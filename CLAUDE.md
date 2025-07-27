@@ -44,10 +44,10 @@ The API will start on:
 - HTTP: http://localhost:5003
 - HTTPS: https://localhost:7241
 
-### Mobile App (Memora)
+### Mobile App (MemoraApp)
 ```bash
 # Navigate to App directory
-cd Memora
+cd MemoraApp
 
 # Build the project
 ./gradlew build
@@ -70,6 +70,24 @@ cd Memora
 # Build release (iOS)
 ./gradlew :iosApp:iosArchiveRelease
 ```
+
+## Development Workflow & Validation
+
+### IMPORTANT: Android Studio Validation Required
+**INSTRUCCIÓN CRÍTICA**: Después de cada paso de implementación en cualquier fase del desarrollo, Claude DEBE solicitar al usuario que valide los cambios en Android Studio antes de continuar. Esta validación incluye:
+
+1. **Sync del Proyecto**: Verificar que Gradle sync sea exitoso
+2. **Build del Proyecto**: Confirmar que el proyecto compile sin errores
+3. **Ejecución**: Verificar que la app ejecute correctamente (cuando aplique)
+4. **Funcionalidad**: Probar que las nuevas características funcionen como se espera
+
+**Proceso Obligatorio**:
+- Claude implementa un paso/característica
+- Claude solicita al usuario: "Por favor, realiza sync de Gradle y build del proyecto en Android Studio. ¿Hay errores o todo funciona correctamente?"
+- Usuario reporta el resultado
+- Solo después de confirmación exitosa, Claude continúa con el siguiente paso
+
+Esta validación es ESENCIAL para mantener la estabilidad del proyecto y detectar problemas tempranamente.
 
 ## Architecture & Technology Stack
 

@@ -1,45 +1,62 @@
 package com.vicherarr.memora
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import org.jetbrains.compose.resources.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import org.jetbrains.compose.ui.tooling.preview.Preview
-
-import memora.composeapp.generated.resources.Res
-import memora.composeapp.generated.resources.compose_multiplatform
 import com.vicherarr.memora.ui.theme.MemoraTheme
+import com.vicherarr.memora.ui.navigation.AuthNavigation
+import com.vicherarr.memora.presentation.viewmodels.AuthViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 @Preview
 fun App() {
     MemoraTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(
+        val authViewModel: AuthViewModel = koinViewModel()
+        var isAuthenticated by remember { mutableStateOf(false) }
+        
+        // Observar el estado de autenticación
+        val currentUser by authViewModel.currentUser.collectAsState()
+        
+        LaunchedEffect(currentUser) {
+            isAuthenticated = currentUser != null
+        }
+        
+        Surface(
             modifier = Modifier
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .fillMaxSize()
+                .safeContentPadding(),
+            color = MaterialTheme.colorScheme.background
         ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
-            }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
-                }
+            if (isAuthenticated) {
+                // Pantalla principal de la aplicación (por ahora placeholder)
+                MainAppContent()
+            } else {
+                // Flujo de autenticación
+                AuthNavigation(
+                    onAuthSuccess = {
+                        isAuthenticated = true
+                    }
+                )
             }
         }
     }
+}
+
+@Composable
+private fun MainAppContent() {
+    // Placeholder para la aplicación principal
+    // TODO: Implementar navegación principal y pantallas de notas
+    Text(
+        text = "¡Bienvenido a Memora!\n\nAplicación principal en desarrollo...",
+        style = MaterialTheme.typography.headlineMedium,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxSize()
+    )
 }

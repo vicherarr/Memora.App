@@ -88,7 +88,7 @@ fun LoadingProgressBar(
         }
         
         LinearProgressIndicator(
-            progress = progress,
+            progress = { progress },
             modifier = Modifier
                 .fillMaxSize()
                 .height(8.dp),
