@@ -16,6 +16,9 @@ kotlin {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
+            freeCompilerArgs.addAll(
+                "-opt-in=kotlin.time.ExperimentalTime"
+            )
         }
     }
     
@@ -27,6 +30,13 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+        }
+        iosTarget.compilations.all {
+            compilerOptions.configure {
+                freeCompilerArgs.addAll(
+                    "-opt-in=kotlin.time.ExperimentalTime"
+                )
+            }
         }
     }
     
