@@ -1,6 +1,6 @@
 package com.vicherarr.memora.domain.models
 
-import kotlin.time.Instant
+import kotlinx.datetime.Instant
 
 /**
  * Modelo de dominio para Usuario

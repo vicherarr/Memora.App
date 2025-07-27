@@ -11,6 +11,7 @@ import androidx.compose.ui.text.style.TextAlign
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import com.vicherarr.memora.ui.theme.MemoraTheme
 import com.vicherarr.memora.ui.navigation.AuthNavigation
+import com.vicherarr.memora.ui.screens.DebugScreen
 import com.vicherarr.memora.presentation.viewmodels.AuthViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -35,8 +36,12 @@ fun App() {
             color = MaterialTheme.colorScheme.background
         ) {
             if (isAuthenticated) {
-                // Pantalla principal de la aplicación (por ahora placeholder)
-                MainAppContent()
+                // Pantalla de debug para testing (modo desarrollo)
+                DebugScreen(
+                    onLogout = {
+                        isAuthenticated = false
+                    }
+                )
             } else {
                 // Flujo de autenticación
                 AuthNavigation(
@@ -49,14 +54,3 @@ fun App() {
     }
 }
 
-@Composable
-private fun MainAppContent() {
-    // Placeholder para la aplicación principal
-    // TODO: Implementar navegación principal y pantallas de notas
-    Text(
-        text = "¡Bienvenido a Memora!\n\nAplicación principal en desarrollo...",
-        style = MaterialTheme.typography.headlineMedium,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxSize()
-    )
-}
