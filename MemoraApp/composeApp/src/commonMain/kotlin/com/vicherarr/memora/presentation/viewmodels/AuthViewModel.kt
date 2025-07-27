@@ -17,6 +17,11 @@ class AuthViewModel(
     private val authRepository: AuthRepository
 ) : BaseViewModel<AuthUiState>(AuthUiState()) {
     
+    init {
+        // Verificar autenticación guardada al inicializar
+        checkSavedAuthentication()
+    }
+    
     // Estados individuales para las pantallas
     val loginState: StateFlow<AsyncUiState<User>> = uiState
         .map { it.loginState }
@@ -40,6 +45,14 @@ class AuthViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
+        )
+    
+    val isInitializing: StateFlow<Boolean> = uiState
+        .map { it.isInitializing }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
         )
     
     fun login(email: String, password: String) {
@@ -102,6 +115,38 @@ class AuthViewModel(
     fun clearRegisterState() {
         updateState { it.copy(registerState = AsyncUiState.Idle) }
     }
+    
+    /**
+     * Verifica si hay autenticación guardada al inicializar la app
+     */
+    private fun checkSavedAuthentication() {
+        launchSafe {
+            val isAuthenticated = authRepository.isUserAuthenticated()
+            if (isAuthenticated) {
+                // Si hay autenticación guardada, obtener el usuario actual
+                val userFlow = authRepository.getCurrentUser()
+                // Obtener el primer valor emitido
+                userFlow.collect { user ->
+                    updateState { 
+                        it.copy(
+                            currentUser = user,
+                            isInitializing = false
+                        )
+                    }
+                    // Terminar la corrutina después de obtener el primer valor
+                    return@collect
+                }
+            } else {
+                // No hay autenticación guardada
+                updateState { 
+                    it.copy(
+                        currentUser = null,
+                        isInitializing = false
+                    )
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -109,6 +154,7 @@ class AuthViewModel(
  */
 data class AuthUiState(
     val currentUser: User? = null,
+    val isInitializing: Boolean = true, // Indica si la app está verificando autenticación guardada
     val loginState: AsyncUiState<User> = AsyncUiState.Idle,
     val registerState: AsyncUiState<User> = AsyncUiState.Idle
 ) : com.vicherarr.memora.presentation.utils.UiState

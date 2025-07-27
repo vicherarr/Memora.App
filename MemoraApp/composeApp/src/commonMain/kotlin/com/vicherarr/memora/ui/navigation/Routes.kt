@@ -11,6 +11,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed class AppRoute {
     @Serializable
+    data object Splash : AppRoute()
+    
+    @Serializable
     data object Auth : AppRoute()
     
     @Serializable
