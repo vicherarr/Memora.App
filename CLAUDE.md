@@ -719,8 +719,45 @@ expected class SecureStorageService
 - Use Koin for dependency injection across platforms
 - Handle device orientation changes with Compose adaptive layouts
 
-## Git Commit Instructions
+## Git Workflow & Branching Strategy
 
+### Branch Structure (Git Flow)
+- **`main`**: Rama de producción, solo código estable y releases
+- **`develop`**: Rama principal de desarrollo, integración de features
+- **`release/vX.X.X`**: Ramas de preparación para releases
+- **`feature/nombre-feature`**: Ramas de desarrollo de características específicas
+- **`hotfix/nombre-hotfix`**: Ramas para correcciones urgentes en producción
+
+### Workflow de Desarrollo
+1. **Desarrollo de Features**: Crear rama desde `develop`
+   ```bash
+   git checkout develop
+   git pull origin develop
+   git checkout -b feature/fase-x-descripcion
+   ```
+
+2. **Finalizar Feature**: Merge a `develop` via Pull Request
+   ```bash
+   git checkout develop
+   git pull origin develop
+   git merge feature/fase-x-descripcion
+   git push origin develop
+   ```
+
+3. **Releases**: Crear rama desde `develop` → merge a `main`
+   ```bash
+   git checkout develop
+   git checkout -b release/v1.0.0
+   # Testing y preparación
+   git checkout main
+   git merge release/v1.0.0
+   git tag v1.0.0
+   ```
+
+### Rama de Trabajo Actual
+**Trabajaremos en**: `feature/phase2-architecture-setup` (basada en `develop`)
+
+### Commit Instructions
 - When committing changes, always use "Víctor León Herrera Arribas <vicherarr@gmail.com>" as co-author
 - Update PROGRESOPROYECTO.md after completing each phase to track progress
 - Follow conventional commit format: feat/fix/docs/refactor etc.
