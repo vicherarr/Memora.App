@@ -57,6 +57,8 @@ kotlin {
             implementation(libs.androidx.datastore.preferences)
             implementation(libs.androidx.navigation.compose)
             implementation(libs.coil.compose)
+            implementation(libs.koin.core)
+            implementation(libs.koin.compose)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
