@@ -1,0 +1,6 @@
+@Memora_HostAddress = http://localhost:5003
+
+GET {{Memora_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
