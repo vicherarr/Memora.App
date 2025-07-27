@@ -1,0 +1,121 @@
+-- Tabla de usuarios (para cache local)
+CREATE TABLE User (
+    id TEXT NOT NULL PRIMARY KEY,
+    username TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    createdAt INTEGER NOT NULL
+);
+
+-- Tabla de notas
+CREATE TABLE Note (
+    id TEXT NOT NULL PRIMARY KEY,
+    title TEXT,
+    content TEXT NOT NULL,
+    createdAt INTEGER NOT NULL,
+    modifiedAt INTEGER NOT NULL,
+    userId TEXT NOT NULL,
+    isLocalOnly INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (userId) REFERENCES User(id) ON DELETE CASCADE
+);
+
+-- Tabla de archivos adjuntos
+CREATE TABLE Attachment (
+    id TEXT NOT NULL PRIMARY KEY,
+    originalName TEXT NOT NULL,
+    type INTEGER NOT NULL, -- 1=IMAGE, 2=VIDEO
+    mimeType TEXT NOT NULL,
+    sizeBytes INTEGER NOT NULL,
+    uploadedAt INTEGER NOT NULL,
+    noteId TEXT NOT NULL,
+    localPath TEXT,
+    isUploaded INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (noteId) REFERENCES Note(id) ON DELETE CASCADE
+);
+
+-- Índices para mejorar performance
+CREATE INDEX idx_note_userId ON Note(userId);
+CREATE INDEX idx_note_createdAt ON Note(createdAt DESC);
+CREATE INDEX idx_note_modifiedAt ON Note(modifiedAt DESC);
+CREATE INDEX idx_attachment_noteId ON Attachment(noteId);
+
+-- Queries para User
+selectAllUsers:
+SELECT * FROM User;
+
+selectUserById:
+SELECT * FROM User WHERE id = ?;
+
+selectUserByEmail:
+SELECT * FROM User WHERE email = ?;
+
+insertUser:
+INSERT INTO User(id, username, email, createdAt)
+VALUES (?, ?, ?, ?);
+
+updateUser:
+UPDATE User SET username = ?, email = ? WHERE id = ?;
+
+deleteUser:
+DELETE FROM User WHERE id = ?;
+
+-- Queries para Note
+selectAllNotes:
+SELECT * FROM Note ORDER BY modifiedAt DESC;
+
+selectNotesByUserId:
+SELECT * FROM Note WHERE userId = ? ORDER BY modifiedAt DESC;
+
+selectNoteById:
+SELECT * FROM Note WHERE id = ?;
+
+selectNotesByQuery:
+SELECT * FROM Note 
+WHERE userId = ? AND (title LIKE '%' || ? || '%' OR content LIKE '%' || ? || '%')
+ORDER BY modifiedAt DESC;
+
+selectNotesWithPagination:
+SELECT * FROM Note 
+WHERE userId = ? 
+ORDER BY modifiedAt DESC 
+LIMIT ? OFFSET ?;
+
+insertNote:
+INSERT INTO Note(id, title, content, createdAt, modifiedAt, userId, isLocalOnly)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+updateNote:
+UPDATE Note SET 
+    title = ?, 
+    content = ?, 
+    modifiedAt = ?
+WHERE id = ?;
+
+deleteNote:
+DELETE FROM Note WHERE id = ?;
+
+deleteNotesByUserId:
+DELETE FROM Note WHERE userId = ?;
+
+-- Queries para Attachment
+selectAttachmentsByNoteId:
+SELECT * FROM Attachment WHERE noteId = ? ORDER BY uploadedAt ASC;
+
+selectAttachmentById:
+SELECT * FROM Attachment WHERE id = ?;
+
+insertAttachment:
+INSERT INTO Attachment(id, originalName, type, mimeType, sizeBytes, uploadedAt, noteId, localPath, isUploaded)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateAttachment:
+UPDATE Attachment SET 
+    originalName = ?, 
+    localPath = ?, 
+    isUploaded = ?
+WHERE id = ?;
+
+deleteAttachment:
+DELETE FROM Attachment WHERE id = ?;
+
+deleteAttachmentsByNoteId:
+DELETE FROM Attachment WHERE noteId = ?;

@@ -17,7 +17,8 @@ kotlin {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
             freeCompilerArgs.addAll(
-                "-opt-in=kotlin.time.ExperimentalTime"
+                "-opt-in=kotlin.time.ExperimentalTime",
+                "-Xexpect-actual-classes"
             )
         }
     }
@@ -32,10 +33,13 @@ kotlin {
             isStatic = true
         }
         iosTarget.compilations.all {
-            compilerOptions.configure {
-                freeCompilerArgs.addAll(
-                    "-opt-in=kotlin.time.ExperimentalTime"
-                )
+            compileTaskProvider.configure {
+                compilerOptions {
+                    freeCompilerArgs.addAll(
+                        "-opt-in=kotlin.time.ExperimentalTime",
+                        "-Xexpect-actual-classes"
+                    )
+                }
             }
         }
     }
@@ -45,6 +49,7 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.sqldelight.android.driver)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -69,6 +74,9 @@ kotlin {
             implementation(libs.coil.compose)
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
+        }
+        iosMain.dependencies {
+            implementation(libs.sqldelight.native.driver)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -100,6 +108,14 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+}
+
+sqldelight {
+    databases {
+        create("MemoraDatabase") {
+            packageName.set("com.vicherarr.memora.database")
+        }
     }
 }
 
