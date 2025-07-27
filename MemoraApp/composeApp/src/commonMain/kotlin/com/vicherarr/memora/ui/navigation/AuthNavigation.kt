@@ -9,15 +9,8 @@ import com.vicherarr.memora.ui.screens.auth.LoginScreen
 import com.vicherarr.memora.ui.screens.auth.RegisterScreen
 
 /**
- * Rutas de navegación para autenticación
- */
-object AuthDestinations {
-    const val LOGIN = "login"
-    const val REGISTER = "register"
-}
-
-/**
  * Navegación específica para el flujo de autenticación
+ * Usa rutas type-safe con @Serializable para mayor seguridad
  */
 @Composable
 fun AuthNavigation(
@@ -26,26 +19,26 @@ fun AuthNavigation(
 ) {
     NavHost(
         navController = navController,
-        startDestination = AuthDestinations.LOGIN
+        startDestination = AuthRoute.Login
     ) {
-        composable(AuthDestinations.LOGIN) {
+        composable<AuthRoute.Login> {
             LoginScreen(
                 onNavigateToRegister = {
-                    navController.navigate(AuthDestinations.REGISTER) {
+                    navController.navigate(AuthRoute.Register) {
                         // Evitar que se acumulen múltiples pantallas de login
-                        popUpTo(AuthDestinations.LOGIN) { inclusive = false }
+                        popUpTo<AuthRoute.Login> { inclusive = false }
                     }
                 },
                 onLoginSuccess = onAuthSuccess
             )
         }
         
-        composable(AuthDestinations.REGISTER) {
+        composable<AuthRoute.Register> {
             RegisterScreen(
                 onNavigateToLogin = {
-                    navController.navigate(AuthDestinations.LOGIN) {
+                    navController.navigate(AuthRoute.Login) {
                         // Limpiar el stack y volver al login
-                        popUpTo(AuthDestinations.LOGIN) { inclusive = true }
+                        popUpTo<AuthRoute.Login> { inclusive = true }
                     }
                 },
                 onRegisterSuccess = onAuthSuccess
@@ -55,17 +48,17 @@ fun AuthNavigation(
 }
 
 /**
- * Extensiones para simplificar la navegación
+ * Extensiones type-safe para simplificar la navegación de autenticación
  */
 fun NavHostController.navigateToLogin() {
-    navigate(AuthDestinations.LOGIN) {
+    navigate(AuthRoute.Login) {
         popUpTo(graph.startDestinationId) { inclusive = true }
         launchSingleTop = true
     }
 }
 
 fun NavHostController.navigateToRegister() {
-    navigate(AuthDestinations.REGISTER) {
+    navigate(AuthRoute.Register) {
         launchSingleTop = true
     }
 }
