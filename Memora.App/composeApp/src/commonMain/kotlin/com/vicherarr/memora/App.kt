@@ -17,11 +17,12 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 
 import memora.composeapp.generated.resources.Res
 import memora.composeapp.generated.resources.compose_multiplatform
+import com.vicherarr.memora.ui.theme.MemoraTheme
 
 @Composable
 @Preview
 fun App() {
-    MaterialTheme {
+    MemoraTheme {
         var showContent by remember { mutableStateOf(false) }
         Column(
             modifier = Modifier
