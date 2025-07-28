@@ -25,10 +25,8 @@ import androidx.navigation.toRoute
 import com.vicherarr.memora.ui.navigation.MainRoute
 import com.vicherarr.memora.ui.screens.notes.NotesListScreen
 import com.vicherarr.memora.ui.screens.notes.NoteDetailScreen
-import com.vicherarr.memora.ui.screens.notes.NoteEditScreen
-import com.vicherarr.memora.presentation.viewmodels.NotesViewModel
-import com.vicherarr.memora.presentation.utils.SimpleUiState
-import org.koin.compose.viewmodel.koinViewModel
+import com.vicherarr.memora.ui.screens.notes.create.CreateNoteScreen
+import com.vicherarr.memora.ui.screens.notes.edit.EditNoteScreen
 
 /**
  * Pantalla principal con bottom navigation
@@ -184,7 +182,7 @@ private fun MainNavHost(
         // Pantalla de editar nota existente
         composable<MainRoute.NoteEdit> { backStackEntry ->
             val noteEdit = backStackEntry.toRoute<MainRoute.NoteEdit>()
-            SimpleEditNoteScreen(
+            EditNoteScreen(
                 noteId = noteEdit.noteId!!,
                 onNavigateBack = { navController.popBackStack() },
                 onNoteSaved = { navController.popBackStack() }
@@ -193,12 +191,9 @@ private fun MainNavHost(
         
         // Pantalla de crear nueva nota
         composable<MainRoute.NoteCreate> {
-            println("MainScreen: NoteCreate composable reached")
-            SimpleCreateNoteScreen(
+            CreateNoteScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNoteSaved = { 
-                    navController.popBackStack()
-                }
+                onNoteSaved = { navController.popBackStack() }
             )
         }
         
@@ -218,188 +213,6 @@ private fun MainNavHost(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SimpleEditNoteScreen(
-    noteId: String,
-    onNavigateBack: () -> Unit,
-    onNoteSaved: () -> Unit,
-    viewModel: NotesViewModel = koinViewModel()
-) {
-    var title by remember { mutableStateOf("") }
-    var content by remember { mutableStateOf("") }
-    var isLoaded by remember { mutableStateOf(false) }
-    val notes by viewModel.notes.collectAsState()
-    
-    // Cargar datos de la nota existente
-    if (!isLoaded) {
-        val note = notes.find { it.id == noteId }
-        if (note != null) {
-            title = note.title ?: ""
-            content = note.content
-            isLoaded = true
-        }
-    }
-    
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Editar Nota") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Volver"
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            println("Actualizando nota: id='$noteId', title='$title', content='$content'")
-                            viewModel.updateNote(
-                                noteId = noteId,
-                                title = if (title.isBlank()) null else title,
-                                content = content
-                            )
-                            onNoteSaved()
-                        },
-                        enabled = content.isNotBlank()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Guardar cambios",
-                            tint = if (content.isNotBlank()) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                            }
-                        )
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Título (opcional)") },
-                placeholder = { Text("Título de tu nota...") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            OutlinedTextField(
-                value = content,
-                onValueChange = { content = it },
-                label = { Text("Contenido") },
-                placeholder = { Text("Escribe tu nota aquí...") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                minLines = 5
-            )
-            
-            Text(
-                text = "${content.length} caracteres",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SimpleCreateNoteScreen(
-    onNavigateBack: () -> Unit,
-    onNoteSaved: () -> Unit,
-    viewModel: NotesViewModel = koinViewModel()
-) {
-    var title by remember { mutableStateOf("") }
-    var content by remember { mutableStateOf("") }
-    
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Nueva Nota") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Volver"
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            println("Guardando nota: title='$title', content='$content'")
-                            viewModel.createNote(
-                                title = if (title.isBlank()) null else title,
-                                content = content
-                            )
-                            // Navegar inmediatamente sin esperar el estado
-                            onNoteSaved()
-                        },
-                        enabled = content.isNotBlank()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Guardar nota",
-                            tint = if (content.isNotBlank()) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                            }
-                        )
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Título (opcional)") },
-                placeholder = { Text("Título de tu nota...") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            OutlinedTextField(
-                value = content,
-                onValueChange = { content = it },
-                label = { Text("Contenido") },
-                placeholder = { Text("Escribe tu nota aquí...") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                minLines = 5
-            )
-            
-            Text(
-                text = "${content.length} caracteres",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
 
 @Composable
 private fun SearchPlaceholderScreen(
