@@ -67,6 +67,7 @@ class NotesViewModel(
         viewModelScope.launch {
             try {
                 notesRepository.createNote(title, content)
+                forceRefreshNotes()
                 _uiState.value = SimpleUiState.Success
             } catch (error: Throwable) {
                 _uiState.value = SimpleUiState.Error(error.message ?: "Error al crear la nota")
@@ -80,6 +81,7 @@ class NotesViewModel(
         viewModelScope.launch {
             try {
                 notesRepository.updateNote(noteId, title, content)
+                forceRefreshNotes()
                 _uiState.value = SimpleUiState.Success
             } catch (error: Throwable) {
                 _uiState.value = SimpleUiState.Error(error.message ?: "Error al actualizar la nota")
@@ -91,10 +93,22 @@ class NotesViewModel(
         viewModelScope.launch {
             try {
                 notesRepository.deleteNote(noteId)
-                // loadNotes() se ejecutará automáticamente por el Flow
+                // Forzar recarga inmediata - actualizar lista local sin Flow
+                forceRefreshNotes()
             } catch (error: Throwable) {
                 _uiState.value = SimpleUiState.Error(error.message ?: "Error al eliminar la nota")
             }
+        }
+    }
+    
+    private suspend fun forceRefreshNotes() {
+        try {
+            // Obtener lista actualizada directamente sin Flow
+            val notesList = notesRepository.getAllNotes().first()
+            _notes.value = notesList
+            _uiState.value = SimpleUiState.Success
+        } catch (error: Throwable) {
+            _uiState.value = SimpleUiState.Error(error.message ?: "Error al actualizar la lista")
         }
     }
     
