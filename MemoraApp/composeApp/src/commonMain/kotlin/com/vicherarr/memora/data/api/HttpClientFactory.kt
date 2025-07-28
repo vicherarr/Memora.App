@@ -17,11 +17,11 @@ import kotlinx.serialization.json.Json
 object HttpClientFactory {
     
     fun create(
-        baseUrl: String = "https://localhost:7241/api/",
+        baseUrl: String = "http://localhost:5003/api/",
         enableLogging: Boolean = true,
         tokenProvider: suspend () -> String? = { null }
     ): HttpClient {
-        return HttpClient {
+        return HttpClient(getHttpClientEngine()) {
             // Configuración base
             defaultRequest {
                 url(baseUrl)

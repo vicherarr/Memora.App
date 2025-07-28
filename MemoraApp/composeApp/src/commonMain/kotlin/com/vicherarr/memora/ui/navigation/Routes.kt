@@ -43,6 +43,9 @@ sealed class MainRoute {
     data class NoteEdit(val noteId: String? = null) : MainRoute() // null para crear nueva nota
     
     @Serializable
+    data object NoteCreate : MainRoute()
+    
+    @Serializable
     data object Search : MainRoute()
     
     @Serializable

@@ -40,6 +40,15 @@ interface NotesRepository {
     suspend fun updateNote(note: Note): Note
     
     /**
+     * Actualiza una nota existente por ID
+     * @param noteId ID de la nota a actualizar
+     * @param title Nuevo título de la nota
+     * @param content Nuevo contenido de la nota
+     * @return Nota actualizada
+     */
+    suspend fun updateNote(noteId: String, title: String?, content: String): Note
+    
+    /**
      * Elimina una nota
      * @param noteId ID de la nota a eliminar
      */

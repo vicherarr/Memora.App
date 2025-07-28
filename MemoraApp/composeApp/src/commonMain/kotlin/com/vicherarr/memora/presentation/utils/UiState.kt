@@ -37,3 +37,12 @@ data class FormUiState(
     val successMessage: String? = null,
     val errorMessage: String? = null
 ) : UiState
+
+/**
+ * Estados simples para operaciones básicas
+ */
+sealed class SimpleUiState {
+    object Loading : SimpleUiState()
+    object Success : SimpleUiState()
+    data class Error(val message: String) : SimpleUiState()
+}

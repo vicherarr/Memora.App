@@ -123,6 +123,24 @@ class NotesRepositoryImpl(
         return note.copy(modifiedAt = now)
     }
     
+    override suspend fun updateNote(noteId: String, title: String?, content: String): Note {
+        val now = Clock.System.now()
+        
+        // Actualizar en base de datos local
+        localDatabase.updateNote(
+            id = noteId,
+            title = title,
+            content = content,
+            modifiedAt = now.toEpochMilliseconds()
+        )
+        
+        // TODO: Intentar sincronizar con API en background
+        
+        // Obtener la nota actualizada
+        val updatedNote = getNoteById(noteId)
+        return updatedNote ?: throw Exception("No se pudo actualizar la nota")
+    }
+    
     override suspend fun deleteNote(noteId: String) {
         // Eliminar de base de datos local
         localDatabase.deleteNote(noteId)

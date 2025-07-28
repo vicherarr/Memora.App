@@ -1,176 +1,135 @@
 package com.vicherarr.memora.presentation.viewmodels
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.domain.repository.NotesRepository
-import com.vicherarr.memora.presentation.utils.ListUiState
+import com.vicherarr.memora.presentation.utils.SimpleUiState
 import com.vicherarr.memora.domain.models.Note
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 
 /**
  * ViewModel para gestión de notas
  */
 class NotesViewModel(
     private val notesRepository: NotesRepository
-) : BaseViewModel<NotesUiState>(NotesUiState()) {
+) : ViewModel() {
+    
+    private val _uiState = MutableStateFlow<SimpleUiState>(SimpleUiState.Loading)
+    val uiState: StateFlow<SimpleUiState> = _uiState.asStateFlow()
+    
+    private val _notes = MutableStateFlow<List<Note>>(emptyList())
+    val notes: StateFlow<List<Note>> = _notes.asStateFlow()
+    
+    private val _selectedNote = MutableStateFlow<Note?>(null)
+    val selectedNote: StateFlow<Note?> = _selectedNote.asStateFlow()
     
     init {
         loadNotes()
     }
     
     fun loadNotes() {
-        updateState { it.copy(notesState = it.notesState.copy(isLoading = true)) }
+        _uiState.value = SimpleUiState.Loading
         
-        launchSafe(
-            onError = { error ->
-                updateState { 
-                    it.copy(
-                        notesState = it.notesState.copy(
-                            isLoading = false,
-                            error = error.message
-                        )
-                    )
+        viewModelScope.launch {
+            try {
+                notesRepository.getAllNotes().collectLatest { notesList ->
+                    _notes.value = notesList
+                    _uiState.value = SimpleUiState.Success
                 }
-            }
-        ) {
-            notesRepository.getAllNotes().collectLatest { notes ->
-                updateState { 
-                    it.copy(
-                        notesState = it.notesState.copy(
-                            items = notes,
-                            isLoading = false,
-                            error = null
-                        )
-                    )
-                }
+            } catch (error: Throwable) {
+                _uiState.value = SimpleUiState.Error(error.message ?: "Error desconocido")
             }
         }
     }
     
-    fun refreshNotes() {
-        updateState { it.copy(notesState = it.notesState.copy(isRefreshing = true)) }
+    fun loadNoteById(noteId: String) {
+        _uiState.value = SimpleUiState.Loading
         
-        launchSafe(
-            onError = { error ->
-                updateState { 
-                    it.copy(
-                        notesState = it.notesState.copy(
-                            isRefreshing = false,
-                            error = error.message
-                        )
-                    )
+        viewModelScope.launch {
+            try {
+                val note = notesRepository.getNoteById(noteId)
+                if (note != null) {
+                    _selectedNote.value = note
+                    _uiState.value = SimpleUiState.Success
+                } else {
+                    _uiState.value = SimpleUiState.Error("Nota no encontrada")
                 }
-            }
-        ) {
-            notesRepository.syncNotes()
-            updateState { 
-                it.copy(
-                    notesState = it.notesState.copy(isRefreshing = false)
-                )
+            } catch (error: Throwable) {
+                _uiState.value = SimpleUiState.Error(error.message ?: "Error al cargar la nota")
             }
         }
     }
     
     fun createNote(title: String?, content: String) {
-        launchSafe(
-            onError = { error ->
-                updateState { 
-                    it.copy(
-                        notesState = it.notesState.copy(error = error.message)
-                    )
-                }
+        _uiState.value = SimpleUiState.Loading
+        
+        viewModelScope.launch {
+            try {
+                notesRepository.createNote(title, content)
+                _uiState.value = SimpleUiState.Success
+            } catch (error: Throwable) {
+                _uiState.value = SimpleUiState.Error(error.message ?: "Error al crear la nota")
             }
-        ) {
-            notesRepository.createNote(title, content)
-            // loadNotes() se ejecutará automáticamente por el Flow
         }
     }
     
-    fun updateNote(note: Note) {
-        launchSafe(
-            onError = { error ->
-                updateState { 
-                    it.copy(
-                        notesState = it.notesState.copy(error = error.message)
-                    )
-                }
+    fun updateNote(noteId: String, title: String?, content: String) {
+        _uiState.value = SimpleUiState.Loading
+        
+        viewModelScope.launch {
+            try {
+                notesRepository.updateNote(noteId, title, content)
+                _uiState.value = SimpleUiState.Success
+            } catch (error: Throwable) {
+                _uiState.value = SimpleUiState.Error(error.message ?: "Error al actualizar la nota")
             }
-        ) {
-            notesRepository.updateNote(note)
-            // loadNotes() se ejecutará automáticamente por el Flow
         }
     }
     
     fun deleteNote(noteId: String) {
-        launchSafe(
-            onError = { error ->
-                updateState { 
-                    it.copy(
-                        notesState = it.notesState.copy(error = error.message)
-                    )
-                }
+        viewModelScope.launch {
+            try {
+                notesRepository.deleteNote(noteId)
+                // loadNotes() se ejecutará automáticamente por el Flow
+            } catch (error: Throwable) {
+                _uiState.value = SimpleUiState.Error(error.message ?: "Error al eliminar la nota")
             }
-        ) {
-            notesRepository.deleteNote(noteId)
-            // loadNotes() se ejecutará automáticamente por el Flow
+        }
+    }
+    
+    fun refreshNotes() {
+        viewModelScope.launch {
+            try {
+                notesRepository.syncNotes()
+            } catch (error: Throwable) {
+                _uiState.value = SimpleUiState.Error(error.message ?: "Error al sincronizar")
+            }
         }
     }
     
     fun searchNotes(query: String) {
-        updateState { 
-            it.copy(
-                notesState = it.notesState.copy(
-                    searchQuery = query,
-                    isLoading = true
-                )
-            )
-        }
+        _uiState.value = SimpleUiState.Loading
         
-        launchSafe(
-            onError = { error ->
-                updateState { 
-                    it.copy(
-                        notesState = it.notesState.copy(
-                            isLoading = false,
-                            error = error.message
-                        )
-                    )
+        viewModelScope.launch {
+            try {
+                notesRepository.searchNotes(query).collectLatest { notesList ->
+                    _notes.value = notesList
+                    _uiState.value = SimpleUiState.Success
                 }
-            }
-        ) {
-            notesRepository.searchNotes(query).collectLatest { notes ->
-                updateState { 
-                    it.copy(
-                        notesState = it.notesState.copy(
-                            items = notes,
-                            isLoading = false,
-                            error = null
-                        )
-                    )
-                }
+            } catch (error: Throwable) {
+                _uiState.value = SimpleUiState.Error(error.message ?: "Error en la búsqueda")
             }
         }
     }
     
     fun clearSearch() {
-        updateState { 
-            it.copy(
-                notesState = it.notesState.copy(searchQuery = "")
-            )
-        }
         loadNotes()
     }
     
     fun clearError() {
-        updateState { 
-            it.copy(
-                notesState = it.notesState.copy(error = null)
-            )
+        if (_uiState.value is SimpleUiState.Error) {
+            _uiState.value = SimpleUiState.Success
         }
     }
 }
-
-/**
- * Estado de UI para notas
- */
-data class NotesUiState(
-    val notesState: ListUiState<Note> = ListUiState()
-) : com.vicherarr.memora.presentation.utils.UiState

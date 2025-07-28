@@ -13,7 +13,7 @@ val networkModule = module {
     // HttpClient - Configurado con factory
     single<HttpClient> { 
         HttpClientFactory.create(
-            baseUrl = "https://localhost:7241/api/",
+            baseUrl = "http://localhost:5003/api/",
             enableLogging = true,
             tokenProvider = {
                 // TODO: Implementar obtención de token desde secure storage

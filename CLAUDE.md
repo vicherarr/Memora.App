@@ -232,6 +232,23 @@ val Typography = Typography(
 5. **Responsiveness**: Adaptive layouts for different screen sizes and orientations
 6. **Performance**: Smooth animations and fast interactions
 
+### Compose Development Strategy
+**INSTRUCCIÓN CRÍTICA**: Debido a la complejidad de Compose Multiplatform, Claude debe seguir un desarrollo progresivo en dos fases:
+
+#### Fase 1: Funcionalidad Básica
+1. **Crear UI mínima funcional**: Solo elementos básicos (Scaffold, Column, Text, Button, TextField)
+2. **Conectar con ViewModel**: Asegurar que la lógica de negocio funcione correctamente
+3. **Validar funcionamiento**: Probar que CRUD básico funcione antes de continuar
+4. **Evitar componentes complejos**: No usar LaunchedEffect, remember con múltiples dependencias, o lógica compleja
+
+#### Fase 2: Mejoras Visuales y UX
+1. **Mejorar diseño**: Aplicar Material Design 3, colores, tipografía
+2. **Agregar animaciones**: Transiciones suaves y micro-interacciones
+3. **Optimizar performance**: LaunchedEffect, derivedStateOf, remember optimizados
+4. **Pulir UX**: Loading states, error handling, validaciones avanzadas
+
+**Esta estrategia es OBLIGATORIA para evitar bucles de recomposición y problemas de navegación.**
+
 ### Component Patterns
 - **Cards**: Material Design elevated cards with appropriate shadows
 - **Buttons**: FAB, elevated, filled, outlined, and text button variants
