@@ -5,6 +5,7 @@ import kotlin.time.Instant
 /**
  * Modelo de dominio para Nota
  */
+@OptIn(kotlin.time.ExperimentalTime::class)
 data class Note(
     val id: String,
     val title: String?,

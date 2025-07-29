@@ -366,18 +366,23 @@ public enum TipoDeArchivo
 
 ### Screen Structure
 ```
-App (NavHost)
-├── LoginScreen            - User authentication
-├── RegisterScreen         - New user registration
-├── MainScreen             - Bottom navigation container
-│   ├── NotesScreen        - Main notes overview (Tab)
-│   ├── SearchScreen       - Search and filter notes (Tab)
-│   └── ProfileScreen      - User profile and settings (Tab)
-├── NoteDetailScreen       - View specific note
-├── NoteEditScreen         - Create/edit note
-├── MediaViewerScreen      - Full-screen media viewing
-└── SettingsScreen         - App settings and preferences
+App (NavHost) - AppNavigation.kt
+├── SplashScreen           - Initial authentication check
+├── AuthNavigation         - Authentication flow
+│   ├── LoginScreen        - User login
+│   └── RegisterScreen     - User registration
+└── MainNavigation         - Post-authentication screens
+    ├── MainScreen         - Notes list (primary screen)
+    ├── NoteDetailScreen   - View specific note
+    ├── NoteEditScreen     - Edit existing note
+    └── NoteCreateScreen   - Create new note
 ```
+
+**Navigation Architecture:**
+- **Type-safe routing** with @Serializable classes
+- **Clear route separation** - NoteCreate vs NoteEdit with explicit purposes
+- **Simplified structure** - focused on core note-taking functionality
+- **No deep links** - internal navigation only for cleaner implementation
 
 ### MVVM Architecture
 ```kotlin
@@ -531,8 +536,8 @@ expected class SecureStorageService
 
 3. **Navigation Setup**
    - Configure Compose Navigation with NavHost
-   - Set up bottom navigation bar
-   - Implement deep linking
+   - Set up type-safe navigation with @Serializable routes
+   - Implement clear route separation (NoteCreate vs NoteEdit)
    - Add navigation transitions
 
 ### Phase 4: Authentication System

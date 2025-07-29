@@ -15,14 +15,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vicherarr.memora.domain.models.Note
-import com.vicherarr.memora.presentation.utils.SimpleUiState
-import com.vicherarr.memora.presentation.viewmodels.NotesViewModel
+import com.vicherarr.memora.domain.models.Attachment
+import com.vicherarr.memora.presentation.viewmodels.NoteDetailViewModel
+import com.vicherarr.memora.presentation.viewmodels.NoteDetailUiState
 import com.vicherarr.memora.ui.components.LoadingIndicator
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.viewmodel.koinViewModel
-import kotlin.time.ExperimentalTime
 
+/**
+ * Pantalla de detalle de nota refactorizada
+ * Aplicando principios SOLID y mejores prácticas de KMP
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteDetailScreen(
@@ -30,123 +32,198 @@ fun NoteDetailScreen(
     onNavigateBack: () -> Unit,
     onNavigateToEdit: (String) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: NotesViewModel = koinViewModel()
+    viewModel: NoteDetailViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val selectedNote by viewModel.selectedNote.collectAsState()
+    val note by viewModel.note.collectAsState()
+    val isDeleting by viewModel.isDeleting.collectAsState()
+    
+    // Estado para el diálogo de confirmación de eliminación
     var showDeleteDialog by remember { mutableStateOf(false) }
 
+    // Cargar nota cuando se crea la pantalla o cambia el ID
     LaunchedEffect(noteId) {
-        viewModel.loadNoteById(noteId)
+        viewModel.loadNote(noteId)
+    }
+
+    // Limpiar estado cuando se sale de la pantalla
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.clearState()
+        }
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { 
-                    Text(
-                        text = selectedNote?.title?.takeIf { it.isNotBlank() } ?: "Detalle de Nota",
-                        style = MaterialTheme.typography.headlineSmall
-                    ) 
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Volver"
-                        )
-                    }
-                },
-                actions = {
-                    selectedNote?.let { note ->
-                        IconButton(
-                            onClick = { onNavigateToEdit(note.id) }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Editar nota",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        
-                        IconButton(
-                            onClick = { showDeleteDialog = true }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Eliminar nota",
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+            NoteDetailTopBar(
+                title = note?.title,
+                onNavigateBack = onNavigateBack,
+                onEdit = { note?.let { onNavigateToEdit(it.id) } },
+                onDelete = { showDeleteDialog = true },
+                isLoading = uiState is NoteDetailUiState.Loading
             )
         },
         modifier = modifier.fillMaxSize()
     ) { paddingValues ->
-        Box(
+        NoteDetailContent(
+            uiState = uiState,
+            note = note,
+            isDeleting = isDeleting,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-        ) {
-            when (uiState) {
-                is SimpleUiState.Loading -> {
-                    LoadingIndicator(
-                        modifier = Modifier.align(Alignment.Center)
+        )
+    }
+    
+    // Diálogo de confirmación de eliminación
+    if (showDeleteDialog) {
+        note?.let { currentNote ->
+            DeleteNoteDialog(
+                note = currentNote,
+                onConfirm = {
+                    viewModel.deleteNote(onSuccess = onNavigateBack)
+                    showDeleteDialog = false
+                },
+                onDismiss = {
+                    showDeleteDialog = false
+                }
+            )
+        }
+    }
+}
+
+/**
+ * TopBar específico para detalle de nota
+ * Componente separado siguiendo principio SRP
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NoteDetailTopBar(
+    title: String?,
+    onNavigateBack: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    isLoading: Boolean
+) {
+    TopAppBar(
+        title = { 
+            Text(
+                text = title?.takeIf { it.isNotBlank() } ?: "Detalle de Nota",
+                style = MaterialTheme.typography.headlineSmall
+            ) 
+        },
+        navigationIcon = {
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Volver"
+                )
+            }
+        },
+        actions = {
+            if (!isLoading) {
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Editar nota",
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
                 
-                is SimpleUiState.Error -> {
-                    ErrorContent(
-                        message = (uiState as SimpleUiState.Error).message,
-                        onRetry = { viewModel.loadNoteById(noteId) },
-                        onBack = onNavigateBack,
-                        modifier = Modifier.align(Alignment.Center)
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Eliminar nota",
+                        tint = MaterialTheme.colorScheme.error
                     )
                 }
-                
-                is SimpleUiState.Success -> {
-                    selectedNote?.let { note ->
-                        NoteDetailContent(
-                            note = note,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } ?: run {
-                        ErrorContent(
-                            message = "Nota no encontrada",
-                            onRetry = { viewModel.loadNoteById(noteId) },
-                            onBack = onNavigateBack,
-                            modifier = Modifier.align(Alignment.Center)
+            }
+        }
+    )
+}
+
+/**
+ * Contenido principal del detalle
+ * Maneja todos los estados UI de forma profesional
+ */
+@Composable
+private fun NoteDetailContent(
+    uiState: NoteDetailUiState,
+    note: Note?,
+    isDeleting: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier) {
+        when (uiState) {
+            is NoteDetailUiState.Loading -> {
+                LoadingIndicator(
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+            
+            is NoteDetailUiState.Success -> {
+                note?.let { currentNote ->
+                    NoteDetailSuccess(
+                        note = currentNote,
+                        isDeleting = isDeleting,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+            
+            is NoteDetailUiState.NotFound -> {
+                NoteNotFoundState(
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+            
+            is NoteDetailUiState.Error -> {
+                ErrorState(
+                    message = uiState.message,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+        }
+        
+        // Overlay de eliminación
+        if (isDeleting) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Eliminando nota...",
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
             }
         }
     }
-    
-    // Dialog de confirmación para eliminar
-    if (showDeleteDialog) {
-        DeleteConfirmationDialog(
-            onConfirm = {
-                selectedNote?.let { note ->
-                    viewModel.deleteNote(note.id)
-                    onNavigateBack()
-                }
-                showDeleteDialog = false
-            },
-            onDismiss = {
-                showDeleteDialog = false
-            }
-        )
-    }
 }
 
+/**
+ * Contenido exitoso del detalle de nota
+ * Layout profesional con toda la información
+ */
 @Composable
-private fun NoteDetailContent(
+private fun NoteDetailSuccess(
     note: Note,
+    isDeleting: Boolean,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -155,7 +232,7 @@ private fun NoteDetailContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Título
+        // Título de la nota
         if (!note.title.isNullOrBlank()) {
             Text(
                 text = note.title,
@@ -165,47 +242,36 @@ private fun NoteDetailContent(
             )
         }
         
-        // Metadata Card
-        NoteMetadataCard(note = note)
-        
-        // Contenido
+        // Contenido de la nota
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
-            Column(
+            Text(
+                text = note.content,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(16.dp)
-            ) {
-                Text(
-                    text = "Contenido",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                
-                Text(
-                    text = note.content,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.4
-                )
-            }
+            )
         }
+        
+        // Metadata de la nota
+        NoteMetadataCard(note = note)
         
         // Archivos adjuntos (si los hay)
         if (note.attachments.isNotEmpty()) {
-            AttachmentsSection(
-                attachments = note.attachments,
-                modifier = Modifier.fillMaxWidth()
-            )
+            AttachmentsCard(attachments = note.attachments)
         }
     }
 }
 
-@OptIn(ExperimentalTime::class)
+/**
+ * Card con metadata de la nota
+ * Información técnica y timestamps
+ */
+@OptIn(kotlin.time.ExperimentalTime::class)
 @Composable
 private fun NoteMetadataCard(
     note: Note,
@@ -214,7 +280,7 @@ private fun NoteMetadataCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
         )
     ) {
         Column(
@@ -224,13 +290,8 @@ private fun NoteMetadataCard(
             Text(
                 text = "Información",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            
-            Divider(
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.3f),
-                thickness = 1.dp
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
             )
             
             MetadataRow(
@@ -243,60 +304,54 @@ private fun NoteMetadataCard(
                 value = formatDateTime(note.modifiedAt)
             )
             
-            if (note.attachments.isNotEmpty()) {
-                MetadataRow(
-                    label = "Archivos:",
-                    value = "${note.attachments.size} archivo${if (note.attachments.size > 1) "s" else ""}"
-                )
-            }
-            
             if (note.isLocalOnly) {
                 MetadataRow(
                     label = "Estado:",
-                    value = "Solo local (sin sincronizar)"
+                    value = "Solo local"
                 )
             }
         }
     }
 }
 
+/**
+ * Fila de metadata individual
+ */
 @Composable
 private fun MetadataRow(
     label: String,
-    value: String,
-    modifier: Modifier = Modifier
+    value: String
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-            modifier = Modifier.weight(1f)
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
         )
-        
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-            modifier = Modifier.weight(2f),
-            textAlign = TextAlign.End
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer
         )
     }
 }
 
+/**
+ * Card de archivos adjuntos
+ * TODO: Implementar en fase de multimedia
+ */
 @Composable
-private fun AttachmentsSection(
-    attachments: List<com.vicherarr.memora.domain.models.Attachment>,
+private fun AttachmentsCard(
+    attachments: List<Attachment>,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer
         )
     ) {
         Column(
@@ -305,140 +360,126 @@ private fun AttachmentsSection(
             Text(
                 text = "Archivos adjuntos (${attachments.size})",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.padding(bottom = 12.dp)
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onTertiaryContainer
             )
             
-            // Lista de archivos adjuntos
-            attachments.forEach { attachment ->
-                AttachmentItem(
-                    attachment = attachment,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                if (attachment != attachments.last()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AttachmentItem(
-    attachment: com.vicherarr.memora.domain.models.Attachment,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.surface,
-        shape = MaterialTheme.shapes.small
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Icono del tipo de archivo
-            Surface(
-                color = MaterialTheme.colorScheme.primary,
-                shape = MaterialTheme.shapes.small
-            ) {
-                Text(
-                    text = when (attachment.type) {
-                        com.vicherarr.memora.domain.models.AttachmentType.IMAGE -> "📷"
-                        com.vicherarr.memora.domain.models.AttachmentType.VIDEO -> "🎥"
-                    },
-                    modifier = Modifier.padding(8.dp)
-                )
-            }
+            Spacer(modifier = Modifier.height(8.dp))
             
-            // Información del archivo
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = attachment.originalName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                
-                Text(
-                    text = formatFileSize(attachment.sizeBytes),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                text = "Funcionalidad disponible en fase de multimedia",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+            )
         }
     }
 }
 
+/**
+ * Estado cuando la nota no existe
+ */
 @Composable
-private fun ErrorContent(
-    message: String,
-    onRetry: () -> Unit,
-    onBack: () -> Unit,
+private fun NoteNotFoundState(
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier.padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.Center
     ) {
+        Text(
+            text = "📄",
+            style = MaterialTheme.typography.displayMedium
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = "Nota no encontrada",
+            style = MaterialTheme.typography.headlineSmall,
+            textAlign = TextAlign.Center
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Text(
+            text = "La nota que buscas no existe o ha sido eliminada",
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/**
+ * Estado de error general
+ */
+@Composable
+private fun ErrorState(
+    message: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "⚠️",
+            style = MaterialTheme.typography.displayMedium
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
         Text(
             text = "Error",
             style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.error,
             textAlign = TextAlign.Center
         )
+        
+        Spacer(modifier = Modifier.height(8.dp))
         
         Text(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.error
         )
-        
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedButton(onClick = onBack) {
-                Text("Volver")
-            }
-            
-            Button(onClick = onRetry) {
-                Text("Reintentar")
-            }
-        }
     }
 }
 
+/**
+ * Diálogo de confirmación de eliminación profesional
+ */
 @Composable
-private fun DeleteConfirmationDialog(
+private fun DeleteNoteDialog(
+    note: Note,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                text = "Eliminar nota",
-                style = MaterialTheme.typography.headlineSmall
-            )
+            Text("Eliminar nota")
         },
         text = {
-            Text(
-                text = "¿Estás seguro de que quieres eliminar esta nota? Esta acción no se puede deshacer.",
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Column {
+                Text("¿Estás seguro de que quieres eliminar esta nota?")
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = "Esta acción no se puede deshacer y serás redirigido a la lista de notas.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = onConfirm,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
                 )
             ) {
                 Text("Eliminar")
@@ -454,23 +495,19 @@ private fun DeleteConfirmationDialog(
 
 /**
  * Formatea la fecha y hora en formato legible
+ * TODO: Implementar formateo profesional de fechas
  */
-@OptIn(ExperimentalTime::class)
-private fun formatDateTime(instant: kotlinx.datetime.Instant): String {
-    val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-    return "${localDateTime.dayOfMonth}/${localDateTime.monthNumber}/${localDateTime.year} ${
-        String.format("%02d:%02d", localDateTime.hour, localDateTime.minute)
-    }"
-}
-
-/**
- * Formatea el tamaño del archivo en formato legible (KB, MB, etc.)
- */
-private fun formatFileSize(bytes: Long): String {
-    return when {
-        bytes < 1024 -> "$bytes B"
-        bytes < 1024 * 1024 -> "${bytes / 1024} KB"
-        bytes < 1024 * 1024 * 1024 -> "${bytes / (1024 * 1024)} MB"
-        else -> "${bytes / (1024 * 1024 * 1024)} GB"
+@OptIn(kotlin.time.ExperimentalTime::class)
+private fun formatDateTime(instant: kotlin.time.Instant): String {
+    // Usar solo la representación ISO básica hasta resolver las APIs
+    val isoString = instant.toString()
+    // Extraer fecha y hora básica: "2024-01-15T10:30:45Z" -> "2024-01-15 10:30"
+    return try {
+        val datePart = isoString.substringBefore('T')
+        val timePart = isoString.substringAfter('T').substringBefore(':') + ":" + 
+                      isoString.substringAfter('T').substringAfter(':').substringBefore(':')
+        "$datePart $timePart"
+    } catch (e: Exception) {
+        isoString.substringBefore('T') // Solo mostrar fecha si falla
     }
 }

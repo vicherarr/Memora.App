@@ -301,9 +301,9 @@ shared/src/commonMain/kotlin/com/vicherarr/memora/
 
 3. **Sistema de Navegación**
    - Configurar Compose Navigation
-   - Implementar rutas tipadas
-   - Configurar transiciones entre pantallas
-   - Implementar deep linking
+   - Implementar rutas tipadas (@Serializable)
+   - Separación clara NoteCreate vs NoteEdit
+   - Navegación type-safe simplificada (sin deep links)
 
 #### Paleta de Colores Material Design 3
 ```kotlin
@@ -410,7 +410,7 @@ val DarkColorScheme = darkColorScheme(
 - ✅ **Navegación Type-Safe**: Refactorizada con `@Serializable` routes para mayor seguridad
 - ✅ **Persistencia de autenticación**: SplashScreen + verificación automática al iniciar app
 - ✅ **Arquitectura escalable**: Separación Auth/Main navigation preparada para futuras pantallas
-- ✅ **Deep Links**: Configuración completa con URIs personalizados
+- ✅ **Navegación Simplificada**: Arquitectura limpia sin deep links para enfoque en funcionalidad core
 - ⏳ Integración con API backend real - **PENDIENTE para producción**
 - ⏳ Autenticación biométrica (fingerprint/face) - **PENDIENTE para siguiente fase**
 - ⏳ Almacenamiento seguro de credenciales - **PENDIENTE para siguiente fase**
@@ -899,7 +899,7 @@ val DarkColorScheme = darkColorScheme(
 - ✅ **Navegación Type-Safe**: Refactorización completa con `@Serializable` routes (Navigation Compose 2.8+)
 - ✅ **Persistencia de Autenticación**: SplashScreen + verificación automática de auth guardada
 - ✅ **Arquitectura Escalable**: Separación clara Auth/Main navigation preparada para futuras pantallas
-- ✅ **Deep Links**: Configuración completa para navegación externa
+- ✅ **Navegación Refactorizada**: Arquitectura limpia type-safe sin complejidad de deep links
 
 ### Próximos Pasos Inmediatos 🎯
 1. **Completar Fase 5 - Gestión Notas**: Crear UI para CRUD de notas

@@ -13,6 +13,7 @@ enum class AttachmentType {
 /**
  * Modelo de dominio para Archivo Adjunto
  */
+@OptIn(kotlin.time.ExperimentalTime::class)
 data class Attachment(
     val id: String,
     val originalName: String,

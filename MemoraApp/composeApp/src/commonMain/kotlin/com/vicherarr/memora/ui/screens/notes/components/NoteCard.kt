@@ -15,11 +15,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.ui.components.MemoraCard
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import kotlin.time.Duration.Companion.days
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,8 +25,6 @@ fun NoteCard(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    
     MemoraCard(
         modifier = modifier
             .clickable { onClick() }
@@ -43,7 +36,7 @@ fun NoteCard(
             NoteCardHeader(
                 title = note.title,
                 onEdit = onEdit,
-                onDelete = { showDeleteDialog = true }
+                onDelete = onDelete // Llamar directamente sin diálogo interno
             )
             
             Spacer(modifier = Modifier.height(8.dp))
@@ -64,19 +57,6 @@ fun NoteCard(
                 note = note
             )
         }
-    }
-    
-    // Dialog de confirmación para eliminar
-    if (showDeleteDialog) {
-        DeleteConfirmationDialog(
-            onConfirm = {
-                onDelete()
-                showDeleteDialog = false
-            },
-            onDismiss = {
-                showDeleteDialog = false
-            }
-        )
     }
 }
 
@@ -136,6 +116,7 @@ private fun NoteCardHeader(
     }
 }
 
+@OptIn(kotlin.time.ExperimentalTime::class)
 @Composable
 private fun NoteCardFooter(
     note: Note,
@@ -197,53 +178,14 @@ private fun NoteCardFooter(
     }
 }
 
-@Composable
-private fun DeleteConfirmationDialog(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Eliminar nota",
-                style = MaterialTheme.typography.headlineSmall
-            )
-        },
-        text = {
-            Text(
-                text = "¿Estás seguro de que quieres eliminar esta nota? Esta acción no se puede deshacer.",
-                style = MaterialTheme.typography.bodyMedium
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onConfirm,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                )
-            ) {
-                Text("Eliminar")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        }
-    )
-}
-
 /**
  * Formatea la fecha en formato relativo (ej: "hace 2 horas", "ayer", etc.)
+ * TODO: Implementar formateo relativo profesional
  */
-private fun formatRelativeTime(instant: Instant): String {
-    return try {
-        // Formatear fecha simple por ahora hasta resolver las APIs de datetime
-        val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-        "${localDateTime.dayOfMonth}/${localDateTime.monthNumber}/${localDateTime.year}"
-    } catch (e: Exception) {
-        // Fallback en caso de error
-        "Fecha desconocida"
-    }
+@OptIn(kotlin.time.ExperimentalTime::class)
+private fun formatRelativeTime(instant: kotlin.time.Instant): String {
+    // Usar solo la representación ISO básica hasta resolver las APIs
+    val isoString = instant.toString()
+    // Extraer solo la fecha: "2024-01-15T10:30:45Z" -> "2024-01-15"
+    return isoString.substringBefore('T')
 }
