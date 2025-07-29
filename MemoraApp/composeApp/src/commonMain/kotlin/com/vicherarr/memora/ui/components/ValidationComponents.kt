@@ -54,7 +54,7 @@ fun ValidatedTextField(
                     if (isRequired) {
                         Text(
                             text = "*",
-                            color = MaterialTheme.colorScheme.error
+                            color = MaterialTheme.colorScheme.tertiary
                         )
                     }
                 }
@@ -82,7 +82,7 @@ fun ValidatedTextField(
                         Icon(
                             imageVector = Icons.Default.Error,
                             contentDescription = "Error",
-                            tint = MaterialTheme.colorScheme.error,
+                            tint = MaterialTheme.colorScheme.tertiary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -92,9 +92,28 @@ fun ValidatedTextField(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = when (validationResult) {
                     is ValidationResult.Valid -> if (value.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                    is ValidationResult.Invalid -> MaterialTheme.colorScheme.error
+                    is ValidationResult.Invalid -> MaterialTheme.colorScheme.tertiary
                     is ValidationResult.Empty -> MaterialTheme.colorScheme.outline
-                }
+                },
+                unfocusedBorderColor = when (validationResult) {
+                    is ValidationResult.Valid -> MaterialTheme.colorScheme.outline
+                    is ValidationResult.Invalid -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f)
+                    is ValidationResult.Empty -> MaterialTheme.colorScheme.outline
+                },
+                focusedLabelColor = when (validationResult) {
+                    is ValidationResult.Valid -> if (value.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    is ValidationResult.Invalid -> MaterialTheme.colorScheme.onTertiaryContainer
+                    is ValidationResult.Empty -> MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                unfocusedLabelColor = when (validationResult) {
+                    is ValidationResult.Valid -> MaterialTheme.colorScheme.onSurfaceVariant
+                    is ValidationResult.Invalid -> MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                    is ValidationResult.Empty -> MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                errorBorderColor = MaterialTheme.colorScheme.tertiary,
+                errorLabelColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                errorLeadingIconColor = MaterialTheme.colorScheme.tertiary,
+                errorTrailingIconColor = MaterialTheme.colorScheme.tertiary
             )
         )
         
@@ -103,7 +122,7 @@ fun ValidatedTextField(
             Text(
                 text = validationResult.message,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
                 modifier = Modifier.padding(start = 16.dp, top = 4.dp)
             )
         }
@@ -123,8 +142,8 @@ fun CharacterCounter(
     val isOverLimit = current > max
     
     val color = when {
-        isOverLimit -> MaterialTheme.colorScheme.error
-        isNearLimit -> MaterialTheme.colorScheme.tertiary
+        isOverLimit -> MaterialTheme.colorScheme.tertiary
+        isNearLimit -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     
@@ -220,8 +239,8 @@ fun ValidationStrengthIndicator(
                 fontWeight = FontWeight.Medium,
                 color = when {
                     strength == 1f -> MaterialTheme.colorScheme.primary
-                    strength > 0.5f -> MaterialTheme.colorScheme.tertiary
-                    else -> MaterialTheme.colorScheme.error
+                    strength > 0.5f -> MaterialTheme.colorScheme.secondary
+                    else -> MaterialTheme.colorScheme.tertiary
                 }
             )
         }
@@ -233,8 +252,8 @@ fun ValidationStrengthIndicator(
             modifier = Modifier.fillMaxWidth(),
             color = when {
                 strength == 1f -> MaterialTheme.colorScheme.primary
-                strength > 0.5f -> MaterialTheme.colorScheme.tertiary
-                else -> MaterialTheme.colorScheme.error
+                strength > 0.5f -> MaterialTheme.colorScheme.secondary
+                else -> MaterialTheme.colorScheme.tertiary
             },
             trackColor = MaterialTheme.colorScheme.surfaceVariant
         )
