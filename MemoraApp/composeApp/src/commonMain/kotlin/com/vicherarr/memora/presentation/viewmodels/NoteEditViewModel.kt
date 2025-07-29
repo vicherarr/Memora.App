@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.domain.repository.NotesRepository
 import com.vicherarr.memora.domain.models.Note
+import com.vicherarr.memora.presentation.utils.ErrorHandler
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -49,11 +50,11 @@ class NoteEditViewModel(
                     )
                     _uiState.value = NoteEditUiState.Idle
                 } else {
-                    _uiState.value = NoteEditUiState.Error("Nota no encontrada")
+                    _uiState.value = NoteEditUiState.Error(ErrorHandler.NotesErrors.notFoundError())
                 }
             } catch (error: Throwable) {
                 _uiState.value = NoteEditUiState.Error(
-                    error.message ?: "Error al cargar la nota"
+                    ErrorHandler.processError(error, "load")
                 )
             }
         }
@@ -99,7 +100,16 @@ class NoteEditViewModel(
     fun saveNote(onSuccess: () -> Unit) {
         val validation = validateForm()
         if (validation != NoteValidation.Valid) {
-            _uiState.value = NoteEditUiState.ValidationError(validation.message)
+            _uiState.value = NoteEditUiState.ValidationError(
+                ErrorHandler.NotesErrors.validationError(
+                    when (validation) {
+                        NoteValidation.ContentRequired -> "content"
+                        NoteValidation.ContentTooLong -> "content"
+                        NoteValidation.TitleTooLong -> "title"
+                        else -> "form"
+                    }
+                )
+            )
             return
         }
         
@@ -127,7 +137,7 @@ class NoteEditViewModel(
                 onSuccess()
             } catch (error: Throwable) {
                 _uiState.value = NoteEditUiState.Error(
-                    error.message ?: "Error al guardar la nota"
+                    ErrorHandler.processError(error, "save")
                 )
             }
         }
@@ -170,8 +180,8 @@ sealed class NoteEditUiState {
     object Loading : NoteEditUiState()
     object Saving : NoteEditUiState()
     object Saved : NoteEditUiState()
-    data class Error(val message: String) : NoteEditUiState()
-    data class ValidationError(val message: String) : NoteEditUiState()
+    data class Error(val errorInfo: ErrorHandler.ErrorInfo) : NoteEditUiState()
+    data class ValidationError(val errorInfo: ErrorHandler.ErrorInfo) : NoteEditUiState()
 }
 
 /**

@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.vicherarr.memora.presentation.viewmodels.NoteEditViewModel
 import com.vicherarr.memora.presentation.viewmodels.NoteEditUiState
 import com.vicherarr.memora.presentation.viewmodels.NoteFormState
-import com.vicherarr.memora.ui.components.LoadingIndicator
+import com.vicherarr.memora.ui.components.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -195,29 +195,55 @@ private fun EditFormContent(
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Campo de título
-        OutlinedTextField(
+        // Campo de título con validación
+        ValidatedTextField(
             value = formState.title,
             onValueChange = onTitleChange,
-            label = { Text("Título (opcional)") },
-            placeholder = { Text("Escribe un título...") },
+            label = "Título",
+            validation = { NoteValidations.titleValidation(it) },
+            placeholder = "Escribe un título...",
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = uiState !is NoteEditUiState.Saving
+            enabled = uiState !is NoteEditUiState.Saving,
+            modifier = Modifier.fillMaxWidth()
         )
         
-        // Campo de contenido
-        OutlinedTextField(
+        // Contador de caracteres para título
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            CharacterCounter(
+                current = formState.title.length,
+                max = 200
+            )
+        }
+        
+        // Campo de contenido con validación
+        ValidatedTextField(
             value = formState.content,
             onValueChange = onContentChange,
-            label = { Text("Contenido *") },
-            placeholder = { Text("Escribe el contenido de tu nota...") },
+            label = "Contenido",
+            validation = { NoteValidations.contentValidation(it) },
+            placeholder = "Escribe el contenido de tu nota...",
+            singleLine = false,
+            minLines = 10,
+            enabled = uiState !is NoteEditUiState.Saving,
+            isRequired = true,
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
-            minLines = 10,
-            enabled = uiState !is NoteEditUiState.Saving
+                .weight(1f)
         )
+        
+        // Contador de caracteres para contenido
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            CharacterCounter(
+                current = formState.content.length,
+                max = 10000
+            )
+        }
         
         // Mostrar información sobre cambios
         if (formState.hasChanges && uiState !is NoteEditUiState.Saving) {
@@ -238,68 +264,21 @@ private fun EditFormContent(
         
         // Mostrar error de validación si existe
         if (uiState is NoteEditUiState.ValidationError) {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                ),
+            ErrorDisplay(
+                errorInfo = uiState.errorInfo,
+                onDismiss = onClearError,
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = uiState.message,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.weight(1f)
-                    )
-                    
-                    TextButton(
-                        onClick = onClearError
-                    ) {
-                        Text("OK")
-                    }
-                }
-            }
+            )
         }
         
         // Mostrar error general si existe
         if (uiState is NoteEditUiState.Error) {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                ),
+            ErrorDisplay(
+                errorInfo = uiState.errorInfo,
+                onRetry = if (uiState.errorInfo.isRetryable) onClearError else null,
+                onDismiss = onClearError,
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Error al editar la nota",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                    
-                    Spacer(modifier = Modifier.height(4.dp))
-                    
-                    Text(
-                        text = uiState.message,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    TextButton(
-                        onClick = onClearError
-                    ) {
-                        Text("Reintentar")
-                    }
-                }
-            }
+            )
         }
     }
 }
