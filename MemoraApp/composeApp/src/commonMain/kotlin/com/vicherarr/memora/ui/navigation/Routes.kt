@@ -3,8 +3,8 @@ package com.vicherarr.memora.ui.navigation
 import kotlinx.serialization.Serializable
 
 /**
- * Rutas type-safe usando @Serializable para Navigation Compose 2.8+
- * Esto proporciona type safety y elimina errores de rutas incorrectas
+ * Rutas type-safe usando @Serializable para Navigation Compose
+ * Simplificadas sin deep links - solo para navegación interna
  */
 
 // Rutas principales de la aplicación
@@ -40,33 +40,8 @@ sealed class MainRoute {
     data class NoteDetail(val noteId: String) : MainRoute()
     
     @Serializable
-    data class NoteEdit(val noteId: String? = null) : MainRoute() // null para crear nueva nota
+    data class NoteEdit(val noteId: String) : MainRoute() // Siempre requiere ID para editar
     
     @Serializable
-    data object NoteCreate : MainRoute()
-    
-    @Serializable
-    data object Search : MainRoute()
-    
-    @Serializable
-    data object Profile : MainRoute()
-    
-    @Serializable
-    data object Settings : MainRoute()
-}
-
-// Rutas para multimedia (pueden ser usadas desde múltiples contextos)
-@Serializable
-sealed class MediaRoute {
-    @Serializable
-    data class MediaViewer(
-        val mediaId: String,
-        val mediaType: String // "image" o "video"
-    ) : MediaRoute()
-    
-    @Serializable
-    data object Camera : MediaRoute()
-    
-    @Serializable
-    data object MediaPicker : MediaRoute()
+    data object NoteCreate : MainRoute() // Crear nueva nota - explícito y claro
 }

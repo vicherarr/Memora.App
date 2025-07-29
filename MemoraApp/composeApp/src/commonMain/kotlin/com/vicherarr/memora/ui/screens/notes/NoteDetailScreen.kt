@@ -21,6 +21,7 @@ import com.vicherarr.memora.ui.components.LoadingIndicator
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -204,6 +205,7 @@ private fun NoteDetailContent(
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
 private fun NoteMetadataCard(
     note: Note,
@@ -453,6 +455,7 @@ private fun DeleteConfirmationDialog(
 /**
  * Formatea la fecha y hora en formato legible
  */
+@OptIn(ExperimentalTime::class)
 private fun formatDateTime(instant: kotlinx.datetime.Instant): String {
     val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
     return "${localDateTime.dayOfMonth}/${localDateTime.monthNumber}/${localDateTime.year} ${
