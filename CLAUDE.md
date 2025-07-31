@@ -44,10 +44,10 @@ The API will start on:
 - HTTP: http://localhost:5003
 - HTTPS: https://localhost:7241
 
-### Mobile App (Memora)
+### Mobile App (MemoraApp)
 ```bash
 # Navigate to App directory
-cd Memora
+cd MemoraApp
 
 # Build the project
 ./gradlew build
@@ -727,3 +727,96 @@ expected class SecureStorageService
 - **NEVER include "Generated with Claude Code" or any Claude-related text in commit messages**
 - Separate commits for API and App changes when possible
 - Use descriptive commit messages that explain the "why" not just the "what"
+
+## 🚨 DESARROLLO INCREMENTAL - INSTRUCCIONES CRÍTICAS
+
+**CONTEXTO**: Después de problemas en el desarrollo anterior, se reinicia el proyecto desde cero con enfoque incremental y muy controlado.
+
+### 📋 METODOLOGÍA DE DESARROLLO
+
+#### 1. **ENFOQUE PASO A PASO**
+- ✅ Proyecto base creado con Android Studio (oficial JetBrains)
+- ✅ Verificado funcionamiento en Android e iOS
+- 🔄 **CADA cambio se prueba en AMBAS plataformas antes de continuar**
+
+#### 2. **GESTIÓN DE DEPENDENCIAS MUY CUIDADOSA**
+- ⚠️ **UNA dependencia a la vez** - NUNCA agregar múltiples librerías juntas
+- ⚠️ **Verificar compatibilidad KMP** antes de agregar cualquier librería
+- ⚠️ **Ubicación correcta**: Verificar si es `commonMain`, `androidMain`, `iosMain`
+- ⚠️ **Buscar en internet** si no estás seguro de la compatibilidad
+
+#### 3. **VERIFICACIÓN CONSTANTE**
+Después de CADA cambio significativo:
+1. **Android**: Compilar y ejecutar sin errores
+2. **iOS**: Compilar y ejecutar sin errores  
+3. **Si falla alguna plataforma**: PARAR y arreglar antes de continuar
+
+#### 4. **PASOS PROHIBIDOS**
+- ❌ NO agregar múltiples dependencias de una vez
+- ❌ NO continuar si una plataforma no funciona
+- ❌ NO asumir compatibilidad sin verificar
+- ❌ NO hacer cambios grandes sin probar incrementalmente
+
+#### 5. **FLUJO DE TRABAJO OBLIGATORIO**
+```
+1. Planificar cambio pequeño
+2. Investigar compatibilidad KMP (si aplica)
+3. Implementar cambio mínimo
+4. Compilar Android ✅
+5. Compilar iOS ✅
+6. Si ambos funcionan → Continuar
+7. Si alguno falla → Arreglar INMEDIATAMENTE
+8. Repetir ciclo
+```
+
+#### 6. **VERIFICACIÓN DE LIBRERÍAS**
+Antes de agregar cualquier dependencia:
+- [ ] ¿Es compatible con Kotlin Multiplatform?
+- [ ] ¿En qué módulo va? (`commonMain`/`androidMain`/`iosMain`)
+- [ ] ¿Hay ejemplos de uso en proyectos KMP?
+- [ ] ¿Versión correcta para nuestra configuración?
+
+#### 7. **CONTROL DE CALIDAD**
+- **Lint**: Ejecutar después de cada fase
+- **Tests**: Verificar que pasan en ambas plataformas
+- **Build**: Compilación limpia sin warnings críticos
+
+#### 8. **🚨 COMMIT OBLIGATORIO DESPUÉS DE VERIFICACIÓN**
+**REGLA CRÍTICA**: Cuando el usuario confirme que ha probado en Android e iOS y ambos funcionan correctamente:
+
+1. **HACER COMMIT INMEDIATO** con mensaje descriptivo
+2. **PUSH AL REPOSITORIO REMOTO** para guardar progreso
+3. **ACTUALIZAR PROGRESOPROYECTO.md** con el avance completado
+4. **NO continuar** hasta completar este proceso
+
+**Formato de commit obligatorio**:
+```bash
+git add .
+git commit -m "feat: [descripción del cambio completado]
+
+✅ Verificado funcionamiento en Android e iOS
+✅ Ambas plataformas compilan y ejecutan correctamente
+✅ Progreso guardado según metodología incremental
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+
+git push origin features/fresh-start
+```
+
+**NUNCA omitir este paso** - Es fundamental para:
+- 🔒 **Preservar progreso** verificado y funcional
+- 🔄 **Trazabilidad** de cada paso incremental  
+- 🛡️ **Punto de restauración** si algo falla después
+- 📊 **Documentar progreso** real del proyecto
+
+### 🎯 OBJETIVO
+Lograr la misma funcionalidad que teníamos en Android, pero esta vez:
+- ✅ Funcionando en iOS también
+- ✅ Sin problemas de dependencias
+- ✅ Código limpio y mantenible
+- ✅ Desarrollo controlado y predecible
+- ✅ **Progreso guardado** en cada verificación exitosa
+
+**RECUERDA**: Lentitud y cuidado > Rapidez y errores
