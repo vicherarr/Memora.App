@@ -46,6 +46,7 @@ kotlin {
             // Koin for Dependency Injection
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
+            implementation(libs.koin.compose.viewmodel)
             
             // Ktor for HTTP Client
             implementation(libs.ktor.client.core)
