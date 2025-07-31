@@ -56,6 +56,9 @@ kotlin {
             // SQLDelight for Database
             implementation(libs.sqldelight.runtime)
             implementation(libs.sqldelight.coroutines.extensions)
+            
+            // DateTime for multiplatform
+            implementation(libs.kotlinx.datetime)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
