@@ -1,5 +1,6 @@
 package com.vicherarr.memora.presentation.viewmodels
 
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.domain.models.User
 import com.vicherarr.memora.domain.repository.AuthRepository
