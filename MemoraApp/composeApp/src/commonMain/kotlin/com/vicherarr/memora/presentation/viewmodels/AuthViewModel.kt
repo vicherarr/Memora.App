@@ -8,15 +8,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 
 /**
  * ViewModel for authentication operations
  */
-class AuthViewModel : BaseViewModel(), KoinComponent {
-    
-    private val authRepository: AuthRepository by inject()
+class AuthViewModel(
+    private val authRepository: AuthRepository
+) : BaseViewModel() {
     
     private val _currentUser = MutableStateFlow<User?>(null)
     val currentUser: StateFlow<User?> = _currentUser.asStateFlow()

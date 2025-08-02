@@ -8,15 +8,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 
 /**
  * ViewModel for notes operations
  */
-class NotesViewModel : BaseViewModel(), KoinComponent {
-    
-    private val notesRepository: NotesRepository by inject()
+class NotesViewModel(
+    private val notesRepository: NotesRepository
+) : BaseViewModel() {
     
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
     val notes: StateFlow<List<Note>> = _notes.asStateFlow()

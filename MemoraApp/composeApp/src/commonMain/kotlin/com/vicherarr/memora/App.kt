@@ -15,34 +15,52 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.KoinApplication
 
 import memora.composeapp.generated.resources.Res
 import memora.composeapp.generated.resources.compose_multiplatform
 import com.vicherarr.memora.ui.theme.MemoraTheme
+import com.vicherarr.memora.di.appModule
 
 @Composable
 @Preview
 fun App() {
-    MemoraTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
-            }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
+    KoinApplication(application = {
+        modules(appModule)
+    }) {
+        MemoraTheme {
+            var showContent by remember { mutableStateOf(false) }
+            
+            Column(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .safeContentPadding()
+                    .fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "Memora App with Koin DI",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                
+                Text(
+                    text = "Koin DI configured successfully",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                
+                Button(onClick = { showContent = !showContent }) {
+                    Text("Toggle Demo Content")
+                }
+                
+                AnimatedVisibility(showContent) {
+                    val greeting = remember { Greeting().greet() }
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Image(painterResource(Res.drawable.compose_multiplatform), null)
+                        Text("Compose: $greeting")
+                    }
                 }
             }
         }
