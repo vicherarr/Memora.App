@@ -50,15 +50,6 @@ class WelcomeScreen : Screen {
             Spacer(modifier = Modifier.height(32.dp))
             
             MemoraButton(
-                text = "Continuar",
-                onClick = {
-                    navigator.push(HomeScreen())
-                }
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            MemoraButton(
                 text = "Iniciar Sesión",
                 onClick = {
                     navigator.push(LoginScreen())
