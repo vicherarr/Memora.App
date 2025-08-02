@@ -10,10 +10,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -21,17 +20,21 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import org.koin.compose.getKoin
 import com.vicherarr.memora.ui.components.MemoraButton
 import com.vicherarr.memora.ui.components.MemoraTextField
+import com.vicherarr.memora.presentation.viewmodels.FormViewModel
 
 class FormScreen : Screen {
     
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val koin = getKoin()
+        val viewModel: FormViewModel = remember { koin.get() }
         
-        var name by remember { mutableStateOf("") }
-        var email by remember { mutableStateOf("") }
+        val name by viewModel.name.collectAsState()
+        val email by viewModel.email.collectAsState()
         
         Column(
             modifier = Modifier
@@ -41,7 +44,7 @@ class FormScreen : Screen {
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "Formulario de Prueba",
+                text = "Formulario con ViewModel",
                 style = MaterialTheme.typography.headlineLarge,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.primary
@@ -51,7 +54,7 @@ class FormScreen : Screen {
             
             MemoraTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = viewModel::updateName,
                 label = "Nombre",
                 modifier = Modifier.fillMaxWidth()
             )
@@ -60,12 +63,21 @@ class FormScreen : Screen {
             
             MemoraTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = viewModel::updateEmail,
                 label = "Email",
                 modifier = Modifier.fillMaxWidth()
             )
             
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            MemoraButton(
+                text = "Limpiar",
+                onClick = {
+                    viewModel.clearForm()
+                }
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
             
             MemoraButton(
                 text = "Volver",

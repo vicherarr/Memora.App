@@ -2,6 +2,7 @@ package com.vicherarr.memora.di
 
 import com.vicherarr.memora.presentation.viewmodels.AuthViewModel
 import com.vicherarr.memora.presentation.viewmodels.NotesViewModel
+import com.vicherarr.memora.presentation.viewmodels.FormViewModel
 import org.koin.dsl.module
 
 /**
@@ -10,4 +11,5 @@ import org.koin.dsl.module
 val viewModelModule = module {
     factory { AuthViewModel(get()) }
     factory { NotesViewModel(get()) }
+    factory { FormViewModel() }
 }
