@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.vicherarr.memora.ui.components.MemoraButton
 
 class WelcomeScreen : Screen {
     
@@ -49,13 +49,12 @@ class WelcomeScreen : Screen {
             
             Spacer(modifier = Modifier.height(32.dp))
             
-            Button(
+            MemoraButton(
+                text = "Continuar",
                 onClick = {
                     navigator.push(HomeScreen())
                 }
-            ) {
-                Text("Continuar")
-            }
+            )
         }
     }
 }
