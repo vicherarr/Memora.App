@@ -718,13 +718,17 @@ expected class SecureStorageService
 - Implement proper lifecycle management with Compose
 - Use Koin for dependency injection across platforms
 - Handle device orientation changes with Compose adaptive layouts
+- **Use `rememberSaveable` for primitive state** that should survive configuration changes (String, Int, Boolean, etc.)
+- **Use `remember` for ViewModels and complex objects** (they handle their own state persistence)
+- Use `rememberSaveable` for form input state, UI toggles, and navigation state when not using ViewModels
+- ViewModels should manage their own state persistence through StateFlow/LiveData
 
 ## Git Commit Instructions
 
-- When committing changes, always use "Víctor León Herrera Arribas <vicherarr@gmail.com>" as co-author
 - Update PROGRESOPROYECTO.md after completing each phase to track progress
 - Follow conventional commit format: feat/fix/docs/refactor etc.
-- **NEVER include "Generated with Claude Code" or any Claude-related text in commit messages**
+- **NEVER include any Claude-related text, co-authors, or AI references in commit messages**
+- **NEVER add co-authors that are not Víctor León Herrera Arribas**
 - Separate commits for API and App changes when possible
 - Use descriptive commit messages that explain the "why" not just the "what"
 
@@ -796,11 +800,7 @@ git commit -m "feat: [descripción del cambio completado]
 
 ✅ Verificado funcionamiento en Android e iOS
 ✅ Ambas plataformas compilan y ejecutan correctamente
-✅ Progreso guardado según metodología incremental
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
+✅ Progreso guardado según metodología incremental"
 
 git push origin features/fresh-start
 ```
