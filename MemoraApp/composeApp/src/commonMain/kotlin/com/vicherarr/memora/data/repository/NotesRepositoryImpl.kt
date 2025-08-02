@@ -3,7 +3,7 @@ package com.vicherarr.memora.data.repository
 import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.domain.repository.NotesRepository
 import kotlinx.coroutines.delay
-import kotlinx.datetime.Clock
+import kotlin.random.Random
 
 /**
  * Mock implementation of NotesRepository for development and testing  
@@ -21,24 +21,24 @@ class NotesRepositoryImpl : NotesRepository {
                     id = "note_1",
                     titulo = "Primera Nota",
                     contenido = "Esta es mi primera nota de prueba",
-                    fechaCreacion = Clock.System.now().toEpochMilliseconds() - 86400000, // 1 day ago
-                    fechaModificacion = Clock.System.now().toEpochMilliseconds() - 86400000,
+                    fechaCreacion = 1700000000L, // Mock timestamp
+                    fechaModificacion = 1700000000L,
                     usuarioId = "user_mock"
                 ),
                 Note(
                     id = "note_2", 
                     titulo = "Lista de Tareas",
                     contenido = "• Completar arquitectura MVVM\n• Implementar UI\n• Conectar con API",
-                    fechaCreacion = Clock.System.now().toEpochMilliseconds() - 43200000, // 12 hours ago
-                    fechaModificacion = Clock.System.now().toEpochMilliseconds() - 43200000,
+                    fechaCreacion = 1700001000L, // Mock timestamp
+                    fechaModificacion = 1700001000L,
                     usuarioId = "user_mock"
                 ),
                 Note(
                     id = "note_3",
                     titulo = null,
                     contenido = "Nota sin título para probar el comportamiento",
-                    fechaCreacion = Clock.System.now().toEpochMilliseconds() - 3600000, // 1 hour ago
-                    fechaModificacion = Clock.System.now().toEpochMilliseconds() - 3600000,
+                    fechaCreacion = 1700002000L, // Mock timestamp
+                    fechaModificacion = 1700002000L,
                     usuarioId = "user_mock"
                 )
             )
@@ -73,11 +73,11 @@ class NotesRepositoryImpl : NotesRepository {
         return try {
             delay(500)
             val newNote = Note(
-                id = "note_${Clock.System.now().toEpochMilliseconds()}",
+                id = "note_${Random.nextInt(1000, 9999)}",
                 titulo = titulo?.takeIf { it.isNotBlank() },
                 contenido = contenido,
-                fechaCreacion = Clock.System.now().toEpochMilliseconds(),
-                fechaModificacion = Clock.System.now().toEpochMilliseconds(),
+                fechaCreacion = 1700003000L, // Mock timestamp
+                fechaModificacion = 1700003000L,
                 usuarioId = "user_mock"
             )
             mockNotes.add(newNote)
@@ -95,7 +95,7 @@ class NotesRepositoryImpl : NotesRepository {
                 val updatedNote = mockNotes[index].copy(
                     titulo = titulo?.takeIf { it.isNotBlank() },
                     contenido = contenido,
-                    fechaModificacion = Clock.System.now().toEpochMilliseconds()
+                    fechaModificacion = 1700004000L // Mock timestamp
                 )
                 mockNotes[index] = updatedNote
                 Result.success(updatedNote)

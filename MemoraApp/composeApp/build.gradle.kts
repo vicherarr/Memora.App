@@ -59,6 +59,14 @@ kotlin {
             
             // DateTime for multiplatform
             implementation(libs.kotlinx.datetime)
+            
+            // Voyager Navigation for Compose Multiplatform
+            implementation(libs.voyager.navigator)
+            implementation(libs.voyager.screenmodel)
+            implementation(libs.voyager.bottom.sheet.navigator)
+            implementation(libs.voyager.tab.navigator)
+            implementation(libs.voyager.transitions)
+            implementation(libs.voyager.koin)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

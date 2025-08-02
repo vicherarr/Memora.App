@@ -3,7 +3,7 @@ package com.vicherarr.memora.data.repository
 import com.vicherarr.memora.domain.models.User
 import com.vicherarr.memora.domain.repository.AuthRepository
 import kotlinx.coroutines.delay
-import kotlinx.datetime.Clock
+import kotlin.random.Random
 
 /**
  * Mock implementation of AuthRepository for development and testing
@@ -21,10 +21,10 @@ class AuthRepositoryImpl : AuthRepository {
             // Mock validation - accept any email with password "123456"
             if (contrasena == "123456") {
                 val user = User(
-                    id = "user_${Clock.System.now().toEpochMilliseconds()}",
+                    id = "user_${Random.nextInt(1000, 9999)}",
                     nombreUsuario = correoElectronico.substringBefore("@"),
                     correoElectronico = correoElectronico,
-                    fechaCreacion = Clock.System.now().toEpochMilliseconds()
+                    fechaCreacion = 1700000000L // Mock timestamp
                 )
                 currentUser = user
                 Result.success(user)
@@ -47,10 +47,10 @@ class AuthRepositoryImpl : AuthRepository {
             
             // Mock registration - always succeeds
             val user = User(
-                id = "user_${Clock.System.now().toEpochMilliseconds()}",
+                id = "user_${Random.nextInt(1000, 9999)}",
                 nombreUsuario = nombreUsuario,
                 correoElectronico = correoElectronico,
-                fechaCreacion = Clock.System.now().toEpochMilliseconds()
+                fechaCreacion = 1700000000L // Mock timestamp
             )
             currentUser = user
             Result.success(user)
