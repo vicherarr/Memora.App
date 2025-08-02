@@ -18,7 +18,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 
-class WelcomeScreen : Screen {
+class HomeScreen : Screen {
     
     @Composable
     override fun Content() {
@@ -32,7 +32,7 @@ class WelcomeScreen : Screen {
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "¡Bienvenido a Memora!",
+                text = "Inicio",
                 style = MaterialTheme.typography.headlineLarge,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.primary
@@ -41,7 +41,7 @@ class WelcomeScreen : Screen {
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "Tu aplicación de notas personal",
+                text = "Esta es la pantalla principal de Memora",
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface
@@ -51,10 +51,10 @@ class WelcomeScreen : Screen {
             
             Button(
                 onClick = {
-                    navigator.push(HomeScreen())
+                    navigator.pop()
                 }
             ) {
-                Text("Continuar")
+                Text("Volver")
             }
         }
     }
