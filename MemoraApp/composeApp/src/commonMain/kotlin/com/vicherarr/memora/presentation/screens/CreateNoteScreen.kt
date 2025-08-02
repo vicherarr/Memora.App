@@ -1,21 +1,25 @@
 package com.vicherarr.memora.presentation.screens
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -33,7 +37,6 @@ import com.vicherarr.memora.presentation.viewmodels.NotesViewModel
 
 class CreateNoteScreen : Screen {
     
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -48,37 +51,42 @@ class CreateNoteScreen : Screen {
         val isLoading by notesViewModel.isLoading.collectAsState()
         val error by notesViewModel.error.collectAsState()
         
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Nueva Nota") },
-                    navigationIcon = {
-                        IconButton(onClick = { navigator.pop() }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
-                        }
-                    }
-                )
-            },
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick = {
-                        if (contenido.isNotBlank()) {
-                            notesViewModel.createNote(
-                                titulo = if (titulo.isBlank()) null else titulo,
-                                contenido = contenido
-                            )
-                            navigator.pop()
-                        }
-                    }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+            // Custom TopAppBar
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 4.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        .padding(horizontal = 4.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Check, contentDescription = "Guardar nota")
+                    IconButton(onClick = { navigator.pop() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                    Text(
+                        text = "Nueva Nota",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(start = 16.dp)
+                    )
                 }
             }
-        ) { paddingValues ->
+            
+            // Content
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
                     .padding(16.dp)
             ) {
                 OutlinedTextField(
@@ -122,6 +130,25 @@ class CreateNoteScreen : Screen {
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
+            }
+            }
+            
+            // FloatingActionButton
+            FloatingActionButton(
+                onClick = {
+                    if (contenido.isNotBlank()) {
+                        notesViewModel.createNote(
+                            titulo = if (titulo.isBlank()) null else titulo,
+                            contenido = contenido
+                        )
+                        navigator.pop()
+                    }
+                },
+                modifier = Modifier
+                    .align(androidx.compose.ui.Alignment.BottomEnd)
+                    .padding(16.dp)
+            ) {
+                Icon(Icons.Default.Check, contentDescription = "Guardar nota")
             }
         }
     }
