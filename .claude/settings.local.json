@@ -3,7 +3,8 @@
     "allow": [
       "Bash(dotnet add package:*)",
       "Bash(powershell:*)",
-      "Bash(dotnet build)"
+      "Bash(dotnet build)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }
