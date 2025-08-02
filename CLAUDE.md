@@ -91,7 +91,7 @@ cd MemoraApp
 - **Architecture Pattern**: MVVM with Repository pattern
 - **Dependency Injection**: Koin for multiplatform DI
 - **HTTP Client**: Ktor client for multiplatform networking
-- **Navigation**: Compose Navigation (shared across platforms)
+- **Navigation**: Voyager (shared across platforms)
 - **Local Storage**: SQLDelight for multiplatform database
 - **State Management**: Compose State and ViewModel
 - **Image Handling**: Platform-specific implementations with expect/actual
@@ -217,7 +217,7 @@ val Typography = Typography(
 ### Component Patterns
 - **Cards**: Material Design elevated cards with appropriate shadows
 - **Buttons**: FAB, elevated, filled, outlined, and text button variants
-- **Navigation**: Bottom navigation bar with Compose Navigation
+- **Navigation**: Bottom navigation bar with Voyager
 - **Forms**: Material Design text fields with floating labels
 - **Lists**: LazyColumn/LazyRow with proper item composables
 - **Media**: Image and video viewers with zoom and playback controls
@@ -495,8 +495,8 @@ expected class SecureStorageService
    - `EmptyState`: Empty state illustrations
 
 3. **Navigation Setup**
-   - Configure Compose Navigation with NavHost
-   - Set up bottom navigation bar
+   - Configure Voyager with Navigator
+   - Set up bottom navigation bar with Voyager TabNavigator
    - Implement deep linking
    - Add navigation transitions
 
@@ -516,9 +516,9 @@ expected class SecureStorageService
    - `AuthenticationViewModel`: Common authentication functionality
 
 3. **Authentication Screens** (`composeApp/src/commonMain/kotlin/screens/`)
-   - `LoginScreen`: Material Design login form with Compose
-   - `RegisterScreen`: Registration form with validation
-   - `WelcomeScreen`: Onboarding and welcome screen
+   - `LoginScreen`: Material Design login form with Compose and Voyager
+   - `RegisterScreen`: Registration form with validation and Voyager
+   - `WelcomeScreen`: Onboarding and welcome screen with Voyager
 
 4. **Platform-Specific Security** (expect/actual pattern)
    - `SecureStorage`: Platform-specific secure token storage
@@ -549,10 +549,10 @@ expected class SecureStorageService
    - `SearchViewModel`: Search and filter functionality
 
 4. **Notes Screens** (`composeApp/src/commonMain/kotlin/screens/`)
-   - `NotesScreen`: Main notes list with LazyColumn
-   - `NoteDetailScreen`: Note viewing with media support
-   - `NoteEditScreen`: Rich text editor with Compose
-   - `SearchScreen`: Search interface with filters
+   - `NotesScreen`: Main notes list with LazyColumn and Voyager
+   - `NoteDetailScreen`: Note viewing with media support and Voyager
+   - `NoteEditScreen`: Rich text editor with Compose and Voyager
+   - `SearchScreen`: Search interface with filters and Voyager
 
 ### Phase 6: Media Management
 **Objective**: Implement multimedia file handling
@@ -576,9 +576,9 @@ expected class SecureStorageService
    - `CameraViewModel`: Camera capture functionality
 
 4. **Media Screens** (`composeApp/src/commonMain/kotlin/screens/`)
-   - `MediaPickerScreen`: Media selection interface
-   - `MediaViewerScreen`: Full-screen image/video viewer
-   - `CameraScreen`: Custom camera interface with Compose
+   - `MediaPickerScreen`: Media selection interface with Voyager
+   - `MediaViewerScreen`: Full-screen image/video viewer with Voyager
+   - `CameraScreen`: Custom camera interface with Compose and Voyager
 
 ### Phase 7: Offline Support & Synchronization
 **Objective**: Enable offline functionality with sync
@@ -646,9 +646,9 @@ expected class SecureStorageService
    - `SecurityViewModel`: Security settings
 
 3. **Settings Screens** (`composeApp/src/commonMain/kotlin/screens/`)
-   - `SettingsScreen`: Main settings interface with Compose
-   - `ProfileScreen`: User profile editing
-   - `SecurityScreen`: Security and privacy settings
+   - `SettingsScreen`: Main settings interface with Compose and Voyager
+   - `ProfileScreen`: User profile editing with Voyager
+   - `SecurityScreen`: Security and privacy settings with Voyager
 
 ### Phase 10: Testing & Quality Assurance
 **Objective**: Comprehensive testing across platforms
@@ -668,7 +668,7 @@ expected class SecureStorageService
 
 3. **UI Tests** (`composeApp/src/commonTest/kotlin/`)
    - Compose UI testing
-   - Screen navigation testing
+   - Voyager navigation testing
    - User interaction testing
    - Accessibility testing
 
