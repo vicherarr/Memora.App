@@ -55,6 +55,24 @@ class WelcomeScreen : Screen {
                     navigator.push(HomeScreen())
                 }
             )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            MemoraButton(
+                text = "Iniciar Sesión",
+                onClick = {
+                    navigator.push(LoginScreen())
+                }
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            MemoraButton(
+                text = "Crear Cuenta",
+                onClick = {
+                    navigator.push(RegisterScreen())
+                }
+            )
         }
     }
 }
