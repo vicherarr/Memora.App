@@ -1,26 +1,13 @@
 package com.vicherarr.memora
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import org.jetbrains.compose.resources.painterResource
+import androidx.compose.runtime.Composable
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.KoinApplication
+import cafe.adriel.voyager.navigator.Navigator
 
-import memora.composeapp.generated.resources.Res
-import memora.composeapp.generated.resources.compose_multiplatform
 import com.vicherarr.memora.ui.theme.MemoraTheme
 import com.vicherarr.memora.di.appModule
+import com.vicherarr.memora.presentation.screens.WelcomeScreen
 
 @Composable
 @Preview
@@ -29,40 +16,7 @@ fun App() {
         modules(appModule)
     }) {
         MemoraTheme {
-            var showContent by remember { mutableStateOf(false) }
-            
-            Column(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.primaryContainer)
-                    .safeContentPadding()
-                    .fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = "Memora App with Koin DI",
-                    style = MaterialTheme.typography.headlineMedium
-                )
-                
-                Text(
-                    text = "Koin DI configured successfully",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                
-                Button(onClick = { showContent = !showContent }) {
-                    Text("Toggle Demo Content")
-                }
-                
-                AnimatedVisibility(showContent) {
-                    val greeting = remember { Greeting().greet() }
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Image(painterResource(Res.drawable.compose_multiplatform), null)
-                        Text("Compose: $greeting")
-                    }
-                }
-            }
+            Navigator(WelcomeScreen())
         }
     }
 }
