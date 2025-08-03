@@ -23,17 +23,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import org.koin.compose.getKoin
-import com.vicherarr.memora.presentation.viewmodels.NotesViewModel
+import com.vicherarr.memora.presentation.viewmodels.CreateNoteViewModel
 
 class CreateNoteScreen : Screen {
     
@@ -41,15 +38,16 @@ class CreateNoteScreen : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val koin = getKoin()
-        val notesViewModel: NotesViewModel = remember { koin.get() }
+        val createNoteViewModel: CreateNoteViewModel = remember { koin.get() }
         
-        // Local form state (primitive data - use rememberSaveable)
-        var titulo by rememberSaveable { mutableStateOf("") }
-        var contenido by rememberSaveable { mutableStateOf("") }
+        // Single Source of Truth - Observe UI State from ViewModel
+        val uiState by createNoteViewModel.uiState.collectAsState()
         
-        // ViewModel state observation
-        val isLoading by notesViewModel.isLoading.collectAsState()
-        val error by notesViewModel.error.collectAsState()
+        // Simple navigation - when note is saved, navigate back
+        if (uiState.isNoteSaved) {
+            navigator.pop()
+            return
+        }
         
         Box(
             modifier = Modifier
@@ -59,96 +57,97 @@ class CreateNoteScreen : Screen {
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-            // Custom TopAppBar
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 4.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp)
-                        .padding(horizontal = 4.dp),
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { navigator.pop() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
-                    }
-                    Text(
-                        text = "Nueva Nota",
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.padding(start = 16.dp)
-                    )
-                }
-            }
-            
-            // Content
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                OutlinedTextField(
-                    value = titulo,
-                    onValueChange = { titulo = it },
-                    label = { Text("Título (opcional)") },
+                // Custom TopAppBar
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                
-                OutlinedTextField(
-                    value = contenido,
-                    onValueChange = { contenido = it },
-                    label = { Text("Contenido") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(top = 16.dp),
-                    minLines = 5,
-                    placeholder = { Text("Escribe tu nota aquí...") }
-                )
-                
-                // Mostrar error si existe
-                error?.let { errorMessage ->
-                    if (errorMessage.isNotEmpty()) {
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 4.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(64.dp)
+                            .padding(horizontal = 4.dp),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { navigator.pop() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        }
                         Text(
-                            text = errorMessage,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = "Nueva Nota",
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(start = 16.dp)
+                        )
+                    }
+                }
+                
+                // Content
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    // Titulo field - Direct method call (JetBrains KMP style)
+                    OutlinedTextField(
+                        value = uiState.titulo,
+                        onValueChange = createNoteViewModel::updateTitulo,
+                        label = { Text("Título (opcional)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        enabled = !uiState.isLoading
+                    )
+                    
+                    // Contenido field - Direct method call (JetBrains KMP style)
+                    OutlinedTextField(
+                        value = uiState.contenido,
+                        onValueChange = createNoteViewModel::updateContenido,
+                        label = { Text("Contenido") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(top = 16.dp),
+                        minLines = 5,
+                        placeholder = { Text("Escribe tu nota aquí...") },
+                        enabled = !uiState.isLoading
+                    )
+                    
+                    // Error message - Displayed based on UI State
+                    uiState.errorMessage?.let { errorMessage ->
+                        if (errorMessage.isNotEmpty()) {
+                            Text(
+                                text = errorMessage,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                        }
+                    }
+                    
+                    // Validation hint - From ViewModel logic
+                    createNoteViewModel.getValidationHint(uiState.contenido)?.let { hint ->
+                        Text(
+                            text = hint,
+                            color = MaterialTheme.colorScheme.outline,
+                            style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(top = 8.dp)
                         )
                     }
                 }
-                
-                // Mostrar validación básica
-                if (contenido.isBlank()) {
-                    Text(
-                        text = "El contenido es requerido",
-                        color = MaterialTheme.colorScheme.outline,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-            }
             }
             
-            // FloatingActionButton
+            // FloatingActionButton - Direct method call (JetBrains KMP style)
             FloatingActionButton(
-                onClick = {
-                    if (contenido.isNotBlank()) {
-                        notesViewModel.createNote(
-                            titulo = if (titulo.isBlank()) null else titulo,
-                            contenido = contenido
-                        )
-                        navigator.pop()
-                    }
-                },
+                onClick = createNoteViewModel::createNote,
                 modifier = Modifier
                     .align(androidx.compose.ui.Alignment.BottomEnd)
                     .padding(16.dp)
             ) {
-                Icon(Icons.Default.Check, contentDescription = "Guardar nota")
+                if (uiState.isLoading) {
+                    // Could add loading indicator here
+                    Icon(Icons.Default.Check, contentDescription = "Guardando...")
+                } else {
+                    Icon(Icons.Default.Check, contentDescription = "Guardar nota")
+                }
             }
         }
     }
