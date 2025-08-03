@@ -19,10 +19,10 @@ object ApiConfig {
         get() = getBaseUrl()
     
     /**
-     * Full API base URL with version
+     * Full API base URL with version - must end with / for KtorFit
      */
     val API_BASE_URL: String
-        get() = "$BASE_URL/api"
+        get() = "$BASE_URL/api/"
     
     /**
      * Authentication endpoints

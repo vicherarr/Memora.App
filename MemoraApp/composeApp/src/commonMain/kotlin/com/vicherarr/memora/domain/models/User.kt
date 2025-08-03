@@ -5,7 +5,7 @@ package com.vicherarr.memora.domain.models
  */
 data class User(
     val id: String,
-    val nombreUsuario: String,
+    val nombreCompleto: String,
     val correoElectronico: String,
     val fechaCreacion: Long // timestamp in milliseconds
 )

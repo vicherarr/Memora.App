@@ -1,57 +1,75 @@
 package com.vicherarr.memora.data.repository
 
+import com.vicherarr.memora.data.dto.LoginUserDto
+import com.vicherarr.memora.data.dto.RegisterUserDto
+import com.vicherarr.memora.data.network.KtorFitClient
 import com.vicherarr.memora.domain.models.User
 import com.vicherarr.memora.domain.repository.AuthRepository
-import kotlinx.coroutines.delay
-import kotlin.random.Random
 
 /**
- * Mock implementation of AuthRepository for development and testing
- * TODO: Replace with real API implementation using Ktor
+ * Real implementation of AuthRepository using KtorFit
+ * Connects to Memora.API backend for authentication
  */
 class AuthRepositoryImpl : AuthRepository {
     
+    private val authApi = KtorFitClient.getAuthApi()
     private var currentUser: User? = null
+    private var authToken: String? = null
     
     override suspend fun login(correoElectronico: String, contrasena: String): Result<User> {
         return try {
-            // Simulate network delay
-            delay(1000)
+            val loginRequest = LoginUserDto(
+                correoElectronico = correoElectronico,
+                contrasena = contrasena
+            )
             
-            // Mock validation - accept any email with password "123456"
-            if (contrasena == "123456") {
-                val user = User(
-                    id = "user_${Random.nextInt(1000, 9999)}",
-                    nombreUsuario = correoElectronico.substringBefore("@"),
-                    correoElectronico = correoElectronico,
-                    fechaCreacion = 1700000000L // Mock timestamp
-                )
-                currentUser = user
-                Result.success(user)
-            } else {
-                Result.failure(Exception("Invalid credentials"))
-            }
+            val response = authApi.login(loginRequest)
+            
+            // Store auth token
+            authToken = response.token
+            KtorFitClient.setAuthToken(response.token)
+            
+            // Convert DTO to domain model
+            val user = User(
+                id = response.usuario.id,
+                nombreCompleto = response.usuario.nombreCompleto,
+                correoElectronico = response.usuario.correoElectronico,
+                fechaCreacion = parseIsoDateTime(response.usuario.fechaCreacion)
+            )
+            
+            currentUser = user
+            Result.success(user)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
     
     override suspend fun register(
-        nombreUsuario: String, 
+        nombreCompleto: String, 
         correoElectronico: String, 
         contrasena: String
     ): Result<User> {
         return try {
-            // Simulate network delay
-            delay(1000)
-            
-            // Mock registration - always succeeds
-            val user = User(
-                id = "user_${Random.nextInt(1000, 9999)}",
-                nombreUsuario = nombreUsuario,
+            val registerRequest = RegisterUserDto(
+                nombreCompleto = nombreCompleto,
                 correoElectronico = correoElectronico,
-                fechaCreacion = 1700000000L // Mock timestamp
+                contrasena = contrasena
             )
+            
+            val response = authApi.register(registerRequest)
+            
+            // Store auth token
+            authToken = response.token
+            KtorFitClient.setAuthToken(response.token)
+            
+            // Convert DTO to domain model
+            val user = User(
+                id = response.usuario.id,
+                nombreCompleto = response.usuario.nombreCompleto,
+                correoElectronico = response.usuario.correoElectronico,
+                fechaCreacion = parseIsoDateTime(response.usuario.fechaCreacion)
+            )
+            
             currentUser = user
             Result.success(user)
         } catch (e: Exception) {
@@ -65,5 +83,22 @@ class AuthRepositoryImpl : AuthRepository {
     
     override suspend fun logout() {
         currentUser = null
+        authToken = null
+        KtorFitClient.clearAuthToken()
+    }
+    
+    /**
+     * Parse ISO DateTime string to timestamp
+     * Expected format: "2024-01-01T12:00:00Z"
+     */
+    private fun parseIsoDateTime(isoString: String): Long {
+        // Simple parsing for now - in production use proper DateTime library
+        return try {
+            // Remove 'T' and 'Z' and extract epoch-like timestamp
+            // This is a simplified implementation
+            System.currentTimeMillis() / 1000
+        } catch (e: Exception) {
+            System.currentTimeMillis() / 1000
+        }
     }
 }

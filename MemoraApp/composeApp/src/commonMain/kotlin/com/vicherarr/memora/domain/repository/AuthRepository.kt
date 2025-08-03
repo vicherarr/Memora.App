@@ -7,7 +7,7 @@ import com.vicherarr.memora.domain.models.User
  */
 interface AuthRepository {
     suspend fun login(correoElectronico: String, contrasena: String): Result<User>
-    suspend fun register(nombreUsuario: String, correoElectronico: String, contrasena: String): Result<User>
+    suspend fun register(nombreCompleto: String, correoElectronico: String, contrasena: String): Result<User>
     suspend fun getCurrentUser(): User?
     suspend fun logout()
 }
