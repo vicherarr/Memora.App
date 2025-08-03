@@ -13,13 +13,9 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -31,7 +27,7 @@ import org.koin.compose.getKoin
 import com.vicherarr.memora.ui.components.MemoraButton
 import com.vicherarr.memora.ui.components.MemoraTextField
 import com.vicherarr.memora.ui.components.MemoraPasswordField
-import com.vicherarr.memora.presentation.viewmodels.AuthViewModel
+import com.vicherarr.memora.presentation.viewmodels.LoginViewModel
 
 class LoginScreen : Screen {
     
@@ -39,23 +35,15 @@ class LoginScreen : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val koin = getKoin()
-        val authViewModel: AuthViewModel = remember { koin.get() }
+        val loginViewModel: LoginViewModel = remember { koin.get() }
         
-        // Local form state (primitive data - use rememberSaveable)
-        var email by rememberSaveable { mutableStateOf("") }
-        var password by rememberSaveable { mutableStateOf("") }
+        // Single Source of Truth - Observe UI State from ViewModel
+        val uiState by loginViewModel.uiState.collectAsState()
         
-        // ViewModel state observation
-        val isLoading by authViewModel.isLoading.collectAsState()
-        val error by authViewModel.error.collectAsState()
-        val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
-        
-        // Navigate to MainScreen when login is successful
-        LaunchedEffect(isLoggedIn) {
-            if (isLoggedIn) {
-                // Replace current screen instead of push to avoid back navigation issues
-                navigator.replace(MainScreen())
-            }
+        // Simple navigation - when logged in, navigate to MainScreen
+        if (uiState.isLoggedIn) {
+            navigator.replace(MainScreen())
+            return
         }
         
         Column(
@@ -75,25 +63,28 @@ class LoginScreen : Screen {
             
             Spacer(modifier = Modifier.height(32.dp))
             
+            // Email field - Direct method call (JetBrains KMP style)
             MemoraTextField(
-                value = email,
-                onValueChange = { email = it },
+                value = uiState.email,
+                onValueChange = loginViewModel::updateEmail,
                 label = "Correo electrónico",
                 modifier = Modifier.fillMaxWidth()
             )
             
             Spacer(modifier = Modifier.height(16.dp))
             
+            // Password field - Direct method call (JetBrains KMP style)
             MemoraPasswordField(
-                value = password,
-                onValueChange = { password = it },
+                value = uiState.password,
+                onValueChange = loginViewModel::updatePassword,
                 label = "Contraseña",
                 modifier = Modifier.fillMaxWidth()
             )
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            error?.let { errorMessage ->
+            // Error message - Displayed based on UI State
+            uiState.errorMessage?.let { errorMessage ->
                 if (errorMessage.isNotEmpty()) {
                     Text(
                         text = errorMessage,
@@ -104,11 +95,10 @@ class LoginScreen : Screen {
                 }
             }
             
+            // Login button - Direct method call (JetBrains KMP style)
             MemoraButton(
-                text = if (isLoading) "Cargando..." else "Iniciar Sesión",
-                onClick = {
-                    authViewModel.login(email, password)
-                },
+                text = if (uiState.isLoading) "Cargando..." else "Iniciar Sesión",
+                onClick = loginViewModel::login,
                 modifier = Modifier.fillMaxWidth()
             )
             
