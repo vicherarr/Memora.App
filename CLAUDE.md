@@ -736,6 +736,76 @@ expected class SecureStorageService
 
 **CONTEXTO**: Después de problemas en el desarrollo anterior, se reinicia el proyecto desde cero con enfoque incremental y muy controlado.
 
+### 📱 SAFE AREAS - CONFIGURACIÓN CRÍTICA PARA iOS
+
+**⚠️ MUY IMPORTANTE**: Todas las pantallas deben respetar las safe areas de iOS para evitar superposiciones con notch, Dynamic Island, status bar, etc.
+
+#### **✅ PATRÓN CORRECTO IMPLEMENTADO**
+Todas las pantallas principales ya están configuradas correctamente:
+
+**Para pantallas simples (sin TopAppBar):**
+```kotlin
+Column(
+    modifier = Modifier
+        .fillMaxSize()
+        .windowInsetsPadding(WindowInsets.safeDrawing)
+        .padding(24.dp)
+) {
+    // Contenido de la pantalla
+}
+```
+
+**Para MainScreen con TabNavigator:**
+```kotlin
+Scaffold(
+    contentWindowInsets = WindowInsets.safeDrawing,
+    bottomBar = { NavigationBar { ... } }
+) { CurrentTab() }
+```
+
+**Para pantallas con TopAppBar custom (como CreateNoteScreen):**
+```kotlin
+Box(
+    modifier = Modifier
+        .fillMaxSize()
+        .windowInsetsPadding(WindowInsets.safeDrawing)
+) {
+    Column {
+        // Custom TopAppBar
+        Surface(...) { Row { ... } }
+        // Contenido
+        Column { ... }
+    }
+    // FloatingActionButton si es necesario
+    FloatingActionButton(modifier = Modifier.align(Alignment.BottomEnd)) { ... }
+}
+```
+
+#### **❌ PROBLEMAS COMUNES A EVITAR**
+- **NO usar** Scaffolds anidados (causa conflictos de safe areas)
+- **NO mezclar** `statusBarsPadding()` con `WindowInsets.safeDrawing`
+- **NO usar** APIs experimentales como `@OptIn(ExperimentalMaterial3Api::class)`
+- **SIEMPRE aplicar** safe areas al contenedor principal de cada pantalla
+
+#### **📋 PANTALLAS VERIFICADAS**
+- ✅ **WelcomeScreen** → `.windowInsetsPadding(WindowInsets.safeDrawing)`
+- ✅ **LoginScreen** → `.windowInsetsPadding(WindowInsets.safeDrawing)`
+- ✅ **RegisterScreen** → `.windowInsetsPadding(WindowInsets.safeDrawing)`
+- ✅ **MainScreen** → `contentWindowInsets = WindowInsets.safeDrawing`
+- ✅ **NotesTab** → `.windowInsetsPadding(WindowInsets.safeDrawing)`
+- ✅ **SearchTab** → `.windowInsetsPadding(WindowInsets.safeDrawing)`
+- ✅ **ProfileTab** → `.windowInsetsPadding(WindowInsets.safeDrawing)`
+- ✅ **CreateNoteScreen** → Patrón Box + Column con safe areas
+
+#### **🔧 IMPORTS NECESARIOS**
+```kotlin
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+```
+
+**REGLA CRÍTICA**: Cualquier pantalla nueva DEBE seguir estos patrones para funcionar correctamente en iOS.
+
 ### 📋 METODOLOGÍA DE DESARROLLO
 
 #### 1. **ENFOQUE PASO A PASO**

@@ -18,3 +18,6 @@ interface AuthApi {
     @POST("autenticacion/registrar")
     suspend fun register(@Body request: RegisterUserDto): RegisterResponseDto
 }
+
+
+

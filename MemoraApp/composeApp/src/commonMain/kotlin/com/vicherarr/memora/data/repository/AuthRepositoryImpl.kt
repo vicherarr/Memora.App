@@ -92,13 +92,8 @@ class AuthRepositoryImpl : AuthRepository {
      * Expected format: "2024-01-01T12:00:00Z"
      */
     private fun parseIsoDateTime(isoString: String): Long {
-        // Simple parsing for now - in production use proper DateTime library
-        return try {
-            // Remove 'T' and 'Z' and extract epoch-like timestamp
-            // This is a simplified implementation
-            System.currentTimeMillis() / 1000
-        } catch (e: Exception) {
-            System.currentTimeMillis() / 1000
-        }
+        // Simplified implementation - just return a fixed timestamp for now
+        // In production, would parse the actual ISO string
+        return 1700000000L // Mock timestamp (November 2023)
     }
 }
