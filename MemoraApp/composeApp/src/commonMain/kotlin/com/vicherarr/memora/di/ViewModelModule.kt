@@ -8,11 +8,11 @@ import com.vicherarr.memora.presentation.viewmodels.NotesViewModel
 import org.koin.dsl.module
 
 /**
- * Koin module for ViewModels
+ * Koin module for ViewModels following Dependency Inversion Principle
  */
 val viewModelModule = module {
     factory { AuthViewModel(get()) }
-    factory { LoginViewModel(get()) }
+    factory { LoginViewModel(get(), get()) } // AuthRepository + ValidationService
     factory { RegisterViewModel(get()) }
     factory { CreateNoteViewModel(get()) }
     factory { NotesViewModel(get()) }

@@ -3,29 +3,25 @@ package com.vicherarr.memora.presentation.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.domain.repository.AuthRepository
+import com.vicherarr.memora.domain.validation.ValidationService
+import com.vicherarr.memora.presentation.states.LoginUiState
+import com.vicherarr.memora.presentation.states.withLoading
+import com.vicherarr.memora.presentation.states.withError
+import com.vicherarr.memora.presentation.states.withSuccess
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * Login UI State - Single Source of Truth
- * Immutable data class representing the complete state of the Login screen
- */
-data class LoginUiState(
-    val email: String = "",
-    val password: String = "",
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null,
-    val isLoggedIn: Boolean = false
-)
-
-/**
- * ViewModel dedicated to Login screen following JetBrains KMP patterns
- * Simple, direct methods without event system complexity
+ * ViewModel dedicated to Login screen following SOLID principles
+ * Single Responsibility: Only handles login UI logic
+ * Dependency Inversion: Depends on abstractions (interfaces)
+ * Open/Closed: Extensible through composition, closed for modification
  */
 class LoginViewModel(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val validationService: ValidationService
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -37,6 +33,7 @@ class LoginViewModel(
     
     /**
      * Update email field - Direct method call
+     * Single Responsibility: Only updates email
      */
     fun updateEmail(email: String) {
         _uiState.value = _uiState.value.copy(email = email)
@@ -44,6 +41,7 @@ class LoginViewModel(
     
     /**
      * Update password field - Direct method call
+     * Single Responsibility: Only updates password
      */
     fun updatePassword(password: String) {
         _uiState.value = _uiState.value.copy(password = password)
@@ -51,59 +49,52 @@ class LoginViewModel(
     
     /**
      * Perform login operation - Direct method call
+     * Uses injected services following Dependency Inversion Principle
      */
     fun login() {
         val currentState = _uiState.value
         
         viewModelScope.launch {
-            _uiState.value = currentState.copy(isLoading = true, errorMessage = null)
+            // Set loading state using extension function
+            _uiState.value = currentState.withLoading()
             
-            val validationError = validateLoginInput(currentState.email, currentState.password)
-            if (validationError != null) {
-                _uiState.value = currentState.copy(
-                    isLoading = false,
-                    errorMessage = validationError
-                )
+            // Validate email using ValidationService (Single Responsibility)
+            val emailValidation = validationService.validateEmail(currentState.email)
+            if (!emailValidation.isValid) {
+                _uiState.value = currentState.withError(emailValidation.errorMessage!!)
                 return@launch
             }
             
+            // Validate password using ValidationService (Single Responsibility)
+            val passwordValidation = validationService.validatePassword(currentState.password)
+            if (!passwordValidation.isValid) {
+                _uiState.value = currentState.withError(passwordValidation.errorMessage!!)
+                return@launch
+            }
+            
+            // Perform login using repository
             authRepository.login(currentState.email.trim(), currentState.password)
                 .onSuccess { 
-                    _uiState.value = currentState.copy(
-                        isLoading = false,
-                        isLoggedIn = true
-                    )
+                    _uiState.value = currentState.withSuccess()
                 }
                 .onFailure { exception ->
-                    _uiState.value = currentState.copy(
-                        isLoading = false,
-                        errorMessage = exception.message ?: "Error al iniciar sesión"
+                    _uiState.value = currentState.withError(
+                        exception.message ?: "Error al iniciar sesión"
                     )
                 }
         }
     }
     
+    /**
+     * Check current login state
+     * Single Responsibility: Only checks authentication status
+     */
     private fun checkCurrentLoginState() {
         viewModelScope.launch {
             val user = authRepository.getCurrentUser()
             if (user != null) {
-                _uiState.value = _uiState.value.copy(isLoggedIn = true)
+                _uiState.value = _uiState.value.withSuccess()
             }
         }
-    }
-    
-    private fun validateLoginInput(email: String, password: String): String? {
-        return when {
-            email.isBlank() -> "El correo electrónico es requerido"
-            !isValidEmail(email) -> "El correo electrónico no tiene un formato válido"
-            password.isBlank() -> "La contraseña es requerida"
-            password.length < 6 -> "La contraseña debe tener al menos 6 caracteres"
-            else -> null
-        }
-    }
-    
-    private fun isValidEmail(email: String): Boolean {
-        val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$".toRegex()
-        return emailRegex.matches(email.trim())
     }
 }
