@@ -13,7 +13,7 @@ import org.koin.dsl.module
 val viewModelModule = module {
     factory { AuthViewModel(get()) }
     factory { LoginViewModel(get(), get()) } // AuthRepository + ValidationService
-    factory { RegisterViewModel(get()) }
+    factory { RegisterViewModel(get(), get()) } // AuthRepository + ValidationService
     factory { CreateNoteViewModel(get()) }
     factory { NotesViewModel(get()) }
 }
