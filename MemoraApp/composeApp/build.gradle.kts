@@ -5,6 +5,9 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.ktorfit)
     alias(libs.plugins.sqldelight)
 }
 
@@ -34,6 +37,13 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+            
+            // Ktor Android HTTP Client
+            implementation(libs.ktor.client.okhttp)
+        }
+        iosMain.dependencies {
+            // Ktor iOS HTTP Client  
+            implementation(libs.ktor.client.darwin)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -50,10 +60,12 @@ kotlin {
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
             
-            // Ktor for HTTP Client
-            implementation(libs.ktor.client.core)
+            // KtorFit for HTTP Client (includes Ktor automatically)
+            implementation(libs.ktorfit.lib)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
+            implementation(libs.ktor.client.logging)
+            implementation(libs.ktor.client.auth)
             
             // SQLDelight for Database
             implementation(libs.sqldelight.runtime)
