@@ -723,6 +723,152 @@ expected class SecureStorageService
 - Use `rememberSaveable` for form input state, UI toggles, and navigation state when not using ViewModels
 - ViewModels should manage their own state persistence through StateFlow/LiveData
 
+## Sincronización Background - Diseño Arquitectural (4 Ago 2025)
+
+### 🎯 Enfoque Local-First Implementado
+
+**Principio Fundamental**: Las notas se guardan **primero en la base de datos local** para respuesta instantánea de UI, y luego se sincronizan con el API backend en segundo plano.
+
+#### 🏗️ Arquitectura de Sincronización
+
+**1. Esquema de Base de Datos con Estados de Sync**
+```sql
+-- Notes.sq (SQLDelight Schema)
+CREATE TABLE notes (
+    id TEXT NOT NULL PRIMARY KEY,
+    titulo TEXT,
+    contenido TEXT NOT NULL,
+    fecha_creacion TEXT NOT NULL,
+    fecha_modificacion TEXT NOT NULL,
+    usuario_id TEXT NOT NULL,
+    -- Campos de sincronización
+    sync_status TEXT NOT NULL DEFAULT 'PENDING',    -- PENDING, SYNCED, FAILED
+    needs_upload INTEGER NOT NULL DEFAULT 1,        -- 0 = no, 1 = sí
+    local_created_at INTEGER NOT NULL,              -- timestamp local
+    last_sync_attempt INTEGER                       -- último intento de sync
+);
+```
+
+**2. SyncRepository - Orquestador de Sincronización**
+```kotlin
+interface SyncRepository {
+    suspend fun syncPendingNotes(): SyncResult
+    suspend fun syncNoteById(noteId: String): SyncResult
+    suspend fun markAsSynced(noteId: String)
+    suspend fun markAsFailed(noteId: String)
+    fun observeSyncStatus(): Flow<SyncStatus>
+}
+
+class SyncRepositoryImpl(
+    private val notesDao: NotesDao,
+    private val notesApi: NotesApi,
+    private val networkMonitor: NetworkMonitor
+) : SyncRepository {
+    
+    // Sincronización inteligente con manejo de conflictos
+    override suspend fun syncPendingNotes(): SyncResult {
+        // 1. Verificar conectividad
+        // 2. Obtener notas pendientes de sync
+        // 3. Upload notas locales al API
+        // 4. Download cambios del API
+        // 5. Resolver conflictos si existen
+        // 6. Actualizar estados de sync
+    }
+}
+```
+
+**3. Estrategias de Sincronización**
+
+- **Sync Incremental**: Solo sincronizar cambios desde último sync
+- **Conflict Resolution**: 
+  - `KEEP_LOCAL`: Priorizar cambios locales
+  - `KEEP_REMOTE`: Priorizar cambios del servidor
+  - `MERGE`: Combinar cambios inteligentemente
+  - `ASK_USER`: Mostrar UI para resolución manual
+
+- **Background Sync Triggers**:
+  - App en foreground → sync inmediato
+  - Conectividad restaurada → sync automático
+  - Periodic WorkManager → sync cada X minutos
+  - Manual refresh → sync bajo demanda
+
+**4. Network State Management**
+```kotlin
+expect class NetworkMonitor {
+    fun isConnected(): Flow<Boolean>
+    fun getConnectionType(): ConnectionType // WiFi, Cellular, None
+}
+
+expect class BackgroundSyncManager {
+    fun scheduleSyncWork(intervalMinutes: Int = 15)
+    fun cancelSyncWork()
+    fun forceSyncNow()
+}
+```
+
+**5. UI States para Indicadores de Sync**
+```kotlin
+sealed class SyncState {
+    object Idle : SyncState()
+    object Syncing : SyncState()
+    data class Success(val syncedCount: Int) : SyncState()
+    data class Error(val message: String) : SyncState()
+    data class Conflict(val conflictedNotes: List<Note>) : SyncState()
+}
+
+// En NotesViewModel
+val syncState: StateFlow<SyncState> = syncRepository.observeSyncStatus()
+    .stateIn(viewModelScope, SharingStarted.Lazily, SyncState.Idle)
+```
+
+#### 🔄 Flujo de Sincronización
+
+**Crear Nota (Local-First)**:
+1. Usuario crea nota → `NotesDao.insertNote()`
+2. UI se actualiza inmediatamente (respuesta rápida)
+3. Background: `SyncRepository.syncPendingNotes()`
+4. API call para crear nota en servidor
+5. Actualizar `sync_status = SYNCED`
+
+**Conflict Resolution**:
+1. Detectar conflicto: `local_modified > server_modified`
+2. Mostrar UI de resolución de conflictos
+3. Usuario elige estrategia (keep local/remote/merge)
+4. Aplicar resolución y actualizar ambos lados
+
+**Offline Support**:
+- Todas las operaciones funcionan offline
+- Queue de operaciones pendientes
+- Retry automático con exponential backoff
+- UI indicators para estado offline/online
+
+#### 🚀 Implementación Progresiva
+
+**Fase 7a - SyncRepository Core**:
+- Implementar SyncRepository básico
+- Sync unidireccional (local → server)
+- NetworkMonitor para detectar conectividad
+
+**Fase 7b - Conflict Resolution**:
+- Detect conflictos local vs server
+- UI para mostrar conflictos
+- Estrategias de resolución automática
+
+**Fase 7c - Advanced Sync**:
+- Background WorkManager integration
+- Sync bidireccional completo
+- Optimizaciones de performance
+
+#### 💡 Ventajas del Enfoque Local-First
+
+- **UX Superior**: Respuesta instantánea, no esperas por API
+- **Offline-First**: Funciona sin conectividad
+- **Resiliente**: Fallos de red no bloquean la app
+- **Performance**: Operaciones locales son instantáneas
+- **Escalable**: Sync inteligente solo cuando necesario
+
+Esta arquitectura garantiza que Memora funcione fluidamente tanto online como offline, con sincronización transparente e inteligente en background.
+
 ## Git Commit Instructions
 
 - Update PROGRESOPROYECTO.md after completing each phase to track progress
