@@ -30,6 +30,9 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            
+            // SQLDelight requires sqlite3 linking on iOS
+            linkerOpts.add("-lsqlite3")
         }
     }
     
@@ -40,10 +43,16 @@ kotlin {
             
             // Ktor Android HTTP Client
             implementation(libs.ktor.client.okhttp)
+            
+            // SQLDelight Android Driver
+            implementation(libs.sqldelight.android.driver)
         }
         iosMain.dependencies {
             // Ktor iOS HTTP Client  
             implementation(libs.ktor.client.darwin)
+            
+            // SQLDelight iOS Driver
+            implementation(libs.sqldelight.native.driver)
         }
         commonMain.dependencies {
             implementation(compose.runtime)

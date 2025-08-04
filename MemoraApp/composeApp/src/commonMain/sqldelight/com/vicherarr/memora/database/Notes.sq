@@ -1,0 +1,72 @@
+-- Notes table schema matching EXACTLY the backend API
+-- API: Nota.cs -> SQLDelight local storage + sync fields
+
+CREATE TABLE notes (
+    id TEXT NOT NULL PRIMARY KEY,
+    titulo TEXT,
+    contenido TEXT NOT NULL,
+    fecha_creacion TEXT NOT NULL,
+    fecha_modificacion TEXT NOT NULL,
+    usuario_id TEXT NOT NULL,
+    
+    -- Sync management fields for local-first architecture
+    sync_status TEXT NOT NULL DEFAULT 'PENDING',
+    needs_upload INTEGER NOT NULL DEFAULT 1,
+    local_created_at INTEGER NOT NULL,
+    last_sync_attempt INTEGER
+);
+
+-- Index for faster queries by user
+CREATE INDEX notes_usuario_id_idx ON notes(usuario_id);
+CREATE INDEX notes_sync_status_idx ON notes(sync_status);
+CREATE INDEX notes_needs_upload_idx ON notes(needs_upload);
+
+-- Queries
+getAllNotes:
+SELECT * FROM notes ORDER BY fecha_modificacion DESC;
+
+getNotesByUserId:
+SELECT * FROM notes 
+WHERE usuario_id = ? 
+ORDER BY fecha_modificacion DESC;
+
+getNoteById:
+SELECT * FROM notes WHERE id = ?;
+
+getNotesNeedingSync:
+SELECT * FROM notes 
+WHERE sync_status = 'PENDING' OR sync_status = 'FAILED'
+ORDER BY local_created_at ASC;
+
+insertNote:
+INSERT INTO notes (
+    id, titulo, contenido, fecha_creacion, fecha_modificacion, 
+    usuario_id, sync_status, needs_upload, local_created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateNote:
+UPDATE notes 
+SET titulo = ?, contenido = ?, fecha_modificacion = ?, 
+    sync_status = 'PENDING', needs_upload = 1
+WHERE id = ?;
+
+updateSyncStatus:
+UPDATE notes 
+SET sync_status = ?, needs_upload = ?, last_sync_attempt = ?
+WHERE id = ?;
+
+deleteNote:
+DELETE FROM notes WHERE id = ?;
+
+deleteNotesByUserId:
+DELETE FROM notes WHERE usuario_id = ?;
+
+markAsSynced:
+UPDATE notes 
+SET sync_status = 'SYNCED', needs_upload = 0, last_sync_attempt = ?
+WHERE id = ?;
+
+markSyncFailed:
+UPDATE notes 
+SET sync_status = 'FAILED', last_sync_attempt = ?
+WHERE id = ?;
