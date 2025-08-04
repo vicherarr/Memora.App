@@ -46,6 +46,9 @@ kotlin {
             
             // SQLDelight Android Driver
             implementation(libs.sqldelight.android.driver)
+            
+            // Koin Android
+            implementation(libs.koin.android)
         }
         iosMain.dependencies {
             // Ktor iOS HTTP Client  

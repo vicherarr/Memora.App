@@ -7,16 +7,24 @@ import cafe.adriel.voyager.navigator.Navigator
 
 import com.vicherarr.memora.ui.theme.MemoraTheme
 import com.vicherarr.memora.di.appModule
+import com.vicherarr.memora.di.databaseModule
 import com.vicherarr.memora.presentation.screens.WelcomeScreen
 
 @Composable
 @Preview
 fun App() {
     KoinApplication(application = {
-        modules(appModule)
+        modules(
+            appModule,
+            databaseModule,
+            getPlatformDatabaseModule()
+        )
     }) {
         MemoraTheme {
             Navigator(WelcomeScreen())
         }
     }
 }
+
+// Platform-specific function to get database module
+expect fun getPlatformDatabaseModule(): org.koin.core.module.Module
