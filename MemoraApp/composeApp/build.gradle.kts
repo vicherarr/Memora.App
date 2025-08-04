@@ -31,8 +31,19 @@ kotlin {
             baseName = "ComposeApp"
             isStatic = true
             
-            // SQLDelight requires sqlite3 linking on iOS
+            // Bundle ID for iOS framework
+            binaryOptions["bundleId"] = "com.vicherarr.memora"
+        }
+    }
+    
+    // SQLDelight requires sqlite3 linking for all native targets
+    targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget> {
+        binaries.all {
             linkerOpts.add("-lsqlite3")
+        }
+        binaries.withType<org.jetbrains.kotlin.gradle.plugin.mpp.Framework> {
+            // Fix for Xcode 16 SwiftUICore linking issue
+            linkerOpts.add("-Wl,-weak_reference_mismatches,weak")
         }
     }
     

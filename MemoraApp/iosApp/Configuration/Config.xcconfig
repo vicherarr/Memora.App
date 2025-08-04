@@ -5,3 +5,6 @@ PRODUCT_BUNDLE_IDENTIFIER=com.vicherarr.memora.Memora$(TEAM_ID)
 
 CURRENT_PROJECT_VERSION=1
 MARKETING_VERSION=1.0
+
+// SQLDelight requires SQLite linking for iOS targets
+OTHER_LDFLAGS = $(inherited) -lsqlite3

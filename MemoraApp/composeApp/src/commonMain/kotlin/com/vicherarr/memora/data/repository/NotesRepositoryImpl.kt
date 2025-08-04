@@ -1,55 +1,38 @@
 package com.vicherarr.memora.data.repository
 
+import com.vicherarr.memora.data.api.NotesApi
+import com.vicherarr.memora.data.database.NotesDao
+import com.vicherarr.memora.data.database.getCurrentTimestamp
+import com.vicherarr.memora.data.dto.CreateNotaDto
+import com.vicherarr.memora.data.dto.UpdateNotaDto
+import com.vicherarr.memora.database.Notes
 import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.domain.repository.NotesRepository
-import kotlinx.coroutines.delay
-import kotlin.random.Random
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /**
- * Mock implementation of NotesRepository for development and testing  
- * TODO: Replace with real implementation using Ktor + SQLDelight
+ * Local-first implementation of NotesRepository
+ * - All operations go to local database first (immediate UI response)
+ * - Background sync with remote API when available
+ * - Offline-first approach for better UX
  */
-class NotesRepositoryImpl : NotesRepository {
+class NotesRepositoryImpl(
+    private val notesDao: NotesDao,
+    private val notesApi: NotesApi
+) : NotesRepository {
     
-    private val mockNotes = mutableListOf<Note>()
-    
-    init {
-        // Add some mock data
-        mockNotes.addAll(
-            listOf(
-                Note(
-                    id = "note_1",
-                    titulo = "Primera Nota",
-                    contenido = "Esta es mi primera nota de prueba",
-                    fechaCreacion = 1700000000L, // Mock timestamp
-                    fechaModificacion = 1700000000L,
-                    usuarioId = "user_mock"
-                ),
-                Note(
-                    id = "note_2", 
-                    titulo = "Lista de Tareas",
-                    contenido = "• Completar arquitectura MVVM\n• Implementar UI\n• Conectar con API",
-                    fechaCreacion = 1700001000L, // Mock timestamp
-                    fechaModificacion = 1700001000L,
-                    usuarioId = "user_mock"
-                ),
-                Note(
-                    id = "note_3",
-                    titulo = null,
-                    contenido = "Nota sin título para probar el comportamiento",
-                    fechaCreacion = 1700002000L, // Mock timestamp
-                    fechaModificacion = 1700002000L,
-                    usuarioId = "user_mock"
-                )
-            )
-        )
-    }
+    // TODO: Get current user ID from AuthRepository
+    private val currentUserId = "user_mock" // Temporary hardcoded value
     
     override suspend fun getNotes(): Result<List<Note>> {
         return try {
-            // Simulate network delay
-            delay(800)
-            Result.success(mockNotes.sortedByDescending { it.fechaModificacion })
+            // LOCAL-FIRST: Get notes from local database immediately
+            val localNotes = notesDao.getNotesByUserId(currentUserId)
+            val domainNotes = localNotes.map { it.toDomainModel() }
+            
+            // TODO: Background sync with API will be handled by SyncRepository
+            Result.success(domainNotes)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -57,10 +40,10 @@ class NotesRepositoryImpl : NotesRepository {
     
     override suspend fun getNoteById(id: String): Result<Note> {
         return try {
-            delay(300)
-            val note = mockNotes.find { it.id == id }
-            if (note != null) {
-                Result.success(note)
+            // LOCAL-FIRST: Get note from local database
+            val localNote = notesDao.getNoteById(id)
+            if (localNote != null) {
+                Result.success(localNote.toDomainModel())
             } else {
                 Result.failure(Exception("Note not found"))
             }
@@ -71,17 +54,34 @@ class NotesRepositoryImpl : NotesRepository {
     
     override suspend fun createNote(titulo: String?, contenido: String): Result<Note> {
         return try {
-            delay(500)
-            val newNote = Note(
-                id = "note_${Random.nextInt(1000, 9999)}",
+            // Generate simple ID without experimental APIs
+            val noteId = "note_${getCurrentTimestamp()}"
+            val now = getCurrentTimestamp().toString()
+            
+            // LOCAL-FIRST: Insert to local database immediately  
+            notesDao.insertNote(
+                id = noteId,
                 titulo = titulo?.takeIf { it.isNotBlank() },
                 contenido = contenido,
-                fechaCreacion = 1700003000L, // Mock timestamp
-                fechaModificacion = 1700003000L,
-                usuarioId = "user_mock"
+                fechaCreacion = now,
+                fechaModificacion = now,
+                usuarioId = currentUserId,
+                syncStatus = "PENDING", // Mark for sync
+                needsUpload = 1
             )
-            mockNotes.add(newNote)
-            Result.success(newNote)
+            
+            // Return the created note
+            val createdNote = Note(
+                id = noteId,
+                titulo = titulo?.takeIf { it.isNotBlank() },
+                contenido = contenido,
+                fechaCreacion = getCurrentTimestamp(),
+                fechaModificacion = getCurrentTimestamp(),
+                usuarioId = currentUserId
+            )
+            
+            // TODO: Background sync will be handled by SyncRepository
+            Result.success(createdNote)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -89,16 +89,21 @@ class NotesRepositoryImpl : NotesRepository {
     
     override suspend fun updateNote(id: String, titulo: String?, contenido: String): Result<Note> {
         return try {
-            delay(500)
-            val index = mockNotes.indexOfFirst { it.id == id }
-            if (index != -1) {
-                val updatedNote = mockNotes[index].copy(
-                    titulo = titulo?.takeIf { it.isNotBlank() },
-                    contenido = contenido,
-                    fechaModificacion = 1700004000L // Mock timestamp
-                )
-                mockNotes[index] = updatedNote
-                Result.success(updatedNote)
+            val now = getCurrentTimestamp().toString()
+            
+            // LOCAL-FIRST: Update in local database immediately
+            notesDao.updateNote(
+                noteId = id,
+                titulo = titulo?.takeIf { it.isNotBlank() },
+                contenido = contenido,
+                fechaModificacion = now
+            )
+            
+            // Get updated note to return
+            val updatedNote = notesDao.getNoteById(id)
+            if (updatedNote != null) {
+                // TODO: Background sync will be handled by SyncRepository
+                Result.success(updatedNote.toDomainModel())
             } else {
                 Result.failure(Exception("Note not found"))
             }
@@ -109,16 +114,37 @@ class NotesRepositoryImpl : NotesRepository {
     
     override suspend fun deleteNote(id: String): Result<Unit> {
         return try {
-            delay(300)
-            val index = mockNotes.indexOfFirst { note -> note.id == id }
-            if (index != -1) {
-                mockNotes.removeAt(index)
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("Note not found"))
-            }
+            // LOCAL-FIRST: Delete from local database immediately
+            notesDao.deleteNote(id)
+            
+            // TODO: Background sync will be handled by SyncRepository
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+    
+    /**
+     * Get notes as Flow for reactive UI updates
+     */
+    fun getNotesFlow(): Flow<List<Note>> {
+        return notesDao.getNotesByUserIdFlow(currentUserId)
+            .map { notesList -> notesList.map { it.toDomainModel() } }
+    }
+    
+    // MAPPING FUNCTIONS
+    
+    /**
+     * Convert SQLDelight Notes entity to Domain model
+     */
+    private fun Notes.toDomainModel(): Note {
+        return Note(
+            id = this.id,
+            titulo = this.titulo,
+            contenido = this.contenido,
+            fechaCreacion = this.fecha_creacion.toLongOrNull() ?: getCurrentTimestamp(),
+            fechaModificacion = this.fecha_modificacion.toLongOrNull() ?: getCurrentTimestamp(),
+            usuarioId = this.usuario_id
+        )
     }
 }

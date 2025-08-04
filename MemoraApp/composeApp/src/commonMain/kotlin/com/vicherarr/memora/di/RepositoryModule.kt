@@ -13,6 +13,11 @@ import org.koin.dsl.module
  */
 val repositoryModule = module {
     single<AuthRepository> { AuthRepositoryImpl() }
-    single<NotesRepository> { NotesRepositoryImpl() }
+    single<NotesRepository> { 
+        NotesRepositoryImpl(
+            notesDao = get(),
+            notesApi = get()
+        ) 
+    }
     single<ValidationService> { ValidationServiceImpl() }
 }

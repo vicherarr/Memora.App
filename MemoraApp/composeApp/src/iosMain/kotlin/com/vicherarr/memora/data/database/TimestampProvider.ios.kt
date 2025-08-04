@@ -1,6 +1,7 @@
 package com.vicherarr.memora.data.database
 
 import platform.Foundation.NSDate
+import platform.Foundation.timeIntervalSince1970
 
 /**
  * iOS implementation for timestamp provider
