@@ -5,16 +5,13 @@ import com.vicherarr.memora.data.dto.LoginUserDto
 import com.vicherarr.memora.data.dto.RegisterResponseDto
 import com.vicherarr.memora.data.dto.RegisterUserDto
 import de.jensklingenberg.ktorfit.http.Body
-import de.jensklingenberg.ktorfit.http.Headers
 import de.jensklingenberg.ktorfit.http.POST
 
 interface AuthApi {
     
-    @Headers("Content-Type: application/json")
     @POST("autenticacion/login")
     suspend fun login(@Body request: LoginUserDto): LoginResponseDto
     
-    @Headers("Content-Type: application/json")
     @POST("autenticacion/registrar")
     suspend fun register(@Body request: RegisterUserDto): RegisterResponseDto
 }
