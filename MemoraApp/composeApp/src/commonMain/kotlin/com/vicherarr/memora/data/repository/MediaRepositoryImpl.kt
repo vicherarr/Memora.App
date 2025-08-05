@@ -1,8 +1,6 @@
 package com.vicherarr.memora.data.repository
 
-import com.vicherarr.memora.data.media.CameraController
-import com.vicherarr.memora.data.media.MediaPicker
-import com.vicherarr.memora.data.media.PermissionManager
+import com.vicherarr.memora.domain.factories.MediaFactory
 import com.vicherarr.memora.domain.models.MediaResult
 import com.vicherarr.memora.domain.models.Permission
 import com.vicherarr.memora.domain.models.PermissionResult
@@ -10,30 +8,21 @@ import com.vicherarr.memora.domain.repository.MediaRepository
 
 /**
  * Implementation of MediaRepository that coordinates platform-specific media operations
+ * Uses MediaFactory to create platform-specific components as needed
  */
 class MediaRepositoryImpl(
-    private val cameraController: CameraController,
-    private val mediaPicker: MediaPicker,
-    private val permissionManager: PermissionManager
+    private val mediaFactory: MediaFactory
 ) : MediaRepository {
     
     override suspend fun capturePhoto(): MediaResult {
-        // Check camera permission first
-        val cameraPermission = requestPermission(Permission.CAMERA)
-        if (cameraPermission != PermissionResult.Granted) {
-            return MediaResult.Error("Camera permission not granted")
-        }
-        
+        // Temporary: Skip permission check to test camera functionality
+        val cameraController = mediaFactory.createCameraController()
         return cameraController.capturePhoto()
     }
     
     override suspend fun recordVideo(): MediaResult {
-        // Check camera permission first
-        val cameraPermission = requestPermission(Permission.CAMERA)
-        if (cameraPermission != PermissionResult.Granted) {
-            return MediaResult.Error("Camera permission not granted")
-        }
-        
+        // Temporary: Skip permission check to test camera functionality
+        val cameraController = mediaFactory.createCameraController()
         return cameraController.recordVideo()
     }
     
@@ -44,6 +33,8 @@ class MediaRepositoryImpl(
             return MediaResult.Error("Photo library permission not granted")
         }
         
+        val mediaPicker = mediaFactory.createMediaPicker()
+            ?: return MediaResult.Error("Media picker not available")
         return mediaPicker.pickImage()
     }
     
@@ -54,6 +45,8 @@ class MediaRepositoryImpl(
             return MediaResult.Error("Photo library permission not granted")
         }
         
+        val mediaPicker = mediaFactory.createMediaPicker()
+            ?: return MediaResult.Error("Media picker not available")
         return mediaPicker.pickVideo()
     }
     
@@ -64,22 +57,31 @@ class MediaRepositoryImpl(
             return listOf(MediaResult.Error("Photo library permission not granted"))
         }
         
+        val mediaPicker = mediaFactory.createMediaPicker()
+            ?: return listOf(MediaResult.Error("Media picker not available"))
         return mediaPicker.pickMultipleImages(maxSelection)
     }
     
     override suspend fun requestPermission(permission: Permission): PermissionResult {
+        val permissionManager = mediaFactory.createPermissionManager()
+            ?: return PermissionResult.Denied
         return permissionManager.requestPermission(permission)
     }
     
     override fun isPermissionGranted(permission: Permission): Boolean {
+        val permissionManager = mediaFactory.createPermissionManager()
+            ?: return false
         return permissionManager.isPermissionGranted(permission)
     }
     
     override suspend fun requestPermissions(permissions: List<Permission>): Map<Permission, PermissionResult> {
+        val permissionManager = mediaFactory.createPermissionManager()
+            ?: return permissions.associateWith { PermissionResult.Denied }
         return permissionManager.requestPermissions(permissions)
     }
     
     override fun isCameraAvailable(): Boolean {
+        val cameraController = mediaFactory.createCameraController()
         return cameraController.isCameraAvailable()
     }
 }

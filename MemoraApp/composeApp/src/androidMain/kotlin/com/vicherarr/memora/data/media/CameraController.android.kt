@@ -20,8 +20,7 @@ import kotlin.coroutines.resume
  * Android implementation of CameraController using CameraX
  */
 actual class CameraController(
-    private val context: Context,
-    private val lifecycleOwner: LifecycleOwner
+    private val context: Context
 ) {
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
@@ -36,11 +35,19 @@ actual class CameraController(
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
             cameraProvider = cameraProviderFuture.get()
-            bindCameraUseCases()
+            // Try to bind camera if we have access to lifecycle
+            tryBindCamera()
         }, ContextCompat.getMainExecutor(context))
     }
     
-    private fun bindCameraUseCases() {
+    private fun tryBindCamera() {
+        val lifecycleOwner = com.vicherarr.memora.platform.ActivityRegistry.getCurrentActivity()
+        if (lifecycleOwner != null) {
+            bindCameraUseCases(lifecycleOwner)
+        }
+    }
+    
+    fun bindCameraUseCases(lifecycleOwner: LifecycleOwner) {
         val cameraProvider = cameraProvider ?: return
         
         // Image capture use case
@@ -74,6 +81,11 @@ actual class CameraController(
     }
     
     actual suspend fun capturePhoto(): MediaResult = suspendCancellableCoroutine { continuation ->
+        // Try to bind camera if not already done
+        if (imageCapture == null) {
+            tryBindCamera()
+        }
+        
         val imageCapture = imageCapture ?: run {
             continuation.resume(MediaResult.Error("Camera not initialized"))
             return@suspendCancellableCoroutine

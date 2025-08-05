@@ -53,6 +53,18 @@ enum class MediaType {
 }
 
 /**
+ * Types of media operations being performed
+ */
+enum class MediaOperationType {
+    NONE,
+    PHOTO_CAPTURE,
+    VIDEO_RECORDING,
+    IMAGE_SELECTION,
+    VIDEO_SELECTION,
+    MULTIPLE_SELECTION
+}
+
+/**
  * Permissions required for media operations
  */
 enum class Permission {

@@ -21,6 +21,7 @@ kotlinx-datetime = "0.7.1"
 voyager = "1.0.1"
 camerax = "1.4.1"
 androidx-permissions = "1.7.1"
+moko-permissions = "0.19.1"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -65,6 +66,10 @@ androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "
 androidx-camera-extensions = { module = "androidx.camera:camera-extensions", version.ref = "camerax" }
 # Permissions handling
 androidx-activity-result = { module = "androidx.activity:activity-ktx", version.ref = "androidx-activity" }
+# moko-permissions for multiplatform permissions
+moko-permissions = { module = "dev.icerock.moko:permissions", version.ref = "moko-permissions" }
+moko-permissions-camera = { module = "dev.icerock.moko:permissions-camera", version.ref = "moko-permissions" }
+moko-permissions-compose = { module = "dev.icerock.moko:permissions-compose", version.ref = "moko-permissions" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

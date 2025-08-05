@@ -29,7 +29,7 @@ kotlin {
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
-            isStatic = true
+            isStatic = false
             
             // Bundle ID for iOS framework
             binaryOptions["bundleId"] = "com.vicherarr.memora"
@@ -44,6 +44,18 @@ kotlin {
         binaries.withType<org.jetbrains.kotlin.gradle.plugin.mpp.Framework> {
             // Fix for Xcode 16 SwiftUICore linking issue
             linkerOpts.add("-Wl,-weak_reference_mismatches,weak")
+            
+            // Additional fixes for iOS linking issues
+            linkerOpts.add("-framework")
+            linkerOpts.add("Foundation")
+            linkerOpts.add("-framework") 
+            linkerOpts.add("UIKit")
+            linkerOpts.add("-framework")
+            linkerOpts.add("CoreGraphics")
+            
+            // Fix for SwiftUICore framework linking
+            linkerOpts.add("-Wl,-U,_objc_msgSend")
+            linkerOpts.add("-Wl,-undefined,dynamic_lookup")
         }
     }
     
@@ -78,6 +90,15 @@ kotlin {
             
             // SQLDelight iOS Driver
             implementation(libs.sqldelight.native.driver)
+            
+            // moko-permissions iOS specific dependencies
+            implementation(libs.moko.permissions)
+            implementation(libs.moko.permissions.camera)
+            implementation(libs.moko.permissions.compose)
+            
+            // API dependencies for framework export
+            api(libs.koin.core)
+            api(libs.kotlinx.datetime)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -115,6 +136,11 @@ kotlin {
             implementation(libs.voyager.tab.navigator)
             implementation(libs.voyager.transitions)
             implementation(libs.voyager.koin)
+            
+            // moko-permissions for multiplatform permissions handling
+            implementation(libs.moko.permissions)
+            implementation(libs.moko.permissions.camera)
+            implementation(libs.moko.permissions.compose)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

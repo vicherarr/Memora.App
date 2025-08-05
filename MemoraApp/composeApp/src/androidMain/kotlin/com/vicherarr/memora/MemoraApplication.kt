@@ -4,6 +4,7 @@ import android.app.Application
 import com.vicherarr.memora.di.appModule
 import com.vicherarr.memora.di.databaseModule
 import com.vicherarr.memora.di.androidDatabaseModule
+import com.vicherarr.memora.di.androidMediaModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 
@@ -21,7 +22,8 @@ class MemoraApplication : Application() {
             modules(
                 appModule,
                 databaseModule,
-                androidDatabaseModule
+                androidDatabaseModule,
+                androidMediaModule
             )
         }
     }

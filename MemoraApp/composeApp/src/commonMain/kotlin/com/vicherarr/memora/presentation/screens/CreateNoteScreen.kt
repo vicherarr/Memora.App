@@ -3,16 +3,20 @@ package com.vicherarr.memora.presentation.screens
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -110,6 +114,56 @@ class CreateNoteScreen : Screen {
                         placeholder = { Text("Escribe tu nota aquí...") },
                         enabled = !uiState.isLoading
                     )
+                    
+                    // Multimedia Actions - Navigate to multimedia screens
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceEvenly
+                    ) {
+                        // Camera Button Section
+                        Column(
+                            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+                        ) {
+                            IconButton(
+                                onClick = { 
+                                    navigator.push(CameraScreen())
+                                },
+                                enabled = !uiState.isLoading
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CameraAlt,
+                                    contentDescription = "Cámara"
+                                )
+                            }
+                            Text(
+                                text = "Cámara",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        
+                        // Gallery Button Section
+                        Column(
+                            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+                        ) {
+                            IconButton(
+                                onClick = { 
+                                    navigator.push(MediaPickerScreen(allowMultiple = true, maxSelection = 5))
+                                },
+                                enabled = !uiState.isLoading
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PhotoLibrary,
+                                    contentDescription = "Galería"
+                                )
+                            }
+                            Text(
+                                text = "Galería",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
                     
                     // Error message - Displayed based on UI State
                     uiState.errorMessage?.let { errorMessage ->

@@ -2,8 +2,10 @@ package com.vicherarr.memora.di
 
 import com.vicherarr.memora.data.repository.AuthRepositoryImpl
 import com.vicherarr.memora.data.repository.NotesRepositoryImpl
+import com.vicherarr.memora.data.repository.SimplifiedMediaRepository
 import com.vicherarr.memora.domain.repository.AuthRepository
 import com.vicherarr.memora.domain.repository.NotesRepository
+import com.vicherarr.memora.domain.repository.MediaRepository
 import com.vicherarr.memora.domain.validation.ValidationService
 import com.vicherarr.memora.domain.validation.ValidationServiceImpl
 import org.koin.dsl.module
@@ -19,5 +21,6 @@ val repositoryModule = module {
             notesApi = get()
         ) 
     }
+    single<MediaRepository> { SimplifiedMediaRepository() }
     single<ValidationService> { ValidationServiceImpl() }
 }
