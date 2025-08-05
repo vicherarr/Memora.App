@@ -60,6 +60,17 @@ kotlin {
             
             // Koin Android
             implementation(libs.koin.android)
+            
+            // CameraX dependencies for multimedia
+            implementation(libs.androidx.camera.core)
+            implementation(libs.androidx.camera.camera2)
+            implementation(libs.androidx.camera.lifecycle)
+            implementation(libs.androidx.camera.video)
+            implementation(libs.androidx.camera.view)
+            implementation(libs.androidx.camera.extensions)
+            
+            // Activity Result API for permissions
+            implementation(libs.androidx.activity.result)
         }
         iosMain.dependencies {
             // Ktor iOS HTTP Client  
