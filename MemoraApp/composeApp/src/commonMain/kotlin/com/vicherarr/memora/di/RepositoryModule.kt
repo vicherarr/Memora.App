@@ -18,6 +18,7 @@ val repositoryModule = module {
     single<NotesRepository> { 
         NotesRepositoryImpl(
             notesDao = get(),
+            attachmentsDao = get(),
             notesApi = get()
         ) 
     }

@@ -1,0 +1,94 @@
+-- Attachments table schema matching EXACTLY the backend API
+-- API: ArchivoAdjunto.cs -> SQLDelight local storage + sync fields
+
+CREATE TABLE attachments (
+    id TEXT NOT NULL PRIMARY KEY,
+    datos_archivo BLOB NOT NULL,
+    nombre_original TEXT NOT NULL,
+    tipo_archivo INTEGER NOT NULL, -- 1=Imagen, 2=Video (matching TipoDeArchivo enum)
+    tipo_mime TEXT NOT NULL,
+    tamano_bytes INTEGER NOT NULL,
+    fecha_subida TEXT NOT NULL,
+    nota_id TEXT NOT NULL,
+    
+    -- Sync management fields for local-first architecture
+    sync_status TEXT NOT NULL DEFAULT 'PENDING',
+    needs_upload INTEGER NOT NULL DEFAULT 1,
+    local_created_at INTEGER NOT NULL,
+    last_sync_attempt INTEGER,
+    
+    FOREIGN KEY (nota_id) REFERENCES notes(id) ON DELETE CASCADE
+);
+
+-- Indexes for faster queries
+CREATE INDEX attachments_nota_id_idx ON attachments(nota_id);
+CREATE INDEX attachments_sync_status_idx ON attachments(sync_status);
+CREATE INDEX attachments_needs_upload_idx ON attachments(needs_upload);
+CREATE INDEX attachments_tipo_archivo_idx ON attachments(tipo_archivo);
+
+-- Queries
+getAllAttachments:
+SELECT * FROM attachments ORDER BY fecha_subida DESC;
+
+getAttachmentsByNoteId:
+SELECT * FROM attachments 
+WHERE nota_id = ? 
+ORDER BY fecha_subida DESC;
+
+getAttachmentById:
+SELECT * FROM attachments WHERE id = ?;
+
+getAttachmentsNeedingSync:
+SELECT * FROM attachments 
+WHERE sync_status = 'PENDING' OR sync_status = 'FAILED'
+ORDER BY local_created_at ASC;
+
+insertAttachment:
+INSERT INTO attachments (
+    id, datos_archivo, nombre_original, tipo_archivo, tipo_mime,
+    tamano_bytes, fecha_subida, nota_id, sync_status, needs_upload, local_created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateAttachment:
+UPDATE attachments 
+SET datos_archivo = ?, nombre_original = ?, tipo_archivo = ?, 
+    tipo_mime = ?, tamano_bytes = ?, fecha_subida = ?,
+    sync_status = 'PENDING', needs_upload = 1
+WHERE id = ?;
+
+updateSyncStatus:
+UPDATE attachments 
+SET sync_status = ?, needs_upload = ?, last_sync_attempt = ?
+WHERE id = ?;
+
+deleteAttachment:
+DELETE FROM attachments WHERE id = ?;
+
+deleteAttachmentsByNoteId:
+DELETE FROM attachments WHERE nota_id = ?;
+
+markAsSynced:
+UPDATE attachments 
+SET sync_status = 'SYNCED', needs_upload = 0, last_sync_attempt = ?
+WHERE id = ?;
+
+markSyncFailed:
+UPDATE attachments 
+SET sync_status = 'FAILED', last_sync_attempt = ?
+WHERE id = ?;
+
+-- Count attachments per note (useful for UI)
+countAttachmentsByNoteId:
+SELECT COUNT(*) FROM attachments WHERE nota_id = ?;
+
+-- Get image attachments only
+getImageAttachmentsByNoteId:
+SELECT * FROM attachments 
+WHERE nota_id = ? AND tipo_archivo = 1
+ORDER BY fecha_subida DESC;
+
+-- Get video attachments only
+getVideoAttachmentsByNoteId:
+SELECT * FROM attachments 
+WHERE nota_id = ? AND tipo_archivo = 2
+ORDER BY fecha_subida DESC;

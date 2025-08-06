@@ -1,12 +1,16 @@
 package com.vicherarr.memora.data.repository
 
 import com.vicherarr.memora.data.api.NotesApi
+import com.vicherarr.memora.data.database.AttachmentsDao
 import com.vicherarr.memora.data.database.NotesDao
 import com.vicherarr.memora.data.database.getCurrentTimestamp
 import com.vicherarr.memora.data.dto.CreateNotaDto
 import com.vicherarr.memora.data.dto.UpdateNotaDto
 import com.vicherarr.memora.database.Notes
+import com.vicherarr.memora.database.Attachments
 import com.vicherarr.memora.domain.models.Note
+import com.vicherarr.memora.domain.models.ArchivoAdjunto
+import com.vicherarr.memora.domain.models.TipoDeArchivo
 import com.vicherarr.memora.domain.repository.NotesRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -19,6 +23,7 @@ import kotlinx.coroutines.flow.map
  */
 class NotesRepositoryImpl(
     private val notesDao: NotesDao,
+    private val attachmentsDao: AttachmentsDao,
     private val notesApi: NotesApi
 ) : NotesRepository {
     
@@ -29,7 +34,9 @@ class NotesRepositoryImpl(
         return try {
             // LOCAL-FIRST: Get notes from local database immediately
             val localNotes = notesDao.getNotesByUserId(currentUserId)
-            val domainNotes = localNotes.map { it.toDomainModel() }
+            val domainNotes = localNotes.map { note ->
+                note.toDomainModelWithAttachments()
+            }
             
             // TODO: Background sync with API will be handled by SyncRepository
             Result.success(domainNotes)
@@ -145,6 +152,43 @@ class NotesRepositoryImpl(
             fechaCreacion = this.fecha_creacion.toLongOrNull() ?: getCurrentTimestamp(),
             fechaModificacion = this.fecha_modificacion.toLongOrNull() ?: getCurrentTimestamp(),
             usuarioId = this.usuario_id
+        )
+    }
+    
+    /**
+     * Convert SQLDelight Notes entity to Domain model WITH attachments
+     */
+    private suspend fun Notes.toDomainModelWithAttachments(): Note {
+        val attachments = attachmentsDao.getAttachmentsByNoteId(this.id)
+        
+        return Note(
+            id = this.id,
+            titulo = this.titulo,
+            contenido = this.contenido,
+            fechaCreacion = this.fecha_creacion.toLongOrNull() ?: getCurrentTimestamp(),
+            fechaModificacion = this.fecha_modificacion.toLongOrNull() ?: getCurrentTimestamp(),
+            usuarioId = this.usuario_id,
+            archivosAdjuntos = attachments.map { it.toDomainModel() }
+        )
+    }
+    
+    /**
+     * Convert SQLDelight Attachments entity to Domain model
+     */
+    private fun Attachments.toDomainModel(): ArchivoAdjunto {
+        return ArchivoAdjunto(
+            id = this.id,
+            datosArchivo = this.datos_archivo,
+            nombreOriginal = this.nombre_original,
+            tipoArchivo = when (this.tipo_archivo.toInt()) {
+                1 -> TipoDeArchivo.Imagen
+                2 -> TipoDeArchivo.Video
+                else -> TipoDeArchivo.Imagen
+            },
+            tipoMime = this.tipo_mime,
+            tamanoBytes = this.tamano_bytes,
+            fechaSubida = this.fecha_subida.toLongOrNull() ?: getCurrentTimestamp(),
+            notaId = this.nota_id
         )
     }
 }

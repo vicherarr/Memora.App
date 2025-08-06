@@ -19,6 +19,13 @@ class DatabaseManager(private val driverFactory: DatabaseDriverFactory) {
     }
     
     /**
+     * Attachments Data Access Object
+     */
+    val attachmentsDao: AttachmentsDao by lazy {
+        AttachmentsDao(database)
+    }
+    
+    /**
      * Get direct access to database if needed
      */
     fun getDatabase(): MemoraDatabase = database

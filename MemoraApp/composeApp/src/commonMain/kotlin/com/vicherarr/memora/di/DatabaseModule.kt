@@ -1,5 +1,6 @@
 package com.vicherarr.memora.di
 
+import com.vicherarr.memora.data.database.AttachmentsDao
 import com.vicherarr.memora.data.database.DatabaseDriverFactory
 import com.vicherarr.memora.data.database.DatabaseManager
 import com.vicherarr.memora.data.database.NotesDao
@@ -22,5 +23,10 @@ val databaseModule = module {
     // NotesDao - from DatabaseManager
     single<NotesDao> {
         get<DatabaseManager>().notesDao
+    }
+    
+    // AttachmentsDao - from DatabaseManager
+    single<AttachmentsDao> {
+        get<DatabaseManager>().attachmentsDao
     }
 }

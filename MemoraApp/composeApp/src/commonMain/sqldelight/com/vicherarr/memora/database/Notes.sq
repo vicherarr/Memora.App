@@ -30,6 +30,7 @@ SELECT * FROM notes
 WHERE usuario_id = ? 
 ORDER BY fecha_modificacion DESC;
 
+
 getNoteById:
 SELECT * FROM notes WHERE id = ?;
 
