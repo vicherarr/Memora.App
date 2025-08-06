@@ -31,3 +31,17 @@ expect class GalleryManager(
 ) {
     fun launch()
 }
+
+/**
+ * Video picker manager using expect/actual pattern
+ */
+@Composable
+expect fun rememberVideoPickerManager(
+    onResult: (MediaFile?) -> Unit
+): VideoPickerManager
+
+expect class VideoPickerManager(
+    onLaunch: () -> Unit
+) {
+    fun launch()
+}

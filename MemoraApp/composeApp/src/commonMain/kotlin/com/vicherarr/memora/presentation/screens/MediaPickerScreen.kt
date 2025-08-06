@@ -22,6 +22,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.vicherarr.memora.domain.models.MediaResult
 import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
 import com.vicherarr.memora.platform.camera.rememberGalleryManager
+import com.vicherarr.memora.platform.camera.rememberVideoPickerManager
 import org.koin.compose.koinInject
 
 /**
@@ -61,6 +62,32 @@ data class MediaPickerScreen(
             } ?: run {
                 // Si mediaFile es null, significa que se canceló o falló
                 println("MediaPickerScreen: mediaFile is null - clearing error")
+                mediaViewModel.clearError()
+            }
+        }
+        
+        // Video Picker Manager para selección de videos
+        val videoPickerManager = rememberVideoPickerManager { mediaFile ->
+            println("MediaPickerScreen: Video callback received - mediaFile: ${mediaFile != null}")
+            
+            mediaViewModel.setLoading(false) // Finalizar loading
+            println("MediaPickerScreen: Video loading set to false")
+            
+            mediaFile?.let { 
+                println("MediaPickerScreen: Processing video mediaFile - size: ${it.sizeBytes} bytes")
+                // Siempre usar selectedMedia para consistencia en la UI
+                if (allowMultiple) {
+                    mediaViewModel.addToSelectedMedia(it)
+                    println("MediaPickerScreen: Added video to selected media (multiple mode)")
+                } else {
+                    // Para modo simple, limpiar lista y agregar solo este video
+                    mediaViewModel.clearSelectedMedia()
+                    mediaViewModel.addToSelectedMedia(it)
+                    println("MediaPickerScreen: Added video to selected media (single mode)")
+                }
+            } ?: run {
+                // Si mediaFile es null, significa que se canceló o falló
+                println("MediaPickerScreen: video mediaFile is null - clearing error")
                 mediaViewModel.clearError()
             }
         }
@@ -157,16 +184,26 @@ data class MediaPickerScreen(
                         
                         Spacer(modifier = Modifier.width(16.dp))
                         
-                        // Pick Video Button (temporalmente deshabilitado hasta implementar video picker)
+                        // Pick Video Button
                         ElevatedButton(
                             onClick = {
-                                // TODO: Implementar video picker
-                                mediaViewModel.clearError()
+                                println("MediaPickerScreen: Pick Video button clicked")
+                                mediaViewModel.setLoading(true)
+                                println("MediaPickerScreen: Loading set to true, launching video picker")
+                                videoPickerManager.launch()
+                                println("MediaPickerScreen: Video picker launch called")
                             },
-                            enabled = false, // Temporalmente deshabilitado
+                            enabled = !uiState.isLoading,
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Elegir Video")
+                            if (uiState.isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("Elegir Video")
+                            }
                         }
                     }
                 }

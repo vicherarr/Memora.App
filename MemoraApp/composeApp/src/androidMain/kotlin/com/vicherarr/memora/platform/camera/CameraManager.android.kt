@@ -226,3 +226,104 @@ actual class GalleryManager actual constructor(
         onLaunch()
     }
 }
+
+/**
+ * Android implementation of VideoPickerManager using ActivityResultContracts.GetContent
+ * Specifically configured for video selection only
+ */
+@Composable
+actual fun rememberVideoPickerManager(
+    onResult: (MediaFile?) -> Unit
+): VideoPickerManager {
+    val context = LocalContext.current
+    val contentResolver = context.contentResolver
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Professional moko-permissions setup following official docs
+    val factory = rememberPermissionsControllerFactory()
+    val controller: PermissionsController = remember(factory) { 
+        factory.createPermissionsController() 
+    }
+    
+    // Essential for proper lifecycle handling on Android
+    BindEffect(controller)
+    
+    val videoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri ->
+            println("Android VideoPickerManager: URI received: ${uri != null}")
+            if (uri != null) {
+                try {
+                    val inputStream = contentResolver.openInputStream(uri)
+                    val bytes = inputStream?.readBytes()
+                    inputStream?.close()
+                    
+                    if (bytes != null) {
+                        // Get file name from URI
+                        val fileName = uri.pathSegments.lastOrNull() ?: "video_${System.currentTimeMillis()}.mp4"
+                        
+                        // Get MIME type (should be video/*)
+                        val mimeType = contentResolver.getType(uri) ?: "video/mp4"
+                        println("Android VideoPickerManager: Video loaded, size: ${bytes.size}, mimeType: $mimeType")
+                        
+                        val mediaFile = MediaFile(
+                            data = bytes,
+                            fileName = fileName,
+                            mimeType = mimeType,
+                            type = MediaType.VIDEO,
+                            sizeBytes = bytes.size.toLong()
+                        )
+                        onResult(mediaFile)
+                        println("Android VideoPickerManager: MediaFile created and callback executed")
+                    } else {
+                        onResult(null)
+                        println("Android VideoPickerManager: Failed to read video bytes")
+                    }
+                } catch (e: Exception) {
+                    println("Android VideoPickerManager: Exception: ${e.message}")
+                    onResult(null)
+                }
+            } else {
+                onResult(null)
+                println("Android VideoPickerManager: URI is null (cancelled)")
+            }
+        }
+    )
+    
+    return remember {
+        VideoPickerManager(
+            onLaunch = {
+                println("Android VideoPickerManager: onLaunch called")
+                coroutineScope.launch {
+                    try {
+                        // Android's ActivityResultContracts.GetContent() doesn't require explicit permissions
+                        // for accessing MediaStore content in modern Android versions
+                        
+                        // Launch video picker (only videos)
+                        println("Android VideoPickerManager: Launching video picker")
+                        videoLauncher.launch("video/*")
+                        
+                    } catch (deniedAlways: DeniedAlwaysException) {
+                        // Permission is permanently denied - redirect to settings
+                        controller.openAppSettings()
+                        onResult(null)
+                    } catch (denied: DeniedException) {
+                        // Permission was denied this time
+                        onResult(null)
+                    } catch (e: Exception) {
+                        println("Android VideoPickerManager: Launch exception: ${e.message}")
+                        onResult(null)
+                    }
+                }
+            }
+        )
+    }
+}
+
+actual class VideoPickerManager actual constructor(
+    private val onLaunch: () -> Unit
+) {
+    actual fun launch() {
+        onLaunch()
+    }
+}

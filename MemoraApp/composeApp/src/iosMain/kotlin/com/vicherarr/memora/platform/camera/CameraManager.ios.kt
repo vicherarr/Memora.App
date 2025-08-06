@@ -20,6 +20,7 @@ import kotlinx.coroutines.withContext
 import platform.Foundation.*
 import platform.UIKit.*
 import platform.UniformTypeIdentifiers.UTTypeImage
+import platform.UniformTypeIdentifiers.UTTypeMovie
 import platform.darwin.NSObject
 
 /**
@@ -277,6 +278,136 @@ private fun createSimpleGalleryDelegate(
             
             onResult(null)
             println("iOS Gallery Delegate: onResult(null) called for cancel")
+        }
+    }
+}
+
+// Global video delegate holder to prevent garbage collection
+private var currentVideoDelegate: UIImagePickerControllerDelegateProtocol? = null
+
+/**
+ * iOS implementation of VideoPickerManager using UIImagePickerController
+ * Simplified without moko-permissions since iOS Photo Library doesn't require explicit permissions
+ */
+@Composable
+actual fun rememberVideoPickerManager(
+    onResult: (MediaFile?) -> Unit
+): VideoPickerManager {
+    return remember {
+        VideoPickerManager(
+            onLaunch = {
+                println("iOS VideoPickerManager: onLaunch called")
+                
+                // Direct UIKit integration for video selection
+                if (UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypePhotoLibrary)) {
+                    println("iOS VideoPickerManager: Photo library is available")
+                    
+                    val picker = UIImagePickerController()
+                    picker.sourceType = UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypePhotoLibrary
+                    picker.mediaTypes = listOf(UTTypeMovie.identifier) // Only videos
+                    
+                    // Create delegate and keep reference to prevent GC
+                    val delegate = createSimpleVideoDelegate(onResult)
+                    currentVideoDelegate = delegate // Keep strong reference
+                    picker.delegate = delegate as UINavigationControllerDelegateProtocol
+                    
+                    println("iOS VideoPickerManager: Delegate set, about to present picker")
+                    
+                    // Present photo library on main thread
+                    val rootViewController = UIApplication.sharedApplication.keyWindow?.rootViewController
+                    if (rootViewController != null) {
+                        println("iOS VideoPickerManager: Root view controller found, presenting picker")
+                        rootViewController.presentViewController(picker, animated = true, completion = null)
+                    } else {
+                        println("iOS VideoPickerManager: ERROR - Root view controller is null")
+                        onResult(null)
+                    }
+                } else {
+                    println("iOS VideoPickerManager: ERROR - Photo library not available")
+                    onResult(null)
+                }
+            }
+        )
+    }
+}
+
+actual class VideoPickerManager actual constructor(
+    private val onLaunch: () -> Unit
+) {
+    actual fun launch() {
+        onLaunch()
+    }
+}
+
+/**
+ * Creates simplified video delegate for handling UIImagePickerController video results
+ * Direct callback without coroutines to avoid threading issues
+ */
+@OptIn(ExperimentalForeignApi::class)
+private fun createSimpleVideoDelegate(
+    onResult: (MediaFile?) -> Unit
+): UIImagePickerControllerDelegateProtocol {
+    return object : NSObject(), UIImagePickerControllerDelegateProtocol, UINavigationControllerDelegateProtocol {
+        override fun imagePickerController(
+            picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo: Map<Any?, *>
+        ) {
+            println("iOS Video Delegate: imagePickerController didFinishPickingMediaWithInfo called")
+            
+            // Dismiss picker AFTER processing
+            picker.dismissViewControllerAnimated(true, completion = null)
+            
+            // Clean up delegate reference
+            currentVideoDelegate = null
+            
+            // Get video URL from the picker info
+            val videoURL = didFinishPickingMediaWithInfo[UIImagePickerControllerMediaURL] as? NSURL
+            println("iOS Video Delegate: video URL extracted: ${videoURL != null}")
+            
+            val mediaFile = if (videoURL != null) {
+                try {
+                    // Read video data from URL
+                    val videoData = NSData.dataWithContentsOfURL(videoURL)
+                    println("iOS Video Delegate: videoData loaded: ${videoData != null}")
+                    
+                    if (videoData != null) {
+                        val bytes = ByteArray(videoData.length.toInt())
+                        bytes.usePinned { pinned ->
+                            videoData.getBytes(pinned.addressOf(0), videoData.length.toULong())
+                        }
+                        
+                        val mediaFile = MediaFile(
+                            data = bytes,
+                            fileName = "video_${NSDate().timeIntervalSince1970.toLong()}.mp4",
+                            mimeType = "video/mp4",
+                            type = MediaType.VIDEO,
+                            sizeBytes = bytes.size.toLong()
+                        )
+                        println("iOS Video Delegate: MediaFile created, size: ${bytes.size}")
+                        mediaFile
+                    } else null
+                } catch (e: Exception) {
+                    println("iOS Video Delegate: Error processing video: ${e.message}")
+                    null
+                }
+            } else null
+            
+            println("iOS Video Delegate: About to call onResult with mediaFile: ${mediaFile != null}")
+            
+            // Direct callback - we're already on main thread
+            onResult(mediaFile)
+            println("iOS Video Delegate: onResult called")
+        }
+        
+        override fun imagePickerControllerDidCancel(picker: UIImagePickerController) {
+            println("iOS Video Delegate: imagePickerControllerDidCancel called")
+            picker.dismissViewControllerAnimated(true, completion = null)
+            
+            // Clean up delegate reference
+            currentVideoDelegate = null
+            
+            onResult(null)
+            println("iOS Video Delegate: onResult(null) called for cancel")
         }
     }
 }
