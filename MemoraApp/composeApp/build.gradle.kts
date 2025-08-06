@@ -141,6 +141,10 @@ kotlin {
             implementation(libs.moko.permissions)
             implementation(libs.moko.permissions.camera)
             implementation(libs.moko.permissions.compose)
+            
+            // Coil for image loading
+            implementation(libs.coil)
+            implementation(libs.coil.compose)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

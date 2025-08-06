@@ -3,19 +3,25 @@ package com.vicherarr.memora.presentation.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.vicherarr.memora.domain.models.MediaResult
 import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
+import com.vicherarr.memora.platform.camera.rememberGalleryManager
 import org.koin.compose.koinInject
 
 /**
@@ -32,6 +38,32 @@ data class MediaPickerScreen(
         val navigator = LocalNavigator.currentOrThrow
         val mediaViewModel: MediaViewModel = koinInject()
         val uiState by mediaViewModel.uiState.collectAsState()
+        
+        // Gallery Manager para selección de imágenes
+        val galleryManager = rememberGalleryManager { mediaFile ->
+            println("MediaPickerScreen: Gallery callback received - mediaFile: ${mediaFile != null}")
+            
+            mediaViewModel.setLoading(false) // Finalizar loading
+            println("MediaPickerScreen: Loading set to false")
+            
+            mediaFile?.let { 
+                println("MediaPickerScreen: Processing mediaFile - size: ${it.sizeBytes} bytes")
+                // Siempre usar selectedMedia para consistencia en la UI
+                if (allowMultiple) {
+                    mediaViewModel.addToSelectedMedia(it)
+                    println("MediaPickerScreen: Added to selected media (multiple mode)")
+                } else {
+                    // Para modo simple, limpiar lista y agregar solo esta imagen
+                    mediaViewModel.clearSelectedMedia()
+                    mediaViewModel.addToSelectedMedia(it)
+                    println("MediaPickerScreen: Added to selected media (single mode)")
+                }
+            } ?: run {
+                // Si mediaFile es null, significa que se canceló o falló
+                println("MediaPickerScreen: mediaFile is null - clearing error")
+                mediaViewModel.clearError()
+            }
+        }
         
         Box(
             modifier = Modifier
@@ -58,12 +90,12 @@ data class MediaPickerScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ArrowBack,
-                                contentDescription = "Back"
+                                contentDescription = "Volver"
                             )
                         }
                         
                         Text(
-                            text = if (allowMultiple) "Select Media" else "Pick Media",
+                            text = if (allowMultiple) "Seleccionar Multimedia" else "Elegir Multimedia",
                             style = MaterialTheme.typography.titleLarge
                         )
                         
@@ -76,7 +108,7 @@ data class MediaPickerScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
-                                    contentDescription = "Confirm Selection"
+                                    contentDescription = "Confirmar Selección"
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("${uiState.selectedMedia.size}")
@@ -102,31 +134,39 @@ data class MediaPickerScreen(
                         // Pick Image Button
                         ElevatedButton(
                             onClick = {
-                                if (allowMultiple) {
-                                    mediaViewModel.pickMultipleImages(maxSelection)
-                                } else {
-                                    mediaViewModel.pickImage()
-                                }
+                                println("MediaPickerScreen: Pick Image button clicked")
+                                mediaViewModel.setLoading(true)
+                                println("MediaPickerScreen: Loading set to true, launching gallery")
+                                galleryManager.launch()
+                                println("MediaPickerScreen: Gallery launch called")
                             },
                             enabled = !uiState.isLoading,
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text(
-                                text = if (allowMultiple) "Pick Images" else "Pick Image"
-                            )
+                            if (uiState.isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text(
+                                    text = if (allowMultiple) "Elegir Imágenes" else "Elegir Imagen"
+                                )
+                            }
                         }
                         
                         Spacer(modifier = Modifier.width(16.dp))
                         
-                        // Pick Video Button
+                        // Pick Video Button (temporalmente deshabilitado hasta implementar video picker)
                         ElevatedButton(
                             onClick = {
-                                mediaViewModel.pickVideo()
+                                // TODO: Implementar video picker
+                                mediaViewModel.clearError()
                             },
-                            enabled = !uiState.isLoading && !allowMultiple, // Only single video for now
+                            enabled = false, // Temporalmente deshabilitado
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Pick Video")
+                            Text("Elegir Video")
                         }
                     }
                 }
@@ -155,18 +195,72 @@ data class MediaPickerScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                                     ) {
-                                        Column(
-                                            modifier = Modifier.padding(16.dp)
+                                        Row(
+                                            modifier = Modifier.padding(16.dp),
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text(
-                                                text = mediaFile.fileName,
-                                                style = MaterialTheme.typography.titleMedium
-                                            )
-                                            Text(
-                                                text = "${mediaFile.type.name} • ${formatFileSize(mediaFile.sizeBytes)}",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                            // Preview de la imagen usando Coil
+                                            if (mediaFile.type.name == "IMAGE") {
+                                                AsyncImage(
+                                                    model = mediaFile.data,
+                                                    contentDescription = mediaFile.fileName,
+                                                    modifier = Modifier
+                                                        .size(64.dp)
+                                                        .clip(RoundedCornerShape(8.dp)),
+                                                    contentScale = ContentScale.Crop,
+                                                    error = null // Coil manejará automáticamente los errores
+                                                )
+                                            } else {
+                                                // Placeholder para videos
+                                                Surface(
+                                                    modifier = Modifier
+                                                        .size(64.dp)
+                                                        .clip(RoundedCornerShape(8.dp)),
+                                                    color = MaterialTheme.colorScheme.surfaceVariant
+                                                ) {
+                                                    Box(
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Text(
+                                                            "VID", 
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            
+                                            Spacer(modifier = Modifier.width(16.dp))
+                                            
+                                            // Información del archivo
+                                            Column(
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Text(
+                                                    text = mediaFile.fileName,
+                                                    style = MaterialTheme.typography.titleMedium
+                                                )
+                                                Text(
+                                                    text = "${mediaFile.type.name} • ${formatFileSize(mediaFile.sizeBytes)}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            
+                                            // Botón para eliminar si es modo múltiple
+                                            if (allowMultiple) {
+                                                IconButton(
+                                                    onClick = {
+                                                        mediaViewModel.removeFromSelectedMedia(mediaFile)
+                                                    }
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Close,
+                                                        contentDescription = "Eliminar",
+                                                        tint = MaterialTheme.colorScheme.error
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -179,13 +273,13 @@ data class MediaPickerScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
-                                    text = "No media selected",
+                                    text = "Sin multimedia seleccionada",
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Tap a button above to select media",
+                                    text = "Toca un botón arriba para seleccionar multimedia",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

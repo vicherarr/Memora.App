@@ -11,6 +11,12 @@ object ApiConfig {
     const val API_PORT = 5003
     
     /**
+     * Development machine IP in local network
+     * Used by real devices (Android & iOS) to connect to dev server
+     */
+    const val DEV_MACHINE_IP = "192.168.1.153"
+    
+    /**
      * Base URL for API - platform specific
      * Android Emulator: 10.0.2.2 (special IP for host machine)
      * iOS Simulator: localhost (works directly)
