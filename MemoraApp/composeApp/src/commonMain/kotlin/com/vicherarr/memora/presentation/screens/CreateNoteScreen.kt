@@ -41,8 +41,10 @@ class CreateNoteScreen : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val koin = getKoin()
+        
+        // Use the same MediaViewModel instance that CreateNoteViewModel receives
+        val mediaViewModel: MediaViewModel = remember { koin.get() }
         val createNoteViewModel: CreateNoteViewModel = remember { koin.get() }
-        val mediaViewModel: MediaViewModel = koinInject()
         
         // Observe UI States from both ViewModels
         val noteUiState by createNoteViewModel.uiState.collectAsState()
@@ -360,7 +362,7 @@ class CreateNoteScreen : Screen {
                 onClick = createNoteViewModel::createNote,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(16.dp),
+                    .padding(bottom = 88.dp, end = 16.dp), // Extra padding para evitar que lo tape la barra de tabs
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
                 if (noteUiState.isLoading || mediaUiState.isLoading) {

@@ -26,7 +26,8 @@ data class CreateNoteUiState(
  * Single Responsibility: Only handles note creation operations
  */
 class CreateNoteViewModel(
-    private val notesRepository: NotesRepository
+    private val notesRepository: NotesRepository,
+    private val mediaViewModel: MediaViewModel
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(CreateNoteUiState())
@@ -47,10 +48,11 @@ class CreateNoteViewModel(
     }
     
     /**
-     * Create note operation - Direct method call
+     * Create note operation - Direct method call with media attachments
      */
     fun createNote() {
         val currentState = _uiState.value
+        val selectedMedia = mediaViewModel.uiState.value.selectedMedia
         
         viewModelScope.launch {
             _uiState.value = currentState.copy(isLoading = true, errorMessage = null)
@@ -65,12 +67,27 @@ class CreateNoteViewModel(
                 return@launch
             }
             
-            // Create note through repository
-            notesRepository.createNote(
-                titulo = if (currentState.titulo.isBlank()) null else currentState.titulo.trim(),
-                contenido = currentState.contenido.trim()
-            )
+            // Create note through repository with attachments
+            val result = if (selectedMedia.isNotEmpty()) {
+                // Create note with attachments
+                notesRepository.createNoteWithAttachments(
+                    titulo = if (currentState.titulo.isBlank()) null else currentState.titulo.trim(),
+                    contenido = currentState.contenido.trim(),
+                    attachments = selectedMedia
+                )
+            } else {
+                // Create note without attachments
+                notesRepository.createNote(
+                    titulo = if (currentState.titulo.isBlank()) null else currentState.titulo.trim(),
+                    contenido = currentState.contenido.trim()
+                )
+            }
+            
+            result
                 .onSuccess {
+                    // Clear media from MediaViewModel after successful save
+                    mediaViewModel.clearSelectedMedia()
+                    
                     _uiState.value = currentState.copy(
                         isLoading = false,
                         isNoteSaved = true

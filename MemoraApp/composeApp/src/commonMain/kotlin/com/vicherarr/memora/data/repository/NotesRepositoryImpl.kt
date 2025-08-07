@@ -11,6 +11,8 @@ import com.vicherarr.memora.database.Attachments
 import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.domain.models.ArchivoAdjunto
 import com.vicherarr.memora.domain.models.TipoDeArchivo
+import com.vicherarr.memora.domain.models.MediaFile
+import com.vicherarr.memora.domain.models.MediaType
 import com.vicherarr.memora.domain.repository.NotesRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -47,10 +49,10 @@ class NotesRepositoryImpl(
     
     override suspend fun getNoteById(id: String): Result<Note> {
         return try {
-            // LOCAL-FIRST: Get note from local database
+            // LOCAL-FIRST: Get note from local database WITH attachments
             val localNote = notesDao.getNoteById(id)
             if (localNote != null) {
-                Result.success(localNote.toDomainModel())
+                Result.success(localNote.toDomainModelWithAttachments())
             } else {
                 Result.failure(Exception("Note not found"))
             }
@@ -85,6 +87,80 @@ class NotesRepositoryImpl(
                 fechaCreacion = getCurrentTimestamp(),
                 fechaModificacion = getCurrentTimestamp(),
                 usuarioId = currentUserId
+            )
+            
+            // TODO: Background sync will be handled by SyncRepository
+            Result.success(createdNote)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    override suspend fun createNoteWithAttachments(titulo: String?, contenido: String, attachments: List<MediaFile>): Result<Note> {
+        return try {
+            // Generate simple ID without experimental APIs
+            val noteId = "note_${getCurrentTimestamp()}"
+            val now = getCurrentTimestamp().toString()
+            
+            // LOCAL-FIRST: Insert note to local database immediately  
+            notesDao.insertNote(
+                id = noteId,
+                titulo = titulo?.takeIf { it.isNotBlank() },
+                contenido = contenido,
+                fechaCreacion = now,
+                fechaModificacion = now,
+                usuarioId = currentUserId,
+                syncStatus = "PENDING", // Mark for sync
+                needsUpload = 1
+            )
+            
+            // Insert attachments
+            val attachmentsList = mutableListOf<ArchivoAdjunto>()
+            attachments.forEachIndexed { index, mediaFile ->
+                val attachmentId = "attachment_${getCurrentTimestamp()}_$index"
+                
+                // Convert MediaType to TipoDeArchivo
+                val tipoArchivo = when (mediaFile.type) {
+                    MediaType.IMAGE -> TipoDeArchivo.Imagen
+                    MediaType.VIDEO -> TipoDeArchivo.Video
+                }
+                
+                // Insert attachment to database
+                attachmentsDao.insertAttachment(
+                    id = attachmentId,
+                    datosArchivo = mediaFile.data,
+                    nombreOriginal = mediaFile.fileName,
+                    tipoArchivo = tipoArchivo.ordinal.toLong() + 1, // 1=Imagen, 2=Video
+                    tipoMime = mediaFile.mimeType ?: "application/octet-stream",
+                    tamanoBytes = mediaFile.data.size.toLong(),
+                    fechaSubida = now,
+                    notaId = noteId
+                )
+                
+                // Create domain model for return value
+                attachmentsList.add(
+                    ArchivoAdjunto(
+                        id = attachmentId,
+                        datosArchivo = mediaFile.data,
+                        nombreOriginal = mediaFile.fileName,
+                        tipoArchivo = tipoArchivo,
+                        tipoMime = mediaFile.mimeType ?: "application/octet-stream",
+                        tamanoBytes = mediaFile.data.size.toLong(),
+                        fechaSubida = getCurrentTimestamp(),
+                        notaId = noteId
+                    )
+                )
+            }
+            
+            // Return the created note with attachments
+            val createdNote = Note(
+                id = noteId,
+                titulo = titulo?.takeIf { it.isNotBlank() },
+                contenido = contenido,
+                fechaCreacion = getCurrentTimestamp(),
+                fechaModificacion = getCurrentTimestamp(),
+                usuarioId = currentUserId,
+                archivosAdjuntos = attachmentsList
             )
             
             // TODO: Background sync will be handled by SyncRepository

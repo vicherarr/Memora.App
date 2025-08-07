@@ -16,8 +16,8 @@ import org.koin.dsl.module
 val viewModelModule = module {
     factory { LoginViewModel(get(), get()) } // AuthRepository + ValidationService
     factory { RegisterViewModel(get(), get()) } // AuthRepository + ValidationService
-    factory { CreateNoteViewModel(get()) }
+    single { MediaViewModel() } // Singleton - shared across CreateNoteViewModel and CreateNoteScreen
+    factory { CreateNoteViewModel(get(), get()) } // NotesRepository + MediaViewModel
     factory { NotesViewModel(get()) }
     factory { NoteDetailViewModel(get()) } // NotesRepository
-    factory { MediaViewModel() } // No dependencies - uses CameraManager/GalleryManager directly
 }

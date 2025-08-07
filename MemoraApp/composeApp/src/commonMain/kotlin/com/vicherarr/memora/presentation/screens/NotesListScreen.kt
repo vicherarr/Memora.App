@@ -31,6 +31,7 @@ import coil3.compose.AsyncImage
 import com.vicherarr.memora.domain.models.ArchivoAdjunto
 import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.domain.models.TipoDeArchivo
+import com.vicherarr.memora.presentation.screens.CreateNoteScreen
 import com.vicherarr.memora.presentation.viewmodels.NotesViewModel
 import org.koin.compose.getKoin
 
@@ -152,9 +153,15 @@ class NotesListScreen : Screen {
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(16.dp)
+                    .padding(bottom = 88.dp, end = 16.dp), // Extra padding para evitar que lo tape la barra de tabs
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Agregar nota")
+                Icon(
+                    Icons.Default.Add, 
+                    contentDescription = "Agregar nota",
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
             }
         }
     }

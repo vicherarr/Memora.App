@@ -346,6 +346,9 @@ private fun ViewNoteContent(
 private fun AttachmentItem(
     attachment: com.vicherarr.memora.domain.models.ArchivoAdjunto
 ) {
+    // Debug logging
+    println("AttachmentItem: id=${attachment.id}, tipo=${attachment.tipoArchivo}, datosSize=${attachment.datosArchivo?.size ?: 0}")
+    
     Card(
         modifier = Modifier.size(120.dp),
         shape = RoundedCornerShape(12.dp),
@@ -354,13 +357,36 @@ private fun AttachmentItem(
         Box(modifier = Modifier.fillMaxSize()) {
             when (attachment.tipoArchivo) {
                 TipoDeArchivo.Imagen -> {
-                    // Show image thumbnail
-                    AsyncImage(
-                        model = attachment.datosArchivo, // This might need adjustment based on how images are handled
-                        contentDescription = "Imagen adjunta",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
+                    // Show image thumbnail - Coil handles ByteArray directly
+                    if (attachment.datosArchivo != null && attachment.datosArchivo.isNotEmpty()) {
+                        AsyncImage(
+                            model = attachment.datosArchivo,
+                            contentDescription = "Imagen adjunta",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            onError = { error ->
+                                println("AsyncImage Error: ${error.result.throwable}")
+                            },
+                            onSuccess = {
+                                println("AsyncImage Success: Image loaded successfully")
+                            }
+                        )
+                    } else {
+                        // Placeholder when no data
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.BrokenImage,
+                                contentDescription = "Sin imagen",
+                                modifier = Modifier.size(32.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
                 TipoDeArchivo.Video -> {
                     // Show video thumbnail with play icon
