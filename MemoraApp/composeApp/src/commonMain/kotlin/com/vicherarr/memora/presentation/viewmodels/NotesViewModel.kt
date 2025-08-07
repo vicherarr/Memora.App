@@ -4,23 +4,33 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.domain.repository.NotesRepository
+import com.vicherarr.memora.presentation.states.BaseUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel for notes operations
+ * Notes UI State - Single Source of Truth
+ * Immutable data class representing the complete state of the Notes List screen
+ */
+data class NotesUiState(
+    val notes: List<Note> = emptyList(),
+    val selectedNote: Note? = null,
+    override val isLoading: Boolean = false,
+    override val errorMessage: String? = null
+) : BaseUiState
+
+/**
+ * ViewModel for notes operations following JetBrains KMP patterns
+ * Single Responsibility: Only handles notes list operations
  */
 class NotesViewModel(
     private val notesRepository: NotesRepository
-) : BaseViewModel() {
+) : ViewModel() {
     
-    private val _notes = MutableStateFlow<List<Note>>(emptyList())
-    val notes: StateFlow<List<Note>> = _notes.asStateFlow()
-    
-    private val _selectedNote = MutableStateFlow<Note?>(null)
-    val selectedNote: StateFlow<Note?> = _selectedNote.asStateFlow()
+    private val _uiState = MutableStateFlow(NotesUiState())
+    val uiState: StateFlow<NotesUiState> = _uiState.asStateFlow()
     
     init {
         loadNotes()
@@ -28,90 +38,96 @@ class NotesViewModel(
     
     fun loadNotes() {
         viewModelScope.launch {
-            setLoading(true)
-            clearError()
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
             notesRepository.getNotes()
                 .onSuccess { notesList ->
-                    _notes.value = notesList
+                    _uiState.value = _uiState.value.copy(
+                        notes = notesList,
+                        isLoading = false
+                    )
                 }
                 .onFailure { exception ->
-                    setError(exception.message ?: "Error loading notes")
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = exception.message ?: "Error loading notes"
+                    )
                 }
-            
-            setLoading(false)
         }
     }
     
     fun selectNote(noteId: String) {
         viewModelScope.launch {
-            setLoading(true)
-            clearError()
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
             notesRepository.getNoteById(noteId)
                 .onSuccess { note ->
-                    _selectedNote.value = note
+                    _uiState.value = _uiState.value.copy(
+                        selectedNote = note,
+                        isLoading = false
+                    )
                 }
                 .onFailure { exception ->
-                    setError(exception.message ?: "Error loading note")
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = exception.message ?: "Error loading note"
+                    )
                 }
-            
-            setLoading(false)
         }
     }
     
     fun createNote(titulo: String?, contenido: String) {
         viewModelScope.launch {
-            setLoading(true)
-            clearError()
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
             notesRepository.createNote(titulo, contenido)
                 .onSuccess {
                     loadNotes() // Refresh list
                 }
                 .onFailure { exception ->
-                    setError(exception.message ?: "Error creating note")
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = exception.message ?: "Error creating note"
+                    )
                 }
-            
-            setLoading(false)
         }
     }
     
     fun updateNote(id: String, titulo: String?, contenido: String) {
         viewModelScope.launch {
-            setLoading(true)
-            clearError()
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
             notesRepository.updateNote(id, titulo, contenido)
                 .onSuccess {
                     loadNotes() // Refresh list
                 }
                 .onFailure { exception ->
-                    setError(exception.message ?: "Error updating note")
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = exception.message ?: "Error updating note"
+                    )
                 }
-            
-            setLoading(false)
         }
     }
     
     fun deleteNote(id: String) {
         viewModelScope.launch {
-            setLoading(true)
-            clearError()
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
             notesRepository.deleteNote(id)
                 .onSuccess {
                     loadNotes() // Refresh list
                 }
                 .onFailure { exception ->
-                    setError(exception.message ?: "Error deleting note")
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = exception.message ?: "Error deleting note"
+                    )
                 }
-            
-            setLoading(false)
         }
     }
     
     fun clearSelectedNote() {
-        _selectedNote.value = null
+        _uiState.value = _uiState.value.copy(selectedNote = null)
     }
 }

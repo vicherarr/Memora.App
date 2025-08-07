@@ -10,12 +10,18 @@ fun MemoraTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    maxLines: Int = 1,
+    isError: Boolean = false,
+    supportingText: String? = null
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
-        modifier = modifier
+        modifier = modifier,
+        maxLines = maxLines,
+        isError = isError,
+        supportingText = supportingText?.let { { Text(it) } }
     )
 }

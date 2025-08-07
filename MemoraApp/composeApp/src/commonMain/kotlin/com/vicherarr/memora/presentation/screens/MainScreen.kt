@@ -45,19 +45,8 @@ class MainScreen : Screen {
                         TabNavigationItem(SearchTab)
                         TabNavigationItem(ProfileTab)
                     }
-                },
-                floatingActionButton = {
-                    // Solo mostrar FAB en NotesTab
-                    if (tabNavigator.current == NotesTab) {
-                        FloatingActionButton(
-                            onClick = {
-                                navigator.push(CreateNoteScreen())
-                            }
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = "Agregar nota")
-                        }
-                    }
                 }
+                // FAB removed - now handled by each tab's own Navigator
             ) {
                 CurrentTab()
             }
