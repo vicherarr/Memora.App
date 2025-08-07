@@ -195,6 +195,48 @@ class NotesRepositoryImpl(
         }
     }
     
+    override suspend fun updateNoteWithAttachments(id: String, titulo: String?, contenido: String, newAttachments: List<ArchivoAdjunto>): Result<Note> {
+        return try {
+            val now = getCurrentTimestamp().toString()
+            
+            // LOCAL-FIRST: Update note in local database immediately
+            notesDao.updateNote(
+                noteId = id,
+                titulo = titulo?.takeIf { it.isNotBlank() },
+                contenido = contenido,
+                fechaModificacion = now
+            )
+            
+            // Delete all existing attachments for this note
+            attachmentsDao.deleteAttachmentsByNoteId(id)
+            
+            // Insert new attachments
+            for (attachment in newAttachments) {
+                attachmentsDao.insertAttachment(
+                    id = attachment.id,
+                    datosArchivo = attachment.datosArchivo,
+                    nombreOriginal = attachment.nombreOriginal,
+                    tipoArchivo = attachment.tipoArchivo.ordinal.toLong() + 1, // 1=Imagen, 2=Video
+                    tipoMime = attachment.tipoMime,
+                    tamanoBytes = attachment.tamanoBytes,
+                    fechaSubida = now,
+                    notaId = id
+                )
+            }
+            
+            // Get updated note with attachments to return
+            val updatedNote = notesDao.getNoteById(id)
+            if (updatedNote != null) {
+                // TODO: Background sync will be handled by SyncRepository
+                Result.success(updatedNote.toDomainModelWithAttachments())
+            } else {
+                Result.failure(Exception("Note not found"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
     override suspend fun deleteNote(id: String): Result<Unit> {
         return try {
             // LOCAL-FIRST: Delete from local database immediately

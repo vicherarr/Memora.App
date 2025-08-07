@@ -123,8 +123,10 @@ data class NoteDetailScreen(private val noteId: String) : Screen {
                             EditNoteContent(
                                 titulo = uiState.editTitulo,
                                 contenido = uiState.editContenido,
+                                editAttachments = uiState.editAttachments,
                                 onTituloChange = viewModel::updateEditTitulo,
                                 onContenidoChange = viewModel::updateEditContenido,
+                                onRemoveAttachment = viewModel::removeAttachment,
                                 validationHint = viewModel.getValidationHint(uiState.editContenido)
                             )
                         } else {
@@ -240,8 +242,10 @@ private fun NoteDetailTopBar(
 private fun EditNoteContent(
     titulo: String,
     contenido: String,
+    editAttachments: List<com.vicherarr.memora.domain.models.ArchivoAdjunto>,
     onTituloChange: (String) -> Unit,
     onContenidoChange: (String) -> Unit,
+    onRemoveAttachment: (String) -> Unit,
     validationHint: String?
 ) {
     Column(
@@ -259,6 +263,31 @@ private fun EditNoteContent(
         )
         
         Spacer(modifier = Modifier.height(16.dp))
+        
+        // Attachments section in edit mode
+        if (editAttachments.isNotEmpty()) {
+            Text(
+                text = "Archivos adjuntos",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                items(editAttachments) { attachment ->
+                    EditableAttachmentItem(
+                        attachment = attachment,
+                        onRemove = { onRemoveAttachment(attachment.id) }
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+        }
         
         // Contenido field
         MemoraTextField(
@@ -411,6 +440,101 @@ private fun AttachmentItem(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(4.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                shape = RoundedCornerShape(4.dp)
+            ) {
+                Text(
+                    text = if (attachment.tipoArchivo == TipoDeArchivo.Imagen) "IMG" else "VID",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EditableAttachmentItem(
+    attachment: com.vicherarr.memora.domain.models.ArchivoAdjunto,
+    onRemove: () -> Unit
+) {
+    Card(
+        modifier = Modifier.size(120.dp),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (attachment.tipoArchivo) {
+                TipoDeArchivo.Imagen -> {
+                    if (attachment.datosArchivo != null && attachment.datosArchivo.isNotEmpty()) {
+                        AsyncImage(
+                            model = attachment.datosArchivo,
+                            contentDescription = "Imagen adjunta",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.BrokenImage,
+                                contentDescription = "Sin imagen",
+                                modifier = Modifier.size(32.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                TipoDeArchivo.Video -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = "Video",
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            
+            // Delete button - prominent and easy to tap
+            Surface(
+                onClick = onRemove,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .size(32.dp),
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = MaterialTheme.colorScheme.error.copy(alpha = 0.9f),
+                shadowElevation = 2.dp
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Eliminar archivo",
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onError
+                    )
+                }
+            }
+            
+            // File type indicator
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(8.dp),
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                 shape = RoundedCornerShape(4.dp)
             ) {

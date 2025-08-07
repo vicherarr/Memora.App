@@ -3,6 +3,7 @@ package com.vicherarr.memora.presentation.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.domain.models.Note
+import com.vicherarr.memora.domain.models.ArchivoAdjunto
 import com.vicherarr.memora.domain.repository.NotesRepository
 import com.vicherarr.memora.presentation.states.BaseUiState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ data class NoteDetailUiState(
     val isEditMode: Boolean = false,
     val editTitulo: String = "",
     val editContenido: String = "",
+    val editAttachments: List<ArchivoAdjunto> = emptyList(), // Current attachments in edit mode
     val isNoteDeleted: Boolean = false,
     val isNoteSaved: Boolean = false,
     override val isLoading: Boolean = false,
@@ -49,6 +51,7 @@ class NoteDetailViewModel(
                         note = note,
                         editTitulo = note.titulo ?: "",
                         editContenido = note.contenido,
+                        editAttachments = note.archivosAdjuntos,
                         isLoading = false
                     )
                 }
@@ -70,6 +73,7 @@ class NoteDetailViewModel(
             isEditMode = true,
             editTitulo = currentNote.titulo ?: "",
             editContenido = currentNote.contenido,
+            editAttachments = currentNote.archivosAdjuntos, // Copy original attachments for editing
             errorMessage = null
         )
     }
@@ -83,6 +87,7 @@ class NoteDetailViewModel(
             isEditMode = false,
             editTitulo = currentNote.titulo ?: "",
             editContenido = currentNote.contenido,
+            editAttachments = currentNote.archivosAdjuntos, // Restore original attachments
             errorMessage = null
         )
     }
@@ -102,6 +107,17 @@ class NoteDetailViewModel(
     fun updateEditContenido(contenido: String) {
         if (_uiState.value.isEditMode) {
             _uiState.value = _uiState.value.copy(editContenido = contenido)
+        }
+    }
+    
+    /**
+     * Remove specific attachment from edit list
+     */
+    fun removeAttachment(attachmentId: String) {
+        if (_uiState.value.isEditMode) {
+            val currentAttachments = _uiState.value.editAttachments.toMutableList()
+            currentAttachments.removeAll { it.id == attachmentId }
+            _uiState.value = _uiState.value.copy(editAttachments = currentAttachments)
         }
     }
     
@@ -128,15 +144,27 @@ class NoteDetailViewModel(
             val newTitulo = if (currentState.editTitulo.isBlank()) null else currentState.editTitulo.trim()
             val newContenido = currentState.editContenido.trim()
             
-            notesRepository.updateNote(currentNote.id, newTitulo, newContenido)
-                .onSuccess {
-                    // Reload note to get updated data
-                    loadNote(currentNote.id)
-                    _uiState.value = _uiState.value.copy(
-                        isEditMode = false,
-                        isNoteSaved = true
-                    )
-                }
+            // Check if attachments have changed
+            val originalAttachments = currentNote.archivosAdjuntos
+            val currentAttachments = currentState.editAttachments
+            val attachmentsChanged = originalAttachments != currentAttachments
+            
+            val result = if (attachmentsChanged) {
+                // Use updateNoteWithAttachments if attachments changed
+                notesRepository.updateNoteWithAttachments(currentNote.id, newTitulo, newContenido, currentAttachments)
+            } else {
+                // Use regular updateNote if only title/content changed
+                notesRepository.updateNote(currentNote.id, newTitulo, newContenido)
+            }
+            
+            result.onSuccess {
+                // Reload note to get updated data
+                loadNote(currentNote.id)
+                _uiState.value = _uiState.value.copy(
+                    isEditMode = false,
+                    isNoteSaved = true
+                )
+            }
                 .onFailure { exception ->
                     _uiState.value = currentState.copy(
                         isLoading = false,
