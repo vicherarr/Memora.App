@@ -4,8 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.domain.models.ArchivoAdjunto
+import com.vicherarr.memora.domain.models.MediaFile
+import com.vicherarr.memora.domain.models.MediaType
+import com.vicherarr.memora.domain.models.TipoDeArchivo
 import com.vicherarr.memora.domain.repository.NotesRepository
 import com.vicherarr.memora.presentation.states.BaseUiState
+import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
+import com.vicherarr.memora.data.database.getCurrentTimestamp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,7 +37,8 @@ data class NoteDetailUiState(
  * Single Responsibility: Only handles note detail operations (view, edit, delete)
  */
 class NoteDetailViewModel(
-    private val notesRepository: NotesRepository
+    private val notesRepository: NotesRepository,
+    private val mediaViewModel: MediaViewModel
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(NoteDetailUiState())
@@ -118,6 +124,42 @@ class NoteDetailViewModel(
             val currentAttachments = _uiState.value.editAttachments.toMutableList()
             currentAttachments.removeAll { it.id == attachmentId }
             _uiState.value = _uiState.value.copy(editAttachments = currentAttachments)
+        }
+    }
+    
+    /**
+     * Add new media files from MediaViewModel to edit attachments
+     */
+    fun addMediaToNote() {
+        if (_uiState.value.isEditMode) {
+            val mediaFiles = mediaViewModel.uiState.value.selectedMedia
+            if (mediaFiles.isNotEmpty()) {
+                val currentAttachments = _uiState.value.editAttachments.toMutableList()
+                
+                // Convert MediaFiles to ArchivoAdjunto
+                mediaFiles.forEach { mediaFile ->
+                    val attachmentId = "attachment_${getCurrentTimestamp()}_${currentAttachments.size}"
+                    val archivoAdjunto = ArchivoAdjunto(
+                        id = attachmentId,
+                        datosArchivo = mediaFile.data,
+                        nombreOriginal = mediaFile.fileName,
+                        tipoArchivo = when (mediaFile.type) {
+                            MediaType.IMAGE -> TipoDeArchivo.Imagen
+                            MediaType.VIDEO -> TipoDeArchivo.Video
+                        },
+                        tipoMime = mediaFile.mimeType ?: "application/octet-stream",
+                        tamanoBytes = mediaFile.data.size.toLong(),
+                        fechaSubida = getCurrentTimestamp(),
+                        notaId = _uiState.value.note?.id ?: ""
+                    )
+                    currentAttachments.add(archivoAdjunto)
+                }
+                
+                _uiState.value = _uiState.value.copy(editAttachments = currentAttachments)
+                
+                // Clear media from MediaViewModel after adding
+                mediaViewModel.clearSelectedMedia()
+            }
         }
     }
     

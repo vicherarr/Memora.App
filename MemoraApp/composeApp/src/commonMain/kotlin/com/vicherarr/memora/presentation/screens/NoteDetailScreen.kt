@@ -28,7 +28,11 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.vicherarr.memora.domain.models.TipoDeArchivo
+import com.vicherarr.memora.platform.camera.rememberCameraManager
+import com.vicherarr.memora.platform.camera.rememberGalleryManager
+import com.vicherarr.memora.platform.camera.rememberVideoPickerManager
 import com.vicherarr.memora.presentation.viewmodels.NoteDetailViewModel
+import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
 import com.vicherarr.memora.ui.components.MemoraTextField
 import org.koin.compose.getKoin
 
@@ -43,7 +47,34 @@ data class NoteDetailScreen(private val noteId: String) : Screen {
         val navigator = LocalNavigator.currentOrThrow
         val koin = getKoin()
         val viewModel: NoteDetailViewModel = remember { koin.get() }
+        val mediaViewModel: MediaViewModel = remember { koin.get() }
         val uiState by viewModel.uiState.collectAsState()
+        val mediaUiState by mediaViewModel.uiState.collectAsState()
+        
+        // Media managers for multimedia functionality
+        val cameraManager = rememberCameraManager { mediaFile ->
+            mediaFile?.let { 
+                mediaViewModel.addToSelectedMedia(it)
+                // Automatically add to note when media is captured
+                viewModel.addMediaToNote()
+            }
+        }
+        
+        val galleryManager = rememberGalleryManager { mediaFile ->
+            mediaFile?.let { 
+                mediaViewModel.addToSelectedMedia(it)
+                // Automatically add to note when media is selected
+                viewModel.addMediaToNote()
+            }
+        }
+        
+        val videoPickerManager = rememberVideoPickerManager { mediaFile ->
+            mediaFile?.let { 
+                mediaViewModel.addToSelectedMedia(it)
+                // Automatically add to note when video is selected
+                viewModel.addMediaToNote()
+            }
+        }
         
         // Load note when screen appears
         LaunchedEffect(noteId) {
@@ -127,6 +158,9 @@ data class NoteDetailScreen(private val noteId: String) : Screen {
                                 onTituloChange = viewModel::updateEditTitulo,
                                 onContenidoChange = viewModel::updateEditContenido,
                                 onRemoveAttachment = viewModel::removeAttachment,
+                                onCameraClick = { cameraManager.launch() },
+                                onGalleryClick = { galleryManager.launch() },
+                                onVideoClick = { videoPickerManager.launch() },
                                 validationHint = viewModel.getValidationHint(uiState.editContenido)
                             )
                         } else {
@@ -246,6 +280,9 @@ private fun EditNoteContent(
     onTituloChange: (String) -> Unit,
     onContenidoChange: (String) -> Unit,
     onRemoveAttachment: (String) -> Unit,
+    onCameraClick: () -> Unit,
+    onGalleryClick: () -> Unit,
+    onVideoClick: () -> Unit,
     validationHint: String?
 ) {
     Column(
@@ -287,6 +324,97 @@ private fun EditNoteContent(
             }
             
             Spacer(modifier = Modifier.height(16.dp))
+        }
+        
+        // Multimedia Actions section
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = "Agregar Multimedia",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Camera Button
+                    FilledTonalButton(
+                        onClick = onCameraClick,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            Icons.Default.CameraAlt,
+                            contentDescription = "Tomar foto",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    
+                    // Gallery Button
+                    FilledTonalButton(
+                        onClick = onGalleryClick,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            Icons.Default.PhotoLibrary,
+                            contentDescription = "Seleccionar imagen",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    
+                    // Video Button
+                    FilledTonalButton(
+                        onClick = onVideoClick,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            Icons.Default.Videocam,
+                            contentDescription = "Seleccionar video",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                
+                // Labels below buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Cámara",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Text(
+                        text = "Galería",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Text(
+                        text = "Videos",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
         }
         
         // Contenido field

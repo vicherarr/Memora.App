@@ -19,5 +19,5 @@ val viewModelModule = module {
     single { MediaViewModel() } // Singleton - shared across CreateNoteViewModel and CreateNoteScreen
     factory { CreateNoteViewModel(get(), get()) } // NotesRepository + MediaViewModel
     factory { NotesViewModel(get()) }
-    factory { NoteDetailViewModel(get()) } // NotesRepository
+    factory { NoteDetailViewModel(get(), get()) } // NotesRepository + MediaViewModel
 }
