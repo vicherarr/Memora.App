@@ -570,7 +570,7 @@ private fun AttachmentSummary(
 
 // Utility function to format relative time
 private fun formatRelativeTime(timestamp: Long): String {
-    val now = System.currentTimeMillis()
+    val now = com.vicherarr.memora.data.database.getCurrentTimestamp()
     val diff = now - timestamp
     
     return when {
