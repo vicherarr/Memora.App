@@ -14,7 +14,7 @@ object ApiConfig {
      * Development machine IP in local network
      * Used by real devices (Android & iOS) to connect to dev server
      */
-    const val DEV_MACHINE_IP = "192.168.1.153"
+    const val DEV_MACHINE_IP = "192.168.1.128"
     
     /**
      * Base URL for API - platform specific
