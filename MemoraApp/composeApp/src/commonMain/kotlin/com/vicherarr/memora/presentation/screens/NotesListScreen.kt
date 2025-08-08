@@ -273,7 +273,7 @@ private fun AttachmentPreview(attachment: ArchivoAdjunto) {
             when (attachment.tipoArchivo) {
                 TipoDeArchivo.Imagen -> {
                     AsyncImage(
-                        model = attachment.datosArchivo,
+                        model = attachment.filePath,
                         contentDescription = "Imagen adjunta",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop

@@ -51,7 +51,7 @@ class AttachmentsDao(private val database: MemoraDatabase) {
      */
     fun insertAttachment(
         id: String,
-        datosArchivo: ByteArray,
+        filePath: String,
         nombreOriginal: String,
         tipoArchivo: Long, // 1=Imagen, 2=Video
         tipoMime: String,
@@ -59,13 +59,14 @@ class AttachmentsDao(private val database: MemoraDatabase) {
         fechaSubida: String,
         notaId: String,
         syncStatus: String = "PENDING",
-        needsUpload: Long = 1
+        needsUpload: Long = 1,
+        remoteUrl: String? = null
     ) {
         val now = getCurrentTimestamp()
         
         queries.insertAttachment(
             id = id,
-            datos_archivo = datosArchivo,
+            file_path = filePath,
             nombre_original = nombreOriginal,
             tipo_archivo = tipoArchivo,
             tipo_mime = tipoMime,
@@ -74,7 +75,8 @@ class AttachmentsDao(private val database: MemoraDatabase) {
             nota_id = notaId,
             sync_status = syncStatus,
             needs_upload = needsUpload,
-            local_created_at = now
+            local_created_at = now,
+            remote_url = remoteUrl
         )
     }
     
@@ -83,7 +85,7 @@ class AttachmentsDao(private val database: MemoraDatabase) {
      */
     suspend fun updateAttachment(
         attachmentId: String,
-        datosArchivo: ByteArray,
+        filePath: String,
         nombreOriginal: String,
         tipoArchivo: Long,
         tipoMime: String,
@@ -91,7 +93,7 @@ class AttachmentsDao(private val database: MemoraDatabase) {
         fechaSubida: String
     ) {
         queries.updateAttachment(
-            datos_archivo = datosArchivo,
+            file_path = filePath,
             nombre_original = nombreOriginal,
             tipo_archivo = tipoArchivo,
             tipo_mime = tipoMime,
@@ -99,6 +101,13 @@ class AttachmentsDao(private val database: MemoraDatabase) {
             fecha_subida = fechaSubida,
             id = attachmentId
         )
+    }
+
+    /**
+     * Updates the remote URL of an attachment after a successful upload.
+     */
+    fun updateRemoteUrl(attachmentId: String, url: String) {
+        queries.updateRemoteUrl(remote_url = url, id = attachmentId)
     }
     
     /**

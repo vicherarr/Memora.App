@@ -3,7 +3,8 @@
 
 CREATE TABLE attachments (
     id TEXT NOT NULL PRIMARY KEY,
-    datos_archivo BLOB NOT NULL,
+    file_path TEXT NOT NULL,
+    remote_url TEXT,
     nombre_original TEXT NOT NULL,
     tipo_archivo INTEGER NOT NULL, -- 1=Imagen, 2=Video (matching TipoDeArchivo enum)
     tipo_mime TEXT NOT NULL,
@@ -45,13 +46,13 @@ ORDER BY local_created_at ASC;
 
 insertAttachment:
 INSERT INTO attachments (
-    id, datos_archivo, nombre_original, tipo_archivo, tipo_mime,
-    tamano_bytes, fecha_subida, nota_id, sync_status, needs_upload, local_created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    id, file_path, nombre_original, tipo_archivo, tipo_mime,
+    tamano_bytes, fecha_subida, nota_id, sync_status, needs_upload, local_created_at, remote_url
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 updateAttachment:
 UPDATE attachments 
-SET datos_archivo = ?, nombre_original = ?, tipo_archivo = ?, 
+SET file_path = ?, nombre_original = ?, tipo_archivo = ?, 
     tipo_mime = ?, tamano_bytes = ?, fecha_subida = ?,
     sync_status = 'PENDING', needs_upload = 1
 WHERE id = ?;
@@ -59,6 +60,11 @@ WHERE id = ?;
 updateSyncStatus:
 UPDATE attachments 
 SET sync_status = ?, needs_upload = ?, last_sync_attempt = ?
+WHERE id = ?;
+
+updateRemoteUrl:
+UPDATE attachments
+SET remote_url = ?
 WHERE id = ?;
 
 deleteAttachment:

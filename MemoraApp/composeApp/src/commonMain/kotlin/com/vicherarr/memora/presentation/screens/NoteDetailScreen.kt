@@ -504,7 +504,7 @@ private fun AttachmentItem(
     attachment: com.vicherarr.memora.domain.models.ArchivoAdjunto
 ) {
     // Debug logging
-    println("AttachmentItem: id=${attachment.id}, tipo=${attachment.tipoArchivo}, datosSize=${attachment.datosArchivo?.size ?: 0}")
+    println("AttachmentItem: id=${attachment.id}, tipo=${attachment.tipoArchivo}, path=${attachment.filePath}")
     
     Card(
         modifier = Modifier.size(120.dp),
@@ -514,10 +514,10 @@ private fun AttachmentItem(
         Box(modifier = Modifier.fillMaxSize()) {
             when (attachment.tipoArchivo) {
                 TipoDeArchivo.Imagen -> {
-                    // Show image thumbnail - Coil handles ByteArray directly
-                    if (attachment.datosArchivo != null && attachment.datosArchivo.isNotEmpty()) {
+                    // Show image thumbnail - Coil handles file paths directly
+                    if (!attachment.filePath.isNullOrBlank()) {
                         AsyncImage(
-                            model = attachment.datosArchivo,
+                            model = attachment.filePath,
                             contentDescription = "Imagen adjunta",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
@@ -595,9 +595,9 @@ private fun EditableAttachmentItem(
         Box(modifier = Modifier.fillMaxSize()) {
             when (attachment.tipoArchivo) {
                 TipoDeArchivo.Imagen -> {
-                    if (attachment.datosArchivo != null && attachment.datosArchivo.isNotEmpty()) {
+                    if (!attachment.filePath.isNullOrBlank()) {
                         AsyncImage(
-                            model = attachment.datosArchivo,
+                            model = attachment.filePath,
                             contentDescription = "Imagen adjunta",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop

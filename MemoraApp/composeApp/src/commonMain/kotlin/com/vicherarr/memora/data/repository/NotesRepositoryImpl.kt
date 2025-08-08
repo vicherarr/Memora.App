@@ -13,6 +13,7 @@ import com.vicherarr.memora.domain.models.ArchivoAdjunto
 import com.vicherarr.memora.domain.models.TipoDeArchivo
 import com.vicherarr.memora.domain.models.MediaFile
 import com.vicherarr.memora.domain.models.MediaType
+import com.vicherarr.memora.domain.platform.FileManager
 import com.vicherarr.memora.domain.repository.NotesRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -26,7 +27,8 @@ import kotlinx.coroutines.flow.map
 class NotesRepositoryImpl(
     private val notesDao: NotesDao,
     private val attachmentsDao: AttachmentsDao,
-    private val notesApi: NotesApi
+    private val notesApi: NotesApi,
+    private val fileManager: FileManager
 ) : NotesRepository {
     
     // TODO: Get current user ID from AuthRepository
@@ -117,39 +119,42 @@ class NotesRepositoryImpl(
             // Insert attachments
             val attachmentsList = mutableListOf<ArchivoAdjunto>()
             attachments.forEachIndexed { index, mediaFile ->
-                val attachmentId = "attachment_${getCurrentTimestamp()}_$index"
-                
-                // Convert MediaType to TipoDeArchivo
-                val tipoArchivo = when (mediaFile.type) {
-                    MediaType.IMAGE -> TipoDeArchivo.Imagen
-                    MediaType.VIDEO -> TipoDeArchivo.Video
-                }
-                
-                // Insert attachment to database
-                attachmentsDao.insertAttachment(
-                    id = attachmentId,
-                    datosArchivo = mediaFile.data,
-                    nombreOriginal = mediaFile.fileName,
-                    tipoArchivo = tipoArchivo.ordinal.toLong() + 1, // 1=Imagen, 2=Video
-                    tipoMime = mediaFile.mimeType ?: "application/octet-stream",
-                    tamanoBytes = mediaFile.data.size.toLong(),
-                    fechaSubida = now,
-                    notaId = noteId
-                )
-                
-                // Create domain model for return value
-                attachmentsList.add(
-                    ArchivoAdjunto(
+                val savedFile = fileManager.saveFile(mediaFile.data, mediaFile.fileName, mediaFile.type)
+                if (savedFile != null) {
+                    val attachmentId = "attachment_${getCurrentTimestamp()}_$index"
+                    
+                    // Convert MediaType to TipoDeArchivo
+                    val tipoArchivo = when (mediaFile.type) {
+                        MediaType.IMAGE -> TipoDeArchivo.Imagen
+                        MediaType.VIDEO -> TipoDeArchivo.Video
+                    }
+                    
+                    // Insert attachment to database
+                    attachmentsDao.insertAttachment(
                         id = attachmentId,
-                        datosArchivo = mediaFile.data,
+                        filePath = savedFile.path,
                         nombreOriginal = mediaFile.fileName,
-                        tipoArchivo = tipoArchivo,
+                        tipoArchivo = tipoArchivo.ordinal.toLong() + 1, // 1=Imagen, 2=Video
                         tipoMime = mediaFile.mimeType ?: "application/octet-stream",
-                        tamanoBytes = mediaFile.data.size.toLong(),
-                        fechaSubida = getCurrentTimestamp(),
+                        tamanoBytes = savedFile.size,
+                        fechaSubida = now,
                         notaId = noteId
                     )
-                )
+                    
+                    // Create domain model for return value
+                    attachmentsList.add(
+                        ArchivoAdjunto(
+                            id = attachmentId,
+                            filePath = savedFile.path,
+                            nombreOriginal = mediaFile.fileName,
+                            tipoArchivo = tipoArchivo,
+                            tipoMime = mediaFile.mimeType ?: "application/octet-stream",
+                            tamanoBytes = savedFile.size,
+                            fechaSubida = getCurrentTimestamp(),
+                            notaId = noteId
+                        )
+                    )
+                }
             }
             
             // Return the created note with attachments
@@ -195,42 +200,63 @@ class NotesRepositoryImpl(
         }
     }
     
-    override suspend fun updateNoteWithAttachments(id: String, titulo: String?, contenido: String, newAttachments: List<ArchivoAdjunto>): Result<Note> {
+    override suspend fun updateNoteWithAttachments(
+        noteId: String,
+        titulo: String?,
+        contenido: String,
+        existingAttachments: List<ArchivoAdjunto>,
+        newMediaFiles: List<MediaFile>
+    ): Result<Note> {
         return try {
             val now = getCurrentTimestamp().toString()
-            
-            // LOCAL-FIRST: Update note in local database immediately
+
+            // 1. Update the note's text content
             notesDao.updateNote(
-                noteId = id,
+                noteId = noteId,
                 titulo = titulo?.takeIf { it.isNotBlank() },
                 contenido = contenido,
                 fechaModificacion = now
             )
-            
-            // Delete all existing attachments for this note
-            attachmentsDao.deleteAttachmentsByNoteId(id)
-            
-            // Insert new attachments
-            for (attachment in newAttachments) {
-                attachmentsDao.insertAttachment(
-                    id = attachment.id,
-                    datosArchivo = attachment.datosArchivo,
-                    nombreOriginal = attachment.nombreOriginal,
-                    tipoArchivo = attachment.tipoArchivo.ordinal.toLong() + 1, // 1=Imagen, 2=Video
-                    tipoMime = attachment.tipoMime,
-                    tamanoBytes = attachment.tamanoBytes,
-                    fechaSubida = now,
-                    notaId = id
-                )
+
+            // 2. Determine which attachments to delete
+            val originalAttachments = attachmentsDao.getAttachmentsByNoteId(noteId)
+            val existingIds = existingAttachments.map { it.id }.toSet()
+            val attachmentsToDelete = originalAttachments.filter { it.id !in existingIds }
+
+            for (attachment in attachmentsToDelete) {
+                // Delete file from disk and then from DB
+                fileManager.deleteFile(attachment.file_path)
+                attachmentsDao.deleteAttachment(attachment.id)
             }
-            
-            // Get updated note with attachments to return
-            val updatedNote = notesDao.getNoteById(id)
+
+            // 3. Save new media files and add them to the database
+            for (mediaFile in newMediaFiles) {
+                val savedFile = fileManager.saveFile(mediaFile.data, mediaFile.fileName, mediaFile.type)
+                if (savedFile != null) {
+                    val attachmentId = "attachment_${getCurrentTimestamp()}_${mediaFile.fileName.hashCode()}"
+                    val tipoArchivo = when (mediaFile.type) {
+                        MediaType.IMAGE -> TipoDeArchivo.Imagen
+                        MediaType.VIDEO -> TipoDeArchivo.Video
+                    }
+                    attachmentsDao.insertAttachment(
+                        id = attachmentId,
+                        filePath = savedFile.path,
+                        nombreOriginal = mediaFile.fileName,
+                        tipoArchivo = tipoArchivo.ordinal.toLong() + 1,
+                        tipoMime = mediaFile.mimeType,
+                        tamanoBytes = savedFile.size,
+                        fechaSubida = now,
+                        notaId = noteId
+                    )
+                }
+            }
+
+            // 4. Return the fully updated note
+            val updatedNote = notesDao.getNoteById(noteId)
             if (updatedNote != null) {
-                // TODO: Background sync will be handled by SyncRepository
                 Result.success(updatedNote.toDomainModelWithAttachments())
             } else {
-                Result.failure(Exception("Note not found"))
+                Result.failure(Exception("Note not found after update"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -296,7 +322,8 @@ class NotesRepositoryImpl(
     private fun Attachments.toDomainModel(): ArchivoAdjunto {
         return ArchivoAdjunto(
             id = this.id,
-            datosArchivo = this.datos_archivo,
+            filePath = this.file_path,
+            remoteUrl = this.remote_url,
             nombreOriginal = this.nombre_original,
             tipoArchivo = when (this.tipo_archivo.toInt()) {
                 1 -> TipoDeArchivo.Imagen

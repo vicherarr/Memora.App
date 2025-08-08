@@ -4,6 +4,7 @@ import androidx.compose.ui.window.ComposeUIViewController
 import com.vicherarr.memora.di.appModule
 import com.vicherarr.memora.di.databaseModule
 import com.vicherarr.memora.di.iosDatabaseModule
+import com.vicherarr.memora.di.platformModule
 import org.koin.compose.KoinApplication
 
 fun MainViewController() = ComposeUIViewController { 
@@ -12,7 +13,8 @@ fun MainViewController() = ComposeUIViewController {
             modules(
                 appModule,
                 databaseModule,
-                iosDatabaseModule
+                iosDatabaseModule,
+                platformModule()
             )
         }
     ) {

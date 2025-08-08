@@ -19,7 +19,8 @@ val repositoryModule = module {
         NotesRepositoryImpl(
             notesDao = get(),
             attachmentsDao = get(),
-            notesApi = get()
+            notesApi = get(),
+            fileManager = get()
         ) 
     }
     single<MediaRepository> { SimplifiedMediaRepository() }

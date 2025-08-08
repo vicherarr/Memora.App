@@ -13,6 +13,12 @@ interface NotesRepository {
     suspend fun createNote(titulo: String?, contenido: String): Result<Note>
     suspend fun createNoteWithAttachments(titulo: String?, contenido: String, attachments: List<MediaFile>): Result<Note>
     suspend fun updateNote(id: String, titulo: String?, contenido: String): Result<Note>
-    suspend fun updateNoteWithAttachments(id: String, titulo: String?, contenido: String, newAttachments: List<ArchivoAdjunto>): Result<Note>
+    suspend fun updateNoteWithAttachments(
+        noteId: String,
+        titulo: String?,
+        contenido: String,
+        existingAttachments: List<ArchivoAdjunto>,
+        newMediaFiles: List<MediaFile>
+    ): Result<Note>
     suspend fun deleteNote(id: String): Result<Unit>
 }

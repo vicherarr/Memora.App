@@ -5,12 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.domain.models.ArchivoAdjunto
 import com.vicherarr.memora.domain.models.MediaFile
-import com.vicherarr.memora.domain.models.MediaType
-import com.vicherarr.memora.domain.models.TipoDeArchivo
 import com.vicherarr.memora.domain.repository.NotesRepository
 import com.vicherarr.memora.presentation.states.BaseUiState
-import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
-import com.vicherarr.memora.data.database.getCurrentTimestamp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +22,7 @@ data class NoteDetailUiState(
     val editTitulo: String = "",
     val editContenido: String = "",
     val editAttachments: List<ArchivoAdjunto> = emptyList(), // Current attachments in edit mode
+    val newlySelectedMedia: List<MediaFile> = emptyList(), // New media files to be added
     val isNoteDeleted: Boolean = false,
     val isNoteSaved: Boolean = false,
     override val isLoading: Boolean = false,
@@ -128,36 +125,15 @@ class NoteDetailViewModel(
     }
     
     /**
-     * Add new media files from MediaViewModel to edit attachments
+     * Add new media files from MediaViewModel to a temporary list
      */
     fun addMediaToNote() {
         if (_uiState.value.isEditMode) {
             val mediaFiles = mediaViewModel.uiState.value.selectedMedia
             if (mediaFiles.isNotEmpty()) {
-                val currentAttachments = _uiState.value.editAttachments.toMutableList()
-                
-                // Convert MediaFiles to ArchivoAdjunto
-                mediaFiles.forEach { mediaFile ->
-                    val attachmentId = "attachment_${getCurrentTimestamp()}_${currentAttachments.size}"
-                    val archivoAdjunto = ArchivoAdjunto(
-                        id = attachmentId,
-                        datosArchivo = mediaFile.data,
-                        nombreOriginal = mediaFile.fileName,
-                        tipoArchivo = when (mediaFile.type) {
-                            MediaType.IMAGE -> TipoDeArchivo.Imagen
-                            MediaType.VIDEO -> TipoDeArchivo.Video
-                        },
-                        tipoMime = mediaFile.mimeType ?: "application/octet-stream",
-                        tamanoBytes = mediaFile.data.size.toLong(),
-                        fechaSubida = getCurrentTimestamp(),
-                        notaId = _uiState.value.note?.id ?: ""
-                    )
-                    currentAttachments.add(archivoAdjunto)
-                }
-                
-                _uiState.value = _uiState.value.copy(editAttachments = currentAttachments)
-                
-                // Clear media from MediaViewModel after adding
+                val currentMedia = _uiState.value.newlySelectedMedia.toMutableList()
+                currentMedia.addAll(mediaFiles)
+                _uiState.value = _uiState.value.copy(newlySelectedMedia = currentMedia)
                 mediaViewModel.clearSelectedMedia()
             }
         }
@@ -173,46 +149,36 @@ class NoteDetailViewModel(
         viewModelScope.launch {
             _uiState.value = currentState.copy(isLoading = true, errorMessage = null)
             
-            // Validate input
             val validationError = validateNoteInput(currentState.editTitulo, currentState.editContenido)
             if (validationError != null) {
-                _uiState.value = currentState.copy(
-                    isLoading = false,
-                    errorMessage = validationError
-                )
+                _uiState.value = currentState.copy(isLoading = false, errorMessage = validationError)
                 return@launch
             }
             
             val newTitulo = if (currentState.editTitulo.isBlank()) null else currentState.editTitulo.trim()
             val newContenido = currentState.editContenido.trim()
             
-            // Check if attachments have changed
-            val originalAttachments = currentNote.archivosAdjuntos
-            val currentAttachments = currentState.editAttachments
-            val attachmentsChanged = originalAttachments != currentAttachments
-            
-            val result = if (attachmentsChanged) {
-                // Use updateNoteWithAttachments if attachments changed
-                notesRepository.updateNoteWithAttachments(currentNote.id, newTitulo, newContenido, currentAttachments)
-            } else {
-                // Use regular updateNote if only title/content changed
-                notesRepository.updateNote(currentNote.id, newTitulo, newContenido)
-            }
+            val result = notesRepository.updateNoteWithAttachments(
+                noteId = currentNote.id,
+                titulo = newTitulo,
+                contenido = newContenido,
+                existingAttachments = currentState.editAttachments,
+                newMediaFiles = currentState.newlySelectedMedia
+            )
             
             result.onSuccess {
-                // Reload note to get updated data
                 loadNote(currentNote.id)
                 _uiState.value = _uiState.value.copy(
                     isEditMode = false,
-                    isNoteSaved = true
+                    isNoteSaved = true,
+                    newlySelectedMedia = emptyList() // Clear media after saving
+                )
+            }.onFailure { exception ->
+                _uiState.value = currentState.copy(
+                    isLoading = false,
+                    errorMessage = exception.message ?: "Error al guardar la nota"
                 )
             }
-                .onFailure { exception ->
-                    _uiState.value = currentState.copy(
-                        isLoading = false,
-                        errorMessage = exception.message ?: "Error al guardar la nota"
-                    )
-                }
         }
     }
     
