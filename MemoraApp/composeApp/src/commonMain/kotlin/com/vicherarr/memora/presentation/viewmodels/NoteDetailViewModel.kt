@@ -13,6 +13,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
+ * Image Viewer State - Single Source of Truth for image viewer
+ * Following Clean Code principles and MVVM pattern
+ */
+data class ImageViewerState(
+    val isVisible: Boolean = false,
+    val imageData: Any? = null,
+    val imageName: String? = null
+)
+
+/**
  * Note Detail UI State - Single Source of Truth
  * Immutable data class representing the complete state of the Note Detail screen
  */
@@ -22,7 +32,7 @@ data class NoteDetailUiState(
     val editTitulo: String = "",
     val editContenido: String = "",
     val editAttachments: List<ArchivoAdjunto> = emptyList(), // Current attachments in edit mode
-    val newlySelectedMedia: List<MediaFile> = emptyList(), // New media files to be added
+    val imageViewer: ImageViewerState = ImageViewerState(), // Image viewer state following MVVM
     val isNoteDeleted: Boolean = false,
     val isNoteSaved: Boolean = false,
     override val isLoading: Boolean = false,
@@ -86,6 +96,7 @@ class NoteDetailViewModel(
      */
     fun exitEditMode() {
         val currentNote = _uiState.value.note ?: return
+        mediaViewModel.clearSelectedMedia() // Clear any unsaved selected media
         _uiState.value = _uiState.value.copy(
             isEditMode = false,
             editTitulo = currentNote.titulo ?: "",
@@ -125,18 +136,12 @@ class NoteDetailViewModel(
     }
     
     /**
-     * Add new media files from MediaViewModel to a temporary list
+     * Add new media files from MediaViewModel - simplified approach
+     * Media files are handled directly by MediaViewModel, no need to duplicate them
      */
     fun addMediaToNote() {
-        if (_uiState.value.isEditMode) {
-            val mediaFiles = mediaViewModel.uiState.value.selectedMedia
-            if (mediaFiles.isNotEmpty()) {
-                val currentMedia = _uiState.value.newlySelectedMedia.toMutableList()
-                currentMedia.addAll(mediaFiles)
-                _uiState.value = _uiState.value.copy(newlySelectedMedia = currentMedia)
-                mediaViewModel.clearSelectedMedia()
-            }
-        }
+        // This function is no longer needed since we're showing selectedMedia directly in the UI
+        // The media files will be retrieved from MediaViewModel when saving
     }
     
     /**
@@ -163,15 +168,15 @@ class NoteDetailViewModel(
                 titulo = newTitulo,
                 contenido = newContenido,
                 existingAttachments = currentState.editAttachments,
-                newMediaFiles = currentState.newlySelectedMedia
+                newMediaFiles = mediaViewModel.uiState.value.selectedMedia
             )
             
             result.onSuccess {
                 loadNote(currentNote.id)
+                mediaViewModel.clearSelectedMedia() // Clear selected media after saving
                 _uiState.value = _uiState.value.copy(
                     isEditMode = false,
-                    isNoteSaved = true,
-                    newlySelectedMedia = emptyList() // Clear media after saving
+                    isNoteSaved = true
                 )
             }.onFailure { exception ->
                 _uiState.value = currentState.copy(
@@ -214,6 +219,30 @@ class NoteDetailViewModel(
         _uiState.value = _uiState.value.copy(
             errorMessage = null,
             isNoteSaved = false
+        )
+    }
+    
+    /**
+     * Show image viewer with specified image data
+     * Following MVVM pattern - state management in ViewModel
+     */
+    fun showImageViewer(imageData: Any, imageName: String?) {
+        _uiState.value = _uiState.value.copy(
+            imageViewer = ImageViewerState(
+                isVisible = true,
+                imageData = imageData,
+                imageName = imageName
+            )
+        )
+    }
+    
+    /**
+     * Hide image viewer
+     * Following MVVM pattern - state management in ViewModel
+     */
+    fun hideImageViewer() {
+        _uiState.value = _uiState.value.copy(
+            imageViewer = ImageViewerState()
         )
     }
     

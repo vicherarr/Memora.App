@@ -87,10 +87,8 @@ class MediaViewModel : ViewModel() {
      * Add media file to selected media list (for multiple selection)
      */
     fun addToSelectedMedia(mediaFile: MediaFile) {
-        val currentList = _uiState.value.selectedMedia.toMutableList()
-        currentList.add(mediaFile)
         _uiState.value = _uiState.value.copy(
-            selectedMedia = currentList,
+            selectedMedia = _uiState.value.selectedMedia + mediaFile,
             operationType = MediaOperationType.MULTIPLE_SELECTION,
             isOperationComplete = true
         )
@@ -100,9 +98,9 @@ class MediaViewModel : ViewModel() {
      * Remove media file from selected media list
      */
     fun removeFromSelectedMedia(mediaFile: MediaFile) {
-        val currentList = _uiState.value.selectedMedia.toMutableList()
-        currentList.remove(mediaFile)
-        _uiState.value = _uiState.value.copy(selectedMedia = currentList)
+        _uiState.value = _uiState.value.copy(
+            selectedMedia = _uiState.value.selectedMedia - mediaFile
+        )
     }
     
     /**

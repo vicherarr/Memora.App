@@ -1,6 +1,7 @@
 package com.vicherarr.memora.presentation.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawing
@@ -33,6 +34,7 @@ import com.vicherarr.memora.platform.camera.rememberGalleryManager
 import com.vicherarr.memora.platform.camera.rememberVideoPickerManager
 import com.vicherarr.memora.presentation.viewmodels.NoteDetailViewModel
 import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
+import com.vicherarr.memora.presentation.components.ImageFullScreenViewer
 import com.vicherarr.memora.ui.components.MemoraTextField
 import org.koin.compose.getKoin
 
@@ -155,9 +157,14 @@ data class NoteDetailScreen(private val noteId: String) : Screen {
                                 titulo = uiState.editTitulo,
                                 contenido = uiState.editContenido,
                                 editAttachments = uiState.editAttachments,
+                                newlySelectedMedia = mediaUiState.selectedMedia,
                                 onTituloChange = viewModel::updateEditTitulo,
                                 onContenidoChange = viewModel::updateEditContenido,
                                 onRemoveAttachment = viewModel::removeAttachment,
+                                onRemoveNewMedia = mediaViewModel::removeFromSelectedMedia,
+                                onImageClick = { imagePath, imageName ->
+                                    viewModel.showImageViewer(imagePath, imageName)
+                                },
                                 onCameraClick = { cameraManager.launch() },
                                 onGalleryClick = { galleryManager.launch() },
                                 onVideoClick = { videoPickerManager.launch() },
@@ -165,12 +172,25 @@ data class NoteDetailScreen(private val noteId: String) : Screen {
                             )
                         } else {
                             ViewNoteContent(
-                                note = uiState.note!!
+                                note = uiState.note!!,
+                                onImageClick = { imagePath, imageName ->
+                                    viewModel.showImageViewer(imagePath, imageName)
+                                }
                             )
                         }
                     }
                 }
             }
+        }
+
+        // Full screen image viewer - Following MVVM pattern
+        uiState.imageViewer.imageData?.let { imageData ->
+            ImageFullScreenViewer(
+                imageData = imageData,
+                fileName = uiState.imageViewer.imageName,
+                isVisible = uiState.imageViewer.isVisible,
+                onDismiss = viewModel::hideImageViewer
+            )
         }
     }
 }
@@ -277,9 +297,12 @@ private fun EditNoteContent(
     titulo: String,
     contenido: String,
     editAttachments: List<com.vicherarr.memora.domain.models.ArchivoAdjunto>,
+    newlySelectedMedia: List<com.vicherarr.memora.domain.models.MediaFile>,
     onTituloChange: (String) -> Unit,
     onContenidoChange: (String) -> Unit,
     onRemoveAttachment: (String) -> Unit,
+    onRemoveNewMedia: (com.vicherarr.memora.domain.models.MediaFile) -> Unit,
+    onImageClick: (imagePath: Any, imageName: String) -> Unit,
     onCameraClick: () -> Unit,
     onGalleryClick: () -> Unit,
     onVideoClick: () -> Unit,
@@ -301,8 +324,8 @@ private fun EditNoteContent(
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // Attachments section in edit mode
-        if (editAttachments.isNotEmpty()) {
+        // Attachments section in edit mode - show both existing and newly selected
+        if (editAttachments.isNotEmpty() || newlySelectedMedia.isNotEmpty()) {
             Text(
                 text = "Archivos adjuntos",
                 style = MaterialTheme.typography.titleMedium,
@@ -315,10 +338,21 @@ private fun EditNoteContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
+                // Show existing attachments (can be edited/deleted)
                 items(editAttachments) { attachment ->
                     EditableAttachmentItem(
                         attachment = attachment,
-                        onRemove = { onRemoveAttachment(attachment.id) }
+                        onRemove = { onRemoveAttachment(attachment.id) },
+                        onImageClick = onImageClick
+                    )
+                }
+                
+                // Show newly selected media (can be removed before saving)
+                items(newlySelectedMedia) { mediaFile ->
+                    NewMediaThumbnail(
+                        mediaFile = mediaFile,
+                        onRemove = { onRemoveNewMedia(mediaFile) },
+                        onImageClick = onImageClick
                     )
                 }
             }
@@ -434,7 +468,8 @@ private fun EditNoteContent(
 
 @Composable
 private fun ViewNoteContent(
-    note: com.vicherarr.memora.domain.models.Note
+    note: com.vicherarr.memora.domain.models.Note,
+    onImageClick: (imagePath: String, imageName: String) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -491,7 +526,10 @@ private fun ViewNoteContent(
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
                     items(note.archivosAdjuntos) { attachment ->
-                        AttachmentItem(attachment = attachment)
+                        AttachmentItem(
+                            attachment = attachment,
+                            onImageClick = onImageClick
+                        )
                     }
                 }
             }
@@ -501,13 +539,24 @@ private fun ViewNoteContent(
 
 @Composable
 private fun AttachmentItem(
-    attachment: com.vicherarr.memora.domain.models.ArchivoAdjunto
+    attachment: com.vicherarr.memora.domain.models.ArchivoAdjunto,
+    onImageClick: (imagePath: String, imageName: String) -> Unit
 ) {
     // Debug logging
     println("AttachmentItem: id=${attachment.id}, tipo=${attachment.tipoArchivo}, path=${attachment.filePath}")
     
     Card(
-        modifier = Modifier.size(120.dp),
+        modifier = Modifier
+            .size(120.dp)
+            .then(
+                if (attachment.tipoArchivo == TipoDeArchivo.Imagen && !attachment.filePath.isNullOrBlank()) {
+                    Modifier.clickable {
+                        onImageClick(attachment.filePath!!, attachment.nombreOriginal ?: "Imagen")
+                    }
+                } else {
+                    Modifier
+                }
+            ),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
@@ -585,10 +634,21 @@ private fun AttachmentItem(
 @Composable
 private fun EditableAttachmentItem(
     attachment: com.vicherarr.memora.domain.models.ArchivoAdjunto,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onImageClick: (imagePath: Any, imageName: String) -> Unit
 ) {
     Card(
-        modifier = Modifier.size(120.dp),
+        modifier = Modifier
+            .size(120.dp)
+            .then(
+                if (attachment.tipoArchivo == TipoDeArchivo.Imagen && !attachment.filePath.isNullOrBlank()) {
+                    Modifier.clickable {
+                        onImageClick(attachment.filePath!!, attachment.nombreOriginal ?: "Imagen")
+                    }
+                } else {
+                    Modifier
+                }
+            ),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
@@ -668,6 +728,114 @@ private fun EditableAttachmentItem(
             ) {
                 Text(
                     text = if (attachment.tipoArchivo == TipoDeArchivo.Imagen) "IMG" else "VID",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NewMediaThumbnail(
+    mediaFile: com.vicherarr.memora.domain.models.MediaFile,
+    onRemove: () -> Unit,
+    onImageClick: (imagePath: Any, imageName: String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .size(120.dp)
+            .then(
+                if (mediaFile.type == com.vicherarr.memora.domain.models.MediaType.IMAGE) {
+                    Modifier.clickable {
+                        onImageClick(mediaFile.data, mediaFile.fileName)
+                    }
+                } else {
+                    Modifier
+                }
+            ),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (mediaFile.type) {
+                com.vicherarr.memora.domain.models.MediaType.IMAGE -> {
+                    AsyncImage(
+                        model = mediaFile.data,
+                        contentDescription = mediaFile.fileName,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                com.vicherarr.memora.domain.models.MediaType.VIDEO -> {
+                    // Video thumbnail placeholder with play icon
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = "Video",
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            
+            // Delete button - prominent and easy to tap
+            Surface(
+                onClick = onRemove,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .size(32.dp),
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = MaterialTheme.colorScheme.error.copy(alpha = 0.9f),
+                shadowElevation = 2.dp
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Eliminar archivo",
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onError
+                    )
+                }
+            }
+            
+            // "NEW" badge to distinguish from existing attachments
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(8.dp),
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f),
+                shape = RoundedCornerShape(4.dp)
+            ) {
+                Text(
+                    text = "NUEVO",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSecondary,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+            
+            // File type indicator
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(8.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                shape = RoundedCornerShape(4.dp)
+            ) {
+                Text(
+                    text = if (mediaFile.type == com.vicherarr.memora.domain.models.MediaType.IMAGE) "IMG" else "VID",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
