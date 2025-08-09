@@ -131,9 +131,13 @@ class NotesListScreen : Screen {
                 
                 else -> {
                     LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 8.dp,
+                            bottom = 80.dp // Space for bottom navigation bar
+                        ),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(uiState.notes) { note ->
