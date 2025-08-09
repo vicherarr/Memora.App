@@ -23,6 +23,12 @@ camerax = "1.4.1"
 androidx-permissions = "1.7.1"
 moko-permissions = "0.19.1"
 coil = "3.0.4"
+# Google Drive API dependencies
+play-services-auth = "21.0.0"
+google-api-services-drive = "v3-rev20240509-2.0.0"
+google-api-client-android = "2.3.0"
+google-http-client-gson = "1.44.1"
+kotlinx-coroutines-play-services = "1.7.3"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -74,6 +80,12 @@ moko-permissions-compose = { module = "dev.icerock.moko:permissions-compose", ve
 # Coil for image loading (Compose Multiplatform)
 coil = { module = "io.coil-kt.coil3:coil", version.ref = "coil" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+# Google Drive API dependencies for cloud sync
+google_play_services_auth = { module = "com.google.android.gms:play-services-auth", version.ref = "play-services-auth" }
+google_api_services_drive = { module = "com.google.apis:google-api-services-drive", version.ref = "google-api-services-drive" }
+google_api_client_android = { module = "com.google.api-client:google-api-client-android", version.ref = "google-api-client-android" }
+google_http_client_gson = { module = "com.google.http-client:google-http-client-gson", version.ref = "google-http-client-gson" }
+kotlinx_coroutines_play_services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "kotlinx-coroutines-play-services" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

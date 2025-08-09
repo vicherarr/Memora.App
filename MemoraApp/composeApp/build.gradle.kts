@@ -83,6 +83,17 @@ kotlin {
             
             // Activity Result API for permissions
             implementation(libs.androidx.activity.result)
+            
+            // Google Drive API dependencies for cloud sync
+            implementation(libs.google.play.services.auth)
+            implementation(libs.google.api.services.drive)
+            implementation("com.google.api-client:google-api-client-android:2.3.0") {
+                exclude(group = "org.apache.httpcomponents")
+            }
+            implementation(libs.google.http.client.gson)
+            
+            // Coroutines support for Google Play Services
+            implementation(libs.kotlinx.coroutines.play.services)
         }
         iosMain.dependencies {
             // Ktor iOS HTTP Client  
@@ -166,6 +177,18 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/DEPENDENCIES"
+            excludes += "META-INF/LICENSE"
+            excludes += "META-INF/LICENSE.txt"
+            excludes += "META-INF/license.txt"
+            excludes += "META-INF/NOTICE"
+            excludes += "META-INF/NOTICE.txt"
+            excludes += "META-INF/notice.txt"
+            excludes += "META-INF/ASL2.0"
+            excludes += "META-INF/INDEX.LIST"
+            excludes += "META-INF/*.RSA"
+            excludes += "META-INF/*.SF"
+            excludes += "META-INF/*.DSA"
         }
     }
     buildTypes {
