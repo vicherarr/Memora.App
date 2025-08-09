@@ -106,7 +106,9 @@ class GoogleDriveStorageProvider(
     
     override suspend fun descargarDB(): ByteArray? = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "Descargando DB desde Google Drive AppDataFolder...")
+            Log.d(TAG, "====== DESCARGA DESDE GOOGLE DRIVE ======")
+            Log.d(TAG, "📥 Descargando DB desde Google Drive AppDataFolder...")
+            Log.d(TAG, "📥 Cuenta actual: vicherarr@gmail.com (esperada)")
             logAppDataInfo()
             
             val service = driveService ?: throw Exception("Google Drive service no inicializado")
@@ -120,19 +122,29 @@ class GoogleDriveStorageProvider(
             
             val files = fileList.files
             if (files.isNullOrEmpty()) {
-                Log.d(TAG, "No se encontró archivo de DB remota")
+                Log.d(TAG, "📥 ❌ No se encontró archivo de DB remota en AppDataFolder")
+                Log.d(TAG, "📥 Esto significa:")
+                Log.d(TAG, "📥   - Primera sincronización desde este dispositivo, O")
+                Log.d(TAG, "📥   - El otro dispositivo no ha sincronizado aún")
+                Log.d(TAG, "====== DESCARGA: ARCHIVO NO ENCONTRADO ======")
                 return@withContext null
             }
             
             val file = files[0]
-            Log.d(TAG, "Descargando archivo: ${file.name} (ID: ${file.id})")
+            Log.d(TAG, "📥 ✅ Archivo encontrado en AppDataFolder:")
+            Log.d(TAG, "📥   - Nombre: ${file.name}")
+            Log.d(TAG, "📥   - ID: ${file.id}")
+            Log.d(TAG, "📥   - Tamaño: ${file.size} bytes")
             
             // Descargar contenido del archivo
             val outputStream = ByteArrayOutputStream()
             service.files().get(file.id).executeMediaAndDownloadTo(outputStream)
             
             val data = outputStream.toByteArray()
-            Log.d(TAG, "Archivo descargado exitosamente (${data.size} bytes)")
+            Log.d(TAG, "📥 ✅ Archivo descargado exitosamente:")
+            Log.d(TAG, "📥   - Bytes descargados: ${data.size}")
+            Log.d(TAG, "📥   - Contenido (primeros 200 chars): ${data.decodeToString().take(200)}")
+            Log.d(TAG, "====== DESCARGA COMPLETADA ======")
             
             data
             
@@ -144,7 +156,11 @@ class GoogleDriveStorageProvider(
     
     override suspend fun subirDB(data: ByteArray): Unit = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "Subiendo DB a Google Drive AppDataFolder (${data.size} bytes)...")
+            Log.d(TAG, "====== SUBIDA A GOOGLE DRIVE ======")
+            Log.d(TAG, "📤 Subiendo DB a Google Drive AppDataFolder")
+            Log.d(TAG, "📤 Tamaño de datos: ${data.size} bytes")
+            Log.d(TAG, "📤 Cuenta actual: vicherarr@gmail.com (esperada)")
+            Log.d(TAG, "📤 Contenido (primeros 200 chars): ${data.decodeToString().take(200)}")
             logAppDataInfo()
             
             val service = driveService ?: throw Exception("Google Drive service no inicializado")
@@ -161,7 +177,7 @@ class GoogleDriveStorageProvider(
             
             if (files.isNullOrEmpty()) {
                 // PRIMERA VEZ: Crear archivo nuevo en AppDataFolder
-                Log.d(TAG, "Primera vez - Creando archivo '$DB_FILE_NAME' en AppDataFolder...")
+                Log.d(TAG, "📤 PRIMERA VEZ - Creando archivo '$DB_FILE_NAME' en AppDataFolder...")
                 
                 val fileMetadata = File()
                     .setName(DB_FILE_NAME)
@@ -171,19 +187,30 @@ class GoogleDriveStorageProvider(
                     .setFields("id, name")
                     .execute()
                 
-                Log.d(TAG, "Archivo creado exitosamente: ${file.name} (ID: ${file.id})")
+                Log.d(TAG, "📤 ✅ Archivo creado exitosamente:")
+                Log.d(TAG, "📤   - Nombre: ${file.name}")
+                Log.d(TAG, "📤   - ID: ${file.id}")
+                Log.d(TAG, "📤   - Ubicación: AppDataFolder (privado para vicherarr@gmail.com)")
                 
             } else {
                 // ACTUALIZAR: Archivo ya existe
                 val existingFileId = files[0].id
-                Log.d(TAG, "Actualizando archivo existente: $existingFileId...")
+                val existingFileName = files[0].name
+                Log.d(TAG, "📤 ACTUALIZANDO archivo existente:")
+                Log.d(TAG, "📤   - ID: $existingFileId")
+                Log.d(TAG, "📤   - Nombre: $existingFileName")
                 
                 val updatedFile = service.files().update(existingFileId, null, fileContent)
                     .setFields("id, name, modifiedTime")
                     .execute()
                 
-                Log.d(TAG, "Archivo actualizado exitosamente: ${updatedFile.name}")
+                Log.d(TAG, "📤 ✅ Archivo actualizado exitosamente:")
+                Log.d(TAG, "📤   - Nombre: ${updatedFile.name}")
+                Log.d(TAG, "📤   - ID: ${updatedFile.id}")
+                Log.d(TAG, "📤   - Timestamp: ${updatedFile.modifiedTime}")
             }
+            
+            Log.d(TAG, "====== SUBIDA COMPLETADA ======")
             
         } catch (e: Exception) {
             Log.e(TAG, "Error subiendo DB: ${e.message}", e)

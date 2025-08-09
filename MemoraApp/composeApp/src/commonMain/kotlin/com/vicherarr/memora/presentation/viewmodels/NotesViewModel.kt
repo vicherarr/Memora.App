@@ -8,6 +8,8 @@ import com.vicherarr.memora.presentation.states.BaseUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 
 /**
@@ -33,24 +35,22 @@ class NotesViewModel(
     val uiState: StateFlow<NotesUiState> = _uiState.asStateFlow()
     
     init {
-        loadNotes()
-    }
-    
-    fun loadNotes() {
+        // Establish a reactive flow from the repository to the UI state
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            
-            notesRepository.getNotes()
-                .onSuccess { notesList ->
-                    _uiState.value = _uiState.value.copy(
-                        notes = notesList,
-                        isLoading = false
-                    )
+            notesRepository.getNotesFlow()
+                .onStart { 
+                    _uiState.value = _uiState.value.copy(isLoading = true) 
                 }
-                .onFailure { exception ->
+                .catch { exception ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         errorMessage = exception.message ?: "Error loading notes"
+                    )
+                }
+                .collect { notesList ->
+                    _uiState.value = _uiState.value.copy(
+                        notes = notesList,
+                        isLoading = false
                     )
                 }
         }
@@ -78,15 +78,10 @@ class NotesViewModel(
     
     fun createNote(titulo: String?, contenido: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            
+            // The UI will update automatically thanks to the reactive flow. No need to call loadNotes().
             notesRepository.createNote(titulo, contenido)
-                .onSuccess {
-                    loadNotes() // Refresh list
-                }
                 .onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
-                        isLoading = false,
                         errorMessage = exception.message ?: "Error creating note"
                     )
                 }
@@ -95,15 +90,10 @@ class NotesViewModel(
     
     fun updateNote(id: String, titulo: String?, contenido: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            
+            // The UI will update automatically thanks to the reactive flow. No need to call loadNotes().
             notesRepository.updateNote(id, titulo, contenido)
-                .onSuccess {
-                    loadNotes() // Refresh list
-                }
                 .onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
-                        isLoading = false,
                         errorMessage = exception.message ?: "Error updating note"
                     )
                 }
@@ -112,15 +102,10 @@ class NotesViewModel(
     
     fun deleteNote(id: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            
+            // The UI will update automatically thanks to the reactive flow. No need to call loadNotes().
             notesRepository.deleteNote(id)
-                .onSuccess {
-                    loadNotes() // Refresh list
-                }
                 .onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
-                        isLoading = false,
                         errorMessage = exception.message ?: "Error deleting note"
                     )
                 }

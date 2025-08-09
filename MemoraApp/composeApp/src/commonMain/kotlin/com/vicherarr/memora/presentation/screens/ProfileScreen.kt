@@ -121,7 +121,7 @@ class ProfileScreen : Screen {
                     
                     // Botón de sincronización
                     Button(
-                        onClick = { syncViewModel.iniciarSincronizacion() },
+                        onClick = { syncViewModel.iniciarSincronizacionManual() },
                         enabled = currentSyncState !is SyncState.Syncing,
                         modifier = Modifier.fillMaxWidth()
                     ) {

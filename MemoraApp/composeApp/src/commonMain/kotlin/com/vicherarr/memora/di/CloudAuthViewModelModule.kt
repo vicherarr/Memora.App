@@ -11,15 +11,14 @@ val cloudAuthViewModelModule = module {
     
     factory { 
         CloudLoginViewModel(
-            signInUseCase = get(),
-            signOutUseCase = get(),
-            getCurrentUserUseCase = get()
+            cloudAuthProvider = get()
         ) 
     }
     
     factory { 
         SyncViewModel(
-            syncEngine = get()
+            syncEngine = get(),
+            cloudAuthProvider = get()
         )
     }
 }

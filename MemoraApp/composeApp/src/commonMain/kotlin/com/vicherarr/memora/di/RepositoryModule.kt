@@ -20,7 +20,8 @@ val repositoryModule = module {
             notesDao = get(),
             attachmentsDao = get(),
             notesApi = get(),
-            fileManager = get()
+            fileManager = get(),
+            cloudAuthProvider = get()
         ) 
     }
     single<MediaRepository> { SimplifiedMediaRepository() }

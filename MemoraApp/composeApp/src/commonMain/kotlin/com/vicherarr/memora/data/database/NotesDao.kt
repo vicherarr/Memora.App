@@ -31,7 +31,26 @@ class NotesDao(private val database: MemoraDatabase) {
      * Get all notes for a specific user (one-time query)
      */
     suspend fun getNotesByUserId(userId: String): List<Notes> {
-        return queries.getNotesByUserId(userId).executeAsList()
+        println("====== NotesDao: getNotesByUserId ======")
+        println("🔍 Consultando notas para el usuario: $userId")
+        val notes = queries.getNotesByUserId(userId).executeAsList()
+        if (notes.isNotEmpty()) {
+            println("✅ Encontradas ${notes.size} notas para el usuario '$userId'")
+            notes.forEach { note ->
+                println("  - Nota ID: ${note.id}, Título: ${note.titulo}, Modificado: ${note.fecha_modificacion}")
+            }
+        } else {
+            println("❌ No se encontraron notas en la DB local para el usuario '$userId'")
+        }
+        println("========================================")
+        return notes
+    }
+    
+    /**
+     * Get ALL notes (for debugging sync issues)
+     */
+    suspend fun getAllNotes(): List<Notes> {
+        return queries.getAllNotes().executeAsList()
     }
     
     /**

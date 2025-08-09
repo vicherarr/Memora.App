@@ -2,29 +2,55 @@ package com.vicherarr.memora.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vicherarr.memora.data.auth.CloudAuthProvider
+import com.vicherarr.memora.domain.model.AuthState
 import com.vicherarr.memora.sync.SyncEngine
 import com.vicherarr.memora.sync.SyncState
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel para manejar la sincronización cloud
+ * ViewModel para manejar la sincronización cloud.
+ * Inicia una sincronización automáticamente al autenticarse.
  */
 class SyncViewModel(
-    private val syncEngine: SyncEngine
+    private val syncEngine: SyncEngine,
+    private val cloudAuthProvider: CloudAuthProvider
 ) : ViewModel() {
-    
+
     val syncState: StateFlow<SyncState> = syncEngine.syncState
-    
-    /**
-     * Inicia sincronización manual
-     */
-    fun iniciarSincronizacion() {
+    private var isFirstSyncDone = false
+
+    init {
+        // Iniciar sincronización automática cuando el usuario se autentique por primera vez
         viewModelScope.launch {
-            try {
-                syncEngine.iniciarSincronizacion()
-            } catch (e: Exception) {
-                println("SyncViewModel: Error iniciando sincronización - ${e.message}")
+            // Espera hasta que el estado sea 'Authenticated'
+            cloudAuthProvider.authState.collect { authState ->
+                if (authState is AuthState.Authenticated && !isFirstSyncDone) {
+                    println("SyncViewModel: Usuario autenticado. Iniciando primera sincronización automática.")
+                    isFirstSyncDone = true
+                    syncEngine.iniciarSincronizacion()
+                }
+            }
+        }
+    }
+
+    /**
+     * Inicia sincronización manual (ej. con un botón de 'refrescar')
+     */
+    fun iniciarSincronizacionManual() {
+        viewModelScope.launch {
+            // Asegurarse de que el usuario está autenticado antes de intentar una sincronización manual
+            if (cloudAuthProvider.authState.value is AuthState.Authenticated) {
+                println("SyncViewModel: Iniciando sincronización manual.")
+                try {
+                    syncEngine.iniciarSincronizacion()
+                } catch (e: Exception) {
+                    println("SyncViewModel: Error en sincronización manual - ${e.message}")
+                }
+            } else {
+                println("SyncViewModel: No se puede iniciar sincronización manual. Usuario no autenticado.")
             }
         }
     }

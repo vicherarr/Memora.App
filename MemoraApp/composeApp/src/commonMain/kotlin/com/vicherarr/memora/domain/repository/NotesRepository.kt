@@ -3,11 +3,13 @@ package com.vicherarr.memora.domain.repository
 import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.domain.models.MediaFile
 import com.vicherarr.memora.domain.models.ArchivoAdjunto
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Repository interface for notes operations
  */
 interface NotesRepository {
+    fun getNotesFlow(): Flow<List<Note>>
     suspend fun getNotes(): Result<List<Note>>
     suspend fun getNoteById(id: String): Result<Note>
     suspend fun createNote(titulo: String?, contenido: String): Result<Note>

@@ -1,6 +1,7 @@
 package com.vicherarr.memora.data.repository
 
 import com.vicherarr.memora.data.api.NotesApi
+import com.vicherarr.memora.data.auth.CloudAuthProvider
 import com.vicherarr.memora.data.database.AttachmentsDao
 import com.vicherarr.memora.data.database.NotesDao
 import com.vicherarr.memora.data.database.getCurrentTimestamp
@@ -8,6 +9,7 @@ import com.vicherarr.memora.data.dto.CreateNotaDto
 import com.vicherarr.memora.data.dto.UpdateNotaDto
 import com.vicherarr.memora.database.Notes
 import com.vicherarr.memora.database.Attachments
+import com.vicherarr.memora.domain.model.AuthState
 import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.domain.models.ArchivoAdjunto
 import com.vicherarr.memora.domain.models.TipoDeArchivo
@@ -16,6 +18,8 @@ import com.vicherarr.memora.domain.models.MediaType
 import com.vicherarr.memora.domain.platform.FileManager
 import com.vicherarr.memora.domain.repository.NotesRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 /**
@@ -28,16 +32,31 @@ class NotesRepositoryImpl(
     private val notesDao: NotesDao,
     private val attachmentsDao: AttachmentsDao,
     private val notesApi: NotesApi,
-    private val fileManager: FileManager
+    private val fileManager: FileManager,
+    private val cloudAuthProvider: CloudAuthProvider
 ) : NotesRepository {
-    
-    // TODO: Get current user ID from AuthRepository
-    private val currentUserId = "user_mock" // Temporary hardcoded value
+
+    private fun getCurrentUserId(): String {
+        println("====== NotesRepository: getCurrentUserId ======")
+        val authState = cloudAuthProvider.authState.value
+        val userId = when (authState) {
+            is AuthState.Authenticated -> {
+                println("✅ Usuario autenticado: ${authState.user.email}")
+                authState.user.email
+            }
+            else -> {
+                println("❌ Usuario NO autenticado. Usando ID de fallback.")
+                "unauthenticated_user" // Fallback
+            }
+        }
+        println("==============================================")
+        return userId
+    }
     
     override suspend fun getNotes(): Result<List<Note>> {
         return try {
             // LOCAL-FIRST: Get notes from local database immediately
-            val localNotes = notesDao.getNotesByUserId(currentUserId)
+            val localNotes = notesDao.getNotesByUserId(getCurrentUserId())
             val domainNotes = localNotes.map { note ->
                 note.toDomainModelWithAttachments()
             }
@@ -76,7 +95,7 @@ class NotesRepositoryImpl(
                 contenido = contenido,
                 fechaCreacion = now,
                 fechaModificacion = now,
-                usuarioId = currentUserId,
+                usuarioId = getCurrentUserId(),
                 syncStatus = "PENDING", // Mark for sync
                 needsUpload = 1
             )
@@ -88,7 +107,7 @@ class NotesRepositoryImpl(
                 contenido = contenido,
                 fechaCreacion = getCurrentTimestamp(),
                 fechaModificacion = getCurrentTimestamp(),
-                usuarioId = currentUserId
+                usuarioId = getCurrentUserId()
             )
             
             // TODO: Background sync will be handled by SyncRepository
@@ -111,7 +130,7 @@ class NotesRepositoryImpl(
                 contenido = contenido,
                 fechaCreacion = now,
                 fechaModificacion = now,
-                usuarioId = currentUserId,
+                usuarioId = getCurrentUserId(),
                 syncStatus = "PENDING", // Mark for sync
                 needsUpload = 1
             )
@@ -164,7 +183,7 @@ class NotesRepositoryImpl(
                 contenido = contenido,
                 fechaCreacion = getCurrentTimestamp(),
                 fechaModificacion = getCurrentTimestamp(),
-                usuarioId = currentUserId,
+                usuarioId = getCurrentUserId(),
                 archivosAdjuntos = attachmentsList
             )
             
@@ -278,9 +297,20 @@ class NotesRepositoryImpl(
     /**
      * Get notes as Flow for reactive UI updates
      */
-    fun getNotesFlow(): Flow<List<Note>> {
-        return notesDao.getNotesByUserIdFlow(currentUserId)
-            .map { notesList -> notesList.map { it.toDomainModel() } }
+    override fun getNotesFlow(): Flow<List<Note>> {
+        return cloudAuthProvider.authState.flatMapLatest { authState ->
+            when (authState) {
+                is AuthState.Authenticated -> {
+                    println("NotesRepository: AuthState changed to Authenticated. Fetching notes for ${authState.user.email}")
+                    notesDao.getNotesByUserIdFlow(authState.user.email)
+                        .map { notesList -> notesList.map { it.toDomainModel() } }
+                }
+                else -> {
+                    println("NotesRepository: AuthState changed to Unauthenticated. Returning empty list.")
+                    flowOf(emptyList())
+                }
+            }
+        }
     }
     
     // MAPPING FUNCTIONS

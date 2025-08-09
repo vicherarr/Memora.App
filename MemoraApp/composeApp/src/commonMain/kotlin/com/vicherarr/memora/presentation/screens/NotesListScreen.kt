@@ -91,11 +91,7 @@ class NotesListScreen : Screen {
                             color = MaterialTheme.colorScheme.error
                         )
                         
-                        Spacer(modifier = Modifier.height(16.dp))
                         
-                        Button(onClick = { notesViewModel.loadNotes() }) {
-                            Text("Reintentar")
-                        }
                     }
                 }
                 

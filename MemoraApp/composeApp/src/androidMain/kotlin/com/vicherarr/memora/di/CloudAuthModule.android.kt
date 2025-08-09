@@ -7,6 +7,8 @@ import com.vicherarr.memora.domain.usecase.auth.CloudSignInUseCase
 import com.vicherarr.memora.domain.usecase.auth.CloudSignOutUseCase
 import com.vicherarr.memora.domain.usecase.auth.GetCurrentCloudUserUseCase
 import com.vicherarr.memora.sync.CloudStorageProvider
+import com.vicherarr.memora.sync.DatabaseMerger
+import com.vicherarr.memora.sync.DatabaseSyncService
 import com.vicherarr.memora.sync.GoogleDriveStorageProvider
 import com.vicherarr.memora.sync.SyncEngine
 import org.koin.android.ext.koin.androidContext
@@ -44,6 +46,12 @@ val cloudAuthModuleAndroid = module {
         ) 
     }
     
+    // Database Merger
+    single { DatabaseMerger() }
+    
+    // Database Sync Service
+    single { DatabaseSyncService(get()) }
+    
     // Sync Engine
-    single { SyncEngine(get()) }
+    single { SyncEngine(get(), get(), get(), get()) }
 }

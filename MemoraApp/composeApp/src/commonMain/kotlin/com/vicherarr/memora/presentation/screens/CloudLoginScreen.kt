@@ -115,8 +115,7 @@ class CloudLoginScreen : Screen {
                         val errorState = authState as AuthState.Error
                         ErrorContent(
                             message = errorState.message,
-                            onRetry = { viewModel.signIn() },
-                            onDismiss = { viewModel.clearError() }
+                            onRetry = { viewModel.signIn() }
                         )
                     }
                 }
@@ -226,8 +225,7 @@ private fun AuthenticatedContent(
 @Composable
 private fun ErrorContent(
     message: String,
-    onRetry: () -> Unit,
-    onDismiss: () -> Unit
+    onRetry: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -261,19 +259,11 @@ private fun ErrorContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = "Cerrar",
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                }
+                // Removed "Cerrar" button as clearError() is no longer needed
                 
                 Button(
                     onClick = onRetry,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(), // Make retry button fill width
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     )
