@@ -23,6 +23,16 @@ data class ImageViewerState(
 )
 
 /**
+ * Video Viewer State - Single Source of Truth for video viewer
+ * Following Clean Code principles and MVVM pattern
+ */
+data class VideoViewerState(
+    val isVisible: Boolean = false,
+    val videoData: Any? = null,
+    val videoName: String? = null
+)
+
+/**
  * Note Detail UI State - Single Source of Truth
  * Immutable data class representing the complete state of the Note Detail screen
  */
@@ -33,6 +43,7 @@ data class NoteDetailUiState(
     val editContenido: String = "",
     val editAttachments: List<ArchivoAdjunto> = emptyList(), // Current attachments in edit mode
     val imageViewer: ImageViewerState = ImageViewerState(), // Image viewer state following MVVM
+    val videoViewer: VideoViewerState = VideoViewerState(), // Video viewer state following MVVM
     val isNoteDeleted: Boolean = false,
     val isNoteSaved: Boolean = false,
     override val isLoading: Boolean = false,
@@ -244,6 +255,62 @@ class NoteDetailViewModel(
         _uiState.value = _uiState.value.copy(
             imageViewer = ImageViewerState()
         )
+    }
+    
+    /**
+     * Show video viewer with specified video data
+     * Following MVVM pattern - state management in ViewModel
+     */
+    fun showVideoViewer(videoData: Any, videoName: String?) {
+        _uiState.value = _uiState.value.copy(
+            videoViewer = VideoViewerState(
+                isVisible = true,
+                videoData = videoData,
+                videoName = videoName
+            )
+        )
+    }
+    
+    /**
+     * Hide video viewer
+     * Following MVVM pattern - state management in ViewModel
+     */
+    fun hideVideoViewer() {
+        _uiState.value = _uiState.value.copy(
+            videoViewer = VideoViewerState()
+        )
+    }
+    
+    /**
+     * Universal media viewer - handles business logic for showing appropriate viewer
+     * Following Clean Code principles - View doesn't know about media types
+     */
+    fun showMediaViewer(attachment: ArchivoAdjunto) {
+        if (attachment.filePath.isNullOrBlank()) return
+        
+        when (attachment.tipoArchivo) {
+            com.vicherarr.memora.domain.models.TipoDeArchivo.Imagen -> {
+                showImageViewer(attachment.filePath!!, attachment.nombreOriginal ?: "Imagen")
+            }
+            com.vicherarr.memora.domain.models.TipoDeArchivo.Video -> {
+                showVideoViewer(attachment.filePath!!, attachment.nombreOriginal ?: "Video")
+            }
+        }
+    }
+    
+    /**
+     * Universal media viewer for new media files (MediaFile type)
+     * Following Clean Code principles - View doesn't know about media types
+     */
+    fun showMediaViewer(mediaFile: MediaFile) {
+        when (mediaFile.type) {
+            com.vicherarr.memora.domain.models.MediaType.IMAGE -> {
+                showImageViewer(mediaFile.data, mediaFile.fileName)
+            }
+            com.vicherarr.memora.domain.models.MediaType.VIDEO -> {
+                showVideoViewer(mediaFile.data, mediaFile.fileName)
+            }
+        }
     }
     
     /**

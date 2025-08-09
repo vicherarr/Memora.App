@@ -35,6 +35,7 @@ import com.vicherarr.memora.platform.camera.rememberVideoPickerManager
 import com.vicherarr.memora.presentation.viewmodels.NoteDetailViewModel
 import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
 import com.vicherarr.memora.presentation.components.ImageFullScreenViewer
+import com.vicherarr.memora.presentation.components.VideoPlayerDialog
 import com.vicherarr.memora.ui.components.MemoraTextField
 import org.koin.compose.getKoin
 
@@ -162,20 +163,17 @@ data class NoteDetailScreen(private val noteId: String) : Screen {
                                 onContenidoChange = viewModel::updateEditContenido,
                                 onRemoveAttachment = viewModel::removeAttachment,
                                 onRemoveNewMedia = mediaViewModel::removeFromSelectedMedia,
-                                onImageClick = { imagePath, imageName ->
-                                    viewModel.showImageViewer(imagePath, imageName)
-                                },
+                                onAttachmentClick = { attachment -> viewModel.showMediaViewer(attachment) },
+                                onMediaFileClick = { mediaFile -> viewModel.showMediaViewer(mediaFile) },
                                 onCameraClick = { cameraManager.launch() },
                                 onGalleryClick = { galleryManager.launch() },
-                                onVideoClick = { videoPickerManager.launch() },
+                                onVideoPickerClick = { videoPickerManager.launch() },
                                 validationHint = viewModel.getValidationHint(uiState.editContenido)
                             )
                         } else {
                             ViewNoteContent(
                                 note = uiState.note!!,
-                                onImageClick = { imagePath, imageName ->
-                                    viewModel.showImageViewer(imagePath, imageName)
-                                }
+                                onMediaClick = { attachment -> viewModel.showMediaViewer(attachment) }
                             )
                         }
                     }
@@ -190,6 +188,16 @@ data class NoteDetailScreen(private val noteId: String) : Screen {
                 fileName = uiState.imageViewer.imageName,
                 isVisible = uiState.imageViewer.isVisible,
                 onDismiss = viewModel::hideImageViewer
+            )
+        }
+        
+        // Video player dialog - Following MVVM pattern
+        uiState.videoViewer.videoData?.let { videoData ->
+            VideoPlayerDialog(
+                videoData = videoData,
+                fileName = uiState.videoViewer.videoName,
+                isVisible = uiState.videoViewer.isVisible,
+                onDismiss = viewModel::hideVideoViewer
             )
         }
     }
@@ -302,10 +310,11 @@ private fun EditNoteContent(
     onContenidoChange: (String) -> Unit,
     onRemoveAttachment: (String) -> Unit,
     onRemoveNewMedia: (com.vicherarr.memora.domain.models.MediaFile) -> Unit,
-    onImageClick: (imagePath: Any, imageName: String) -> Unit,
+    onAttachmentClick: (com.vicherarr.memora.domain.models.ArchivoAdjunto) -> Unit,
+    onMediaFileClick: (com.vicherarr.memora.domain.models.MediaFile) -> Unit,
     onCameraClick: () -> Unit,
     onGalleryClick: () -> Unit,
-    onVideoClick: () -> Unit,
+    onVideoPickerClick: () -> Unit,
     validationHint: String?
 ) {
     Column(
@@ -343,7 +352,7 @@ private fun EditNoteContent(
                     EditableAttachmentItem(
                         attachment = attachment,
                         onRemove = { onRemoveAttachment(attachment.id) },
-                        onImageClick = onImageClick
+                        onMediaClick = { onAttachmentClick(attachment) }
                     )
                 }
                 
@@ -352,7 +361,7 @@ private fun EditNoteContent(
                     NewMediaThumbnail(
                         mediaFile = mediaFile,
                         onRemove = { onRemoveNewMedia(mediaFile) },
-                        onImageClick = onImageClick
+                        onMediaClick = { onMediaFileClick(mediaFile) }
                     )
                 }
             }
@@ -410,7 +419,7 @@ private fun EditNoteContent(
                     
                     // Video Button
                     FilledTonalButton(
-                        onClick = onVideoClick,
+                        onClick = onVideoPickerClick,
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(
@@ -469,7 +478,7 @@ private fun EditNoteContent(
 @Composable
 private fun ViewNoteContent(
     note: com.vicherarr.memora.domain.models.Note,
-    onImageClick: (imagePath: String, imageName: String) -> Unit
+    onMediaClick: (com.vicherarr.memora.domain.models.ArchivoAdjunto) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -528,7 +537,7 @@ private fun ViewNoteContent(
                     items(note.archivosAdjuntos) { attachment ->
                         AttachmentItem(
                             attachment = attachment,
-                            onImageClick = onImageClick
+                            onMediaClick = { onMediaClick(attachment) }
                         )
                     }
                 }
@@ -540,7 +549,7 @@ private fun ViewNoteContent(
 @Composable
 private fun AttachmentItem(
     attachment: com.vicherarr.memora.domain.models.ArchivoAdjunto,
-    onImageClick: (imagePath: String, imageName: String) -> Unit
+    onMediaClick: () -> Unit // Simple callback - no business logic
 ) {
     // Debug logging
     println("AttachmentItem: id=${attachment.id}, tipo=${attachment.tipoArchivo}, path=${attachment.filePath}")
@@ -548,15 +557,7 @@ private fun AttachmentItem(
     Card(
         modifier = Modifier
             .size(120.dp)
-            .then(
-                if (attachment.tipoArchivo == TipoDeArchivo.Imagen && !attachment.filePath.isNullOrBlank()) {
-                    Modifier.clickable {
-                        onImageClick(attachment.filePath!!, attachment.nombreOriginal ?: "Imagen")
-                    }
-                } else {
-                    Modifier
-                }
-            ),
+            .clickable { onMediaClick() }, // Clean - no business logic
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
@@ -635,20 +636,12 @@ private fun AttachmentItem(
 private fun EditableAttachmentItem(
     attachment: com.vicherarr.memora.domain.models.ArchivoAdjunto,
     onRemove: () -> Unit,
-    onImageClick: (imagePath: Any, imageName: String) -> Unit
+    onMediaClick: () -> Unit // Simple callback - no business logic
 ) {
     Card(
         modifier = Modifier
             .size(120.dp)
-            .then(
-                if (attachment.tipoArchivo == TipoDeArchivo.Imagen && !attachment.filePath.isNullOrBlank()) {
-                    Modifier.clickable {
-                        onImageClick(attachment.filePath!!, attachment.nombreOriginal ?: "Imagen")
-                    }
-                } else {
-                    Modifier
-                }
-            ),
+            .clickable { onMediaClick() }, // Clean - no business logic
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
@@ -741,21 +734,13 @@ private fun EditableAttachmentItem(
 private fun NewMediaThumbnail(
     mediaFile: com.vicherarr.memora.domain.models.MediaFile,
     onRemove: () -> Unit,
-    onImageClick: (imagePath: Any, imageName: String) -> Unit,
+    onMediaClick: () -> Unit, // Simple callback - no business logic
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
             .size(120.dp)
-            .then(
-                if (mediaFile.type == com.vicherarr.memora.domain.models.MediaType.IMAGE) {
-                    Modifier.clickable {
-                        onImageClick(mediaFile.data, mediaFile.fileName)
-                    }
-                } else {
-                    Modifier
-                }
-            ),
+            .clickable { onMediaClick() }, // Clean - no business logic
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
