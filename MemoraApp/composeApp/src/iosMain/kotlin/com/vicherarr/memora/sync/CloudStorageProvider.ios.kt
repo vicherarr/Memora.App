@@ -10,6 +10,8 @@ actual interface CloudStorageProvider {
     actual suspend fun descargarDB(): ByteArray?
     actual suspend fun subirDB(data: ByteArray)
     actual suspend fun obtenerMetadatosRemotos(): Long?
+    actual suspend fun forceDeleteRemoteDatabase(): Result<Boolean>
+    actual suspend fun forceDeleteAllRemoteFiles(): Result<Boolean>
 }
 
 /**
@@ -80,6 +82,20 @@ class iCloudStorageProvider : CloudStorageProvider {
         val mockTimestamp = 1704067200000L // Timestamp mock fijo
         println("iCloud Mock: Metadatos obtenidos - timestamp: $mockTimestamp")
         return mockTimestamp
+    }
+    
+    override suspend fun forceDeleteRemoteDatabase(): Result<Boolean> {
+        println("iCloud Mock: 🚨 Simulando borrado forzado de DB remota...")
+        delay(500) // Simular latencia
+        println("iCloud Mock: 🚨 ✅ DB remota eliminada (simulado)")
+        return Result.success(true)
+    }
+    
+    override suspend fun forceDeleteAllRemoteFiles(): Result<Boolean> {
+        println("iCloud Mock: 🚨🚨 Simulando borrado nuclear de todos los archivos...")
+        delay(800) // Simular latencia
+        println("iCloud Mock: 🚨🚨 ✅ Borrado nuclear completado (simulado)")
+        return Result.success(true)
     }
 }
 

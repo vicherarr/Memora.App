@@ -23,4 +23,7 @@ interface NotesRepository {
         newMediaFiles: List<MediaFile>
     ): Result<Note>
     suspend fun deleteNote(id: String): Result<Unit>
+    
+    // TESTING: Delete all notes for a specific user
+    suspend fun deleteAllNotesForUser(userId: String): Result<Unit>
 }

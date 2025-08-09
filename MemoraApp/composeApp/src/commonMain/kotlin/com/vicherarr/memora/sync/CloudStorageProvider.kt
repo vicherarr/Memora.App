@@ -29,6 +29,18 @@ expect interface CloudStorageProvider {
      * @return El timestamp UTC en milisegundos o null si no existe el archivo
      */
     suspend fun obtenerMetadatosRemotos(): Long?
+    
+    /**
+     * TESTING: Force delete remote database for fresh start
+     * TODO: Remove this method after testing
+     */
+    suspend fun forceDeleteRemoteDatabase(): Result<Boolean>
+    
+    /**
+     * TESTING: Force delete ALL remote files for nuclear reset
+     * TODO: Remove this method after testing
+     */
+    suspend fun forceDeleteAllRemoteFiles(): Result<Boolean>
 }
 
 /**

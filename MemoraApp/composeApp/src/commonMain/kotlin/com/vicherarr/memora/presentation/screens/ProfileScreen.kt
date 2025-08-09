@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,6 +33,7 @@ class ProfileScreen : Screen {
         val koin = getKoin()
         val syncViewModel: SyncViewModel = remember { koin.get() }
         val syncState by syncViewModel.syncState.collectAsState()
+        val currentSyncState = syncState // Make it available in entire scope
         
         Column(
             modifier = Modifier
@@ -76,7 +79,6 @@ class ProfileScreen : Screen {
                     Spacer(modifier = Modifier.height(16.dp))
                     
                     // Estado de sincronización
-                    val currentSyncState = syncState
                     when (currentSyncState) {
                         is SyncState.Idle -> {
                             Text(
@@ -138,12 +140,108 @@ class ProfileScreen : Screen {
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            Text(
-                text = "Configuraciones adicionales próximamente",
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // TESTING: Reset completo section (temporal)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "🚨 Testing - Reset Completo",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "⚠️ ELIMINA TODOS LOS DATOS (local y remoto)",
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Botones de reset individual
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Borrar datos remotos
+                        Button(
+                            onClick = { syncViewModel.forceDeleteRemoteData() },
+                            enabled = currentSyncState !is SyncState.Syncing,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.CloudSync,
+                                contentDescription = "Borrar remoto",
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Remoto", style = MaterialTheme.typography.bodySmall)
+                        }
+                        
+                        // Borrar datos locales
+                        Button(
+                            onClick = { syncViewModel.forceDeleteLocalData() },
+                            enabled = currentSyncState !is SyncState.Syncing,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.DeleteForever,
+                                contentDescription = "Borrar local",
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Local", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    // Botón de reset completo
+                    Button(
+                        onClick = { syncViewModel.forceCompleteReset() },
+                        enabled = currentSyncState !is SyncState.Syncing,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = "Reset completo",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("🚨 RESET COMPLETO 🚨")
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "TODO: Remover después del testing",
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                    )
+                }
+            }
         }
     }
 }

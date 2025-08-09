@@ -26,6 +26,8 @@ actual interface CloudStorageProvider {
     actual suspend fun descargarDB(): ByteArray?
     actual suspend fun subirDB(data: ByteArray)
     actual suspend fun obtenerMetadatosRemotos(): Long?
+    actual suspend fun forceDeleteRemoteDatabase(): Result<Boolean>
+    actual suspend fun forceDeleteAllRemoteFiles(): Result<Boolean>
 }
 
 /**
@@ -247,6 +249,96 @@ class GoogleDriveStorageProvider(
         } catch (e: Exception) {
             Log.e(TAG, "Error obteniendo metadatos remotos: ${e.message}", e)
             throw Exception("Error obteniendo metadatos remotos: ${e.message}")
+        }
+    }
+    
+    /**
+     * TEMPORARY: Force delete remote database for fresh start
+     * TODO: Remove this method after testing
+     */
+    override suspend fun forceDeleteRemoteDatabase(): Result<Boolean> = withContext(Dispatchers.Default) {
+        try {
+            Log.d(TAG, "🚨 FORCE DELETE: Eliminando base de datos remota...")
+            
+            val service = driveService ?: throw Exception("Google Drive service no inicializado")
+            
+            // Buscar el archivo de base de datos principal
+            val fileList = service.files().list()
+                .setSpaces("appDataFolder")
+                .setQ("name='$DB_FILE_NAME' and trashed=false")
+                .setFields("files(id, name)")
+                .execute()
+            
+            val files = fileList.files
+            if (files.isNullOrEmpty()) {
+                Log.d(TAG, "🚨 FORCE DELETE: No se encontró DB remota para eliminar")
+                return@withContext Result.success(true)
+            }
+            
+            val dbFile = files[0]
+            Log.d(TAG, "🚨 FORCE DELETE: Eliminando archivo: ${dbFile.name} (ID: ${dbFile.id})")
+            
+            // Eliminar el archivo
+            service.files().delete(dbFile.id).execute()
+            
+            Log.d(TAG, "🚨 FORCE DELETE: ✅ Base de datos remota eliminada exitosamente")
+            Log.d(TAG, "🚨 FORCE DELETE: La próxima sincronización creará una nueva DB desde cero")
+            
+            return@withContext Result.success(true)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "🚨 FORCE DELETE: Error eliminando DB remota: ${e.message}", e)
+            return@withContext Result.failure(Exception("Error eliminando DB remota: ${e.message}"))
+        }
+    }
+    
+    /**
+     * TEMPORARY: Force delete ALL files in AppDataFolder for complete reset
+     * TODO: Remove this method after testing
+     */
+    override suspend fun forceDeleteAllRemoteFiles(): Result<Boolean> = withContext(Dispatchers.Default) {
+        try {
+            Log.d(TAG, "🚨🚨 NUCLEAR DELETE: Eliminando TODOS los archivos en AppDataFolder...")
+            
+            val service = driveService ?: throw Exception("Google Drive service no inicializado")
+            
+            // Listar TODOS los archivos en AppDataFolder
+            val fileList = service.files().list()
+                .setSpaces("appDataFolder")
+                .setFields("files(id, name)")
+                .execute()
+            
+            val files = fileList.files
+            if (files.isNullOrEmpty()) {
+                Log.d(TAG, "🚨🚨 NUCLEAR DELETE: No hay archivos para eliminar")
+                return@withContext Result.success(true)
+            }
+            
+            Log.d(TAG, "🚨🚨 NUCLEAR DELETE: Encontrados ${files.size} archivos para eliminar:")
+            files.forEach { file ->
+                Log.d(TAG, "  - ${file.name} (${file.id})")
+            }
+            
+            // Eliminar cada archivo
+            var deletedCount = 0
+            files.forEach { file ->
+                try {
+                    service.files().delete(file.id).execute()
+                    Log.d(TAG, "🚨🚨 NUCLEAR DELETE: ✅ Eliminado: ${file.name}")
+                    deletedCount++
+                } catch (e: Exception) {
+                    Log.e(TAG, "🚨🚨 NUCLEAR DELETE: ❌ Error eliminando ${file.name}: ${e.message}")
+                }
+            }
+            
+            Log.d(TAG, "🚨🚨 NUCLEAR DELETE: ✅ Eliminados $deletedCount de ${files.size} archivos")
+            Log.d(TAG, "🚨🚨 NUCLEAR DELETE: AppDataFolder ahora está limpio")
+            
+            return@withContext Result.success(true)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "🚨🚨 NUCLEAR DELETE: Error en eliminación masiva: ${e.message}", e)
+            return@withContext Result.failure(Exception("Error en eliminación masiva: ${e.message}"))
         }
     }
 }

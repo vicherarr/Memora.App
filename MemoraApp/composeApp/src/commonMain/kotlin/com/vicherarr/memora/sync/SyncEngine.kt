@@ -143,6 +143,56 @@ class SyncEngine(
     }
     
     /**
+     * TEMPORARY: Force delete remote database for fresh start
+     * TODO: Remove this method after testing
+     */
+    suspend fun forceDeleteRemoteDatabase(): Result<Boolean> {
+        return try {
+            println("SyncEngine: 🚨 INICIANDO BORRADO FORZADO DE DB REMOTA...")
+            
+            // Use the method from CloudStorageProvider interface
+            val result = cloudProvider.forceDeleteRemoteDatabase()
+            if (result.isSuccess) {
+                println("SyncEngine: 🚨 ✅ DB remota eliminada exitosamente")
+                _syncState.value = SyncState.Success("🚨 DB remota eliminada - listo para empezar desde cero")
+            } else {
+                println("SyncEngine: 🚨 ❌ Error eliminando DB remota: ${result.exceptionOrNull()?.message}")
+                _syncState.value = SyncState.Error("Error eliminando DB: ${result.exceptionOrNull()?.message}")
+            }
+            result
+        } catch (e: Exception) {
+            println("SyncEngine: 🚨 ❌ Error en borrado forzado: ${e.message}")
+            _syncState.value = SyncState.Error("Error en borrado: ${e.message}")
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * TEMPORARY: Force delete ALL remote files for nuclear reset
+     * TODO: Remove this method after testing
+     */
+    suspend fun forceDeleteAllRemoteFiles(): Result<Boolean> {
+        return try {
+            println("SyncEngine: 🚨🚨 INICIANDO BORRADO NUCLEAR DE TODOS LOS ARCHIVOS...")
+            
+            // Use the method from CloudStorageProvider interface
+            val result = cloudProvider.forceDeleteAllRemoteFiles()
+            if (result.isSuccess) {
+                println("SyncEngine: 🚨🚨 ✅ TODOS los archivos remotos eliminados")
+                _syncState.value = SyncState.Success("🚨🚨 BORRADO NUCLEAR completado - AppDataFolder limpio")
+            } else {
+                println("SyncEngine: 🚨🚨 ❌ Error en borrado nuclear: ${result.exceptionOrNull()?.message}")
+                _syncState.value = SyncState.Error("Error borrado nuclear: ${result.exceptionOrNull()?.message}")
+            }
+            result
+        } catch (e: Exception) {
+            println("SyncEngine: 🚨🚨 ❌ Error en borrado nuclear: ${e.message}")
+            _syncState.value = SyncState.Error("Error borrado nuclear: ${e.message}")
+            Result.failure(e)
+        }
+    }
+    
+    /**
      * Verifica si hay cambios pendientes de sincronizar
      */
     suspend fun hayCambiosPendientes(): Boolean {

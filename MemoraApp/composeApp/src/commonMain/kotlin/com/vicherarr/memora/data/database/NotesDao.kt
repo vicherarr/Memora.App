@@ -127,6 +127,13 @@ class NotesDao(private val database: MemoraDatabase) {
     }
     
     /**
+     * TESTING: Delete all notes for a specific user
+     */
+    suspend fun deleteAllNotesForUser(userId: String) {
+        queries.deleteNotesByUserId(userId)
+    }
+    
+    /**
      * Mark a note as successfully synced
      */
     fun markAsSynced(noteId: String) {

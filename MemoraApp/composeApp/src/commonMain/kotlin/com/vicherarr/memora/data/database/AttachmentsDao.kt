@@ -54,7 +54,7 @@ class AttachmentsDao(private val database: MemoraDatabase) {
     }
     
     /**
-     * Insert a new attachment locally
+     * Insert a new attachment locally with enhanced sync fields
      */
     fun insertAttachment(
         id: String,
@@ -67,7 +67,13 @@ class AttachmentsDao(private val database: MemoraDatabase) {
         notaId: String,
         syncStatus: String = "PENDING",
         needsUpload: Long = 1,
-        remoteUrl: String? = null
+        remoteUrl: String? = null,
+        remotePath: String? = null,
+        remoteFileId: String? = null,
+        contentHash: String? = null,
+        downloadStatus: String = "NONE",
+        isCachedLocally: Long = 1,
+        isStructuredPath: Long = 0
     ) {
         val now = getCurrentTimestamp()
         
@@ -83,7 +89,13 @@ class AttachmentsDao(private val database: MemoraDatabase) {
             sync_status = syncStatus,
             needs_upload = needsUpload,
             local_created_at = now,
-            remote_url = remoteUrl
+            remote_url = remoteUrl,
+            remote_path = remotePath,
+            remote_file_id = remoteFileId,
+            content_hash = contentHash,
+            download_status = downloadStatus,
+            is_cached_locally = isCachedLocally,
+            is_structured_path = isStructuredPath
         )
     }
     
@@ -183,5 +195,108 @@ class AttachmentsDao(private val database: MemoraDatabase) {
      */
     suspend fun getVideoAttachmentsByNoteId(noteId: String): List<Attachments> {
         return queries.getVideoAttachmentsByNoteId(noteId).executeAsList()
+    }
+    
+    // ===== ENHANCED SYNC METHODS =====
+    
+    /**
+     * Get attachments that need to be uploaded to cloud
+     */
+    suspend fun getAttachmentsNeedingUpload(): List<Attachments> {
+        return queries.getAttachmentsNeedingUpload().executeAsList()
+    }
+    
+    /**
+     * Get attachments that need to be downloaded from cloud
+     */
+    suspend fun getAttachmentsNeedingDownload(): List<Attachments> {
+        return queries.getAttachmentsNeedingDownload().executeAsList()
+    }
+    
+    /**
+     * Get attachments by content hash (for duplicate detection)
+     */
+    suspend fun getAttachmentsByContentHash(hash: String): List<Attachments> {
+        return queries.getAttachmentsByContentHash(hash).executeAsList()
+    }
+    
+    /**
+     * Get attachments still using original paths (before sync)
+     */
+    suspend fun getAttachmentsWithOriginalPaths(): List<Attachments> {
+        return queries.getAttachmentsWithOriginalPaths().executeAsList()
+    }
+    
+    /**
+     * Get attachments using structured paths (after sync)
+     */
+    suspend fun getAttachmentsWithStructuredPaths(): List<Attachments> {
+        return queries.getAttachmentsWithStructuredPaths().executeAsList()
+    }
+    
+    /**
+     * Update attachment to structured path after successful sync
+     */
+    suspend fun updateToStructuredPath(
+        attachmentId: String,
+        newFilePath: String,
+        remoteFileId: String,
+        remotePath: String,
+        contentHash: String
+    ) {
+        val now = getCurrentTimestamp()
+        queries.updateToStructuredPath(
+            file_path = newFilePath,
+            remote_file_id = remoteFileId,
+            remote_path = remotePath,
+            content_hash = contentHash,
+            last_sync_attempt = now,
+            id = attachmentId
+        )
+    }
+    
+    /**
+     * Update sync metadata for an attachment
+     */
+    suspend fun updateSyncMetadata(
+        attachmentId: String,
+        remoteFileId: String,
+        remotePath: String,
+        contentHash: String,
+        syncStatus: String = "SYNCED",
+        needsUpload: Long = 0
+    ) {
+        val now = getCurrentTimestamp()
+        queries.updateSyncMetadata(
+            remote_file_id = remoteFileId,
+            remote_path = remotePath,
+            content_hash = contentHash,
+            sync_status = syncStatus,
+            needs_upload = needsUpload,
+            last_sync_attempt = now,
+            id = attachmentId
+        )
+    }
+    
+    /**
+     * Update download status for an attachment
+     */
+    suspend fun updateDownloadStatus(attachmentId: String, downloadStatus: String) {
+        val now = getCurrentTimestamp()
+        queries.updateDownloadStatus(
+            download_status = downloadStatus,
+            last_sync_attempt = now,
+            id = attachmentId
+        )
+    }
+    
+    /**
+     * Update cache status for an attachment
+     */
+    suspend fun updateCacheStatus(attachmentId: String, isCached: Boolean) {
+        queries.updateCacheStatus(
+            is_cached_locally = if (isCached) 1 else 0,
+            id = attachmentId
+        )
     }
 }

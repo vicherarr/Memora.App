@@ -294,6 +294,18 @@ class NotesRepositoryImpl(
         }
     }
     
+    override suspend fun deleteAllNotesForUser(userId: String): Result<Unit> {
+        return try {
+            // LOCAL-FIRST: Delete all notes for user from local database
+            // This also deletes attachments due to CASCADE constraint
+            notesDao.deleteAllNotesForUser(userId)
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
     /**
      * Get notes as Flow for reactive UI updates
      */

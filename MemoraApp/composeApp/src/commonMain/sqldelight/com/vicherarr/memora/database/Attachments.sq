@@ -12,11 +12,19 @@ CREATE TABLE attachments (
     fecha_subida TEXT NOT NULL,
     nota_id TEXT NOT NULL,
     
-    -- Sync management fields for local-first architecture
-    sync_status TEXT NOT NULL DEFAULT 'PENDING',
-    needs_upload INTEGER NOT NULL DEFAULT 1,
-    local_created_at INTEGER NOT NULL,
-    last_sync_attempt INTEGER,
+    -- Enhanced sync management fields for attachment sync
+    sync_status TEXT NOT NULL DEFAULT 'PENDING',        -- PENDING, UPLOADING, SYNCED, FAILED, DELETED
+    needs_upload INTEGER NOT NULL DEFAULT 1,            -- 0=no, 1=yes
+    local_created_at INTEGER NOT NULL,                  -- timestamp local creation
+    last_sync_attempt INTEGER,                          -- last sync attempt timestamp
+    
+    -- New sync fields for attachment path transition
+    remote_path TEXT,                                   -- structured path in Google Drive
+    remote_file_id TEXT,                               -- Google Drive file ID
+    content_hash TEXT,                                 -- SHA256 hash for integrity verification
+    download_status TEXT DEFAULT 'NONE',              -- NONE, DOWNLOADING, DOWNLOADED, FAILED
+    is_cached_locally INTEGER NOT NULL DEFAULT 1,     -- 0=not cached, 1=cached locally
+    is_structured_path INTEGER NOT NULL DEFAULT 0,    -- 0=original path, 1=structured path
     
     FOREIGN KEY (nota_id) REFERENCES notes(id) ON DELETE CASCADE
 );
@@ -26,6 +34,11 @@ CREATE INDEX attachments_nota_id_idx ON attachments(nota_id);
 CREATE INDEX attachments_sync_status_idx ON attachments(sync_status);
 CREATE INDEX attachments_needs_upload_idx ON attachments(needs_upload);
 CREATE INDEX attachments_tipo_archivo_idx ON attachments(tipo_archivo);
+-- New indexes for enhanced sync
+CREATE INDEX attachments_remote_file_id_idx ON attachments(remote_file_id);
+CREATE INDEX attachments_content_hash_idx ON attachments(content_hash);
+CREATE INDEX attachments_download_status_idx ON attachments(download_status);
+CREATE INDEX attachments_is_structured_path_idx ON attachments(is_structured_path);
 
 -- Queries
 getAllAttachments:
@@ -47,8 +60,9 @@ ORDER BY local_created_at ASC;
 insertAttachment:
 INSERT INTO attachments (
     id, file_path, nombre_original, tipo_archivo, tipo_mime,
-    tamano_bytes, fecha_subida, nota_id, sync_status, needs_upload, local_created_at, remote_url
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    tamano_bytes, fecha_subida, nota_id, sync_status, needs_upload, local_created_at, remote_url,
+    remote_path, remote_file_id, content_hash, download_status, is_cached_locally, is_structured_path
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 updateAttachment:
 UPDATE attachments 
@@ -98,3 +112,60 @@ getVideoAttachmentsByNoteId:
 SELECT * FROM attachments 
 WHERE nota_id = ? AND tipo_archivo = 2
 ORDER BY fecha_subida DESC;
+
+-- Enhanced sync queries for attachment workflow
+getAttachmentsNeedingUpload:
+SELECT * FROM attachments 
+WHERE sync_status IN ('PENDING', 'FAILED') AND needs_upload = 1
+ORDER BY local_created_at ASC;
+
+getAttachmentsNeedingDownload:
+SELECT * FROM attachments 
+WHERE download_status = 'NONE' OR download_status = 'FAILED'
+ORDER BY local_created_at ASC;
+
+getAttachmentsByContentHash:
+SELECT * FROM attachments WHERE content_hash = ?;
+
+getAttachmentsWithOriginalPaths:
+SELECT * FROM attachments WHERE is_structured_path = 0;
+
+getAttachmentsWithStructuredPaths:
+SELECT * FROM attachments WHERE is_structured_path = 1;
+
+-- Update queries for path transition workflow
+updateToStructuredPath:
+UPDATE attachments 
+SET 
+    file_path = ?,
+    remote_file_id = ?,
+    remote_path = ?,
+    content_hash = ?,
+    sync_status = 'SYNCED',
+    needs_upload = 0,
+    download_status = 'DOWNLOADED',
+    is_cached_locally = 1,
+    is_structured_path = 1,
+    last_sync_attempt = ?
+WHERE id = ?;
+
+updateSyncMetadata:
+UPDATE attachments 
+SET 
+    remote_file_id = ?,
+    remote_path = ?,
+    content_hash = ?,
+    sync_status = ?,
+    needs_upload = ?,
+    last_sync_attempt = ?
+WHERE id = ?;
+
+updateDownloadStatus:
+UPDATE attachments 
+SET download_status = ?, last_sync_attempt = ?
+WHERE id = ?;
+
+updateCacheStatus:
+UPDATE attachments 
+SET is_cached_locally = ?
+WHERE id = ?;
