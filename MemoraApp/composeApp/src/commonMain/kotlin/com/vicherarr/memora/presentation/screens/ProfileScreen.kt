@@ -17,7 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import org.koin.compose.getKoin
-import com.vicherarr.memora.presentation.viewmodel.SyncViewModel
+import com.vicherarr.memora.presentation.viewmodels.SyncViewModel
 import com.vicherarr.memora.sync.SyncState
 
 /**

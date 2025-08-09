@@ -18,7 +18,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import org.koin.compose.getKoin
 import com.vicherarr.memora.domain.model.AuthState
-import com.vicherarr.memora.presentation.viewmodel.CloudLoginViewModel
+import com.vicherarr.memora.presentation.viewmodels.CloudLoginViewModel
 
 /**
  * Pantalla de autenticación cloud (Google/Apple Sign-In)

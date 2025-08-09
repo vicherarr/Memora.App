@@ -1,7 +1,7 @@
 package com.vicherarr.memora.di
 
-import com.vicherarr.memora.presentation.viewmodel.CloudLoginViewModel
-import com.vicherarr.memora.presentation.viewmodel.SyncViewModel
+import com.vicherarr.memora.presentation.viewmodels.CloudLoginViewModel
+import com.vicherarr.memora.presentation.viewmodels.SyncViewModel
 import org.koin.dsl.module
 
 /**

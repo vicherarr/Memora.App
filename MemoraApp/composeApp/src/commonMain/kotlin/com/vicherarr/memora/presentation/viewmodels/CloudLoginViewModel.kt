@@ -1,4 +1,4 @@
-package com.vicherarr.memora.presentation.viewmodel
+package com.vicherarr.memora.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

@@ -1,4 +1,4 @@
-package com.vicherarr.memora.presentation.viewmodel
+package com.vicherarr.memora.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,7 +7,6 @@ import com.vicherarr.memora.domain.model.AuthState
 import com.vicherarr.memora.sync.SyncEngine
 import com.vicherarr.memora.sync.SyncState
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
