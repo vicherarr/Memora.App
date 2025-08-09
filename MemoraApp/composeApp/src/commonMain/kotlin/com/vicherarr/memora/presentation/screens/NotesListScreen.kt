@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.Arrangement
+import kotlin.math.ceil
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -24,6 +26,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -188,20 +191,10 @@ private fun EnhancedNoteCard(
             
             // Multimedia preview section
             if (note.archivosAdjuntos.isNotEmpty()) {
-                LazyRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .padding(top = 12.dp, start = 16.dp, end = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(
-                        items = note.archivosAdjuntos.take(5), // Limitar a 5 elementos
-                        key = { attachment -> attachment.id }
-                    ) { attachment ->
-                        AttachmentPreview(attachment = attachment)
-                    }
-                }
+                AttachmentsGrid(
+                    attachments = note.archivosAdjuntos,
+                    modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 16.dp)
+                )
                 
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -255,6 +248,107 @@ private fun EnhancedNoteCard(
                         AttachmentSummary(attachments = note.archivosAdjuntos)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttachmentsGrid(
+    attachments: List<ArchivoAdjunto>,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        val chunkedAttachments = attachments.chunked(3) // Divide en grupos de 3
+        
+        chunkedAttachments.forEach { rowAttachments ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                rowAttachments.forEach { attachment ->
+                    Box(modifier = Modifier.weight(1f)) {
+                        CompactAttachmentPreview(attachment = attachment)
+                    }
+                }
+                
+                // Fill remaining spaces in the row with empty boxes
+                repeat(3 - rowAttachments.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompactAttachmentPreview(attachment: ArchivoAdjunto) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f), // Square aspect ratio
+        shape = RoundedCornerShape(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (attachment.tipoArchivo) {
+                TipoDeArchivo.Imagen -> {
+                    AsyncImage(
+                        model = attachment.filePath,
+                        contentDescription = "Imagen adjunta",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                TipoDeArchivo.Video -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Video thumbnail placeholder
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {}
+                        
+                        // Play button overlay - smaller for compact view
+                        Surface(
+                            modifier = Modifier.size(32.dp),
+                            shape = androidx.compose.foundation.shape.CircleShape,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                        ) {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = "Video",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(6.dp),
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                    }
+                }
+            }
+            
+            // File type indicator - smaller for compact view
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
+                shape = RoundedCornerShape(3.dp)
+            ) {
+                Text(
+                    text = if (attachment.tipoArchivo == TipoDeArchivo.Imagen) "IMG" else "VID",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
+                )
             }
         }
     }
