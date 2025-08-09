@@ -50,7 +50,7 @@ class DatabaseSyncService(
     /**
      * Serializa todas las notas locales a ByteArray para subir a la nube
      */
-    suspend fun serializeLocalDatabase(userId: String): ByteArray = withContext(Dispatchers.IO) {
+    suspend fun serializeLocalDatabase(userId: String): ByteArray = withContext(Dispatchers.Default) {
         try {
             println("DatabaseSyncService: Serializando base de datos local para usuario $userId")
             
@@ -168,7 +168,7 @@ class DatabaseSyncService(
     /**
      * Convierte las notas locales de SQLDelight a formato DatabaseNote
      */
-    suspend fun getLocalNotesForMerging(userId: String): List<DatabaseNote> = withContext(Dispatchers.IO) {
+    suspend fun getLocalNotesForMerging(userId: String): List<DatabaseNote> = withContext(Dispatchers.Default) {
         try {
             println("DatabaseSyncService: Obteniendo notas locales para fusión")
 
@@ -208,7 +208,7 @@ class DatabaseSyncService(
     /**
      * Aplica las notas fusionadas de vuelta a la base de datos local
      */
-    suspend fun applyMergedNotes(mergedNotes: List<DatabaseNote>, userId: String) = withContext(Dispatchers.IO) {
+    suspend fun applyMergedNotes(mergedNotes: List<DatabaseNote>, userId: String) = withContext(Dispatchers.Default) {
         try {
             println("DatabaseSyncService: Aplicando ${mergedNotes.size} notas fusionadas a la DB local")
             

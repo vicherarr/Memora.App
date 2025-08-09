@@ -3,6 +3,7 @@ package com.vicherarr.memora.sync
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.vicherarr.memora.data.database.getCurrentTimestamp
 
 /**
  * Estados posibles del proceso de sincronización
@@ -137,7 +138,7 @@ class SyncEngine(
      */
     private fun obtenerDBLocal(): ByteArray {
         // Por ahora, simulamos datos locales
-        val mockLocalData = "mock_local_db_content_${System.currentTimeMillis()}"
+        val mockLocalData = "mock_local_db_content_${getCurrentTimestamp()}"
         return mockLocalData.encodeToByteArray()
     }
     

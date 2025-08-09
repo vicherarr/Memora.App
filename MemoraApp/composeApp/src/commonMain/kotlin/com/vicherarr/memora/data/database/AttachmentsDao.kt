@@ -33,6 +33,13 @@ class AttachmentsDao(private val database: MemoraDatabase) {
     }
     
     /**
+     * Get all attachments for a specific note (synchronous version for Flow usage)
+     */
+    fun getAttachmentsByNoteIdSync(noteId: String): List<Attachments> {
+        return queries.getAttachmentsByNoteId(noteId).executeAsList()
+    }
+    
+    /**
      * Get a specific attachment by ID
      */
     suspend fun getAttachmentById(attachmentId: String): Attachments? {

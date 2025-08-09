@@ -302,13 +302,38 @@ class NotesRepositoryImpl(
             when (authState) {
                 is AuthState.Authenticated -> {
                     println("NotesRepository: AuthState changed to Authenticated. Fetching notes for ${authState.user.email}")
-                    notesDao.getNotesByUserIdFlow(authState.user.email)
-                        .map { notesList -> notesList.map { it.toDomainModel() } }
+                    // Use custom flow that combines notes with their attachments
+                    getNotesWithAttachmentsFlow(authState.user.email)
                 }
                 else -> {
                     println("NotesRepository: AuthState changed to Unauthenticated. Returning empty list.")
                     flowOf(emptyList())
                 }
+            }
+        }
+    }
+    
+    /**
+     * Private helper to get notes with attachments as Flow
+     */
+    private fun getNotesWithAttachmentsFlow(userId: String): Flow<List<Note>> {
+        return notesDao.getNotesByUserIdFlow(userId).map { notesList ->
+            // For each note, synchronously fetch its attachments
+            // This is safe because we're in a Flow transformation
+            notesList.map { note ->
+                // Get attachments using the synchronous method
+                val attachments = attachmentsDao.getAttachmentsByNoteIdSync(note.id)
+                
+                // Convert to domain model with attachments
+                Note(
+                    id = note.id,
+                    titulo = note.titulo,
+                    contenido = note.contenido,
+                    fechaCreacion = note.fecha_creacion.toLongOrNull() ?: getCurrentTimestamp(),
+                    fechaModificacion = note.fecha_modificacion.toLongOrNull() ?: getCurrentTimestamp(),
+                    usuarioId = note.usuario_id,
+                    archivosAdjuntos = attachments.map { it.toDomainModel() }
+                )
             }
         }
     }

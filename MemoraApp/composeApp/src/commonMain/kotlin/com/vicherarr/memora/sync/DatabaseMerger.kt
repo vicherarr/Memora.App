@@ -2,6 +2,7 @@ package com.vicherarr.memora.sync
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.vicherarr.memora.data.database.getCurrentTimestamp
 
 /**
  * Estrategias de resolución de conflictos durante la sincronización
@@ -77,7 +78,7 @@ class DatabaseMerger(
         localDbPath: String,
         remoteDbBytes: ByteArray,
         strategy: ConflictResolutionStrategy = defaultStrategy
-    ): MergeResult = withContext(Dispatchers.IO) {
+    ): MergeResult = withContext(Dispatchers.Default) {
         
         println("DatabaseMerger: Iniciando fusión con estrategia $strategy")
         
@@ -97,7 +98,7 @@ class DatabaseMerger(
             applyMergedNotesToLocalDatabase(mergeResult.mergedNotes)
             
             // PASO 5: Actualizar timestamp de última sincronización
-            actualizarUltimaSincronizacion(System.currentTimeMillis())
+            actualizarUltimaSincronizacion(getCurrentTimestamp())
             
             println("DatabaseMerger: Fusión completada exitosamente")
             return@withContext mergeResult
@@ -281,14 +282,14 @@ class DatabaseMerger(
                 id = "remote-note-1",
                 titulo = "Nota Remota 1",
                 contenido = "Contenido desde la nube",
-                fechaModificacion = System.currentTimeMillis() - 1000,
+                fechaModificacion = getCurrentTimestamp() - 1000,
                 eliminado = false
             ),
             DatabaseNote(
                 id = "remote-note-2",
                 titulo = "Nota Remota 2",
                 contenido = "Otra nota desde la nube",
-                fechaModificacion = System.currentTimeMillis() - 2000,
+                fechaModificacion = getCurrentTimestamp() - 2000,
                 eliminado = false
             )
         )
@@ -308,14 +309,14 @@ class DatabaseMerger(
                 id = "local-note-1",
                 titulo = "Nota Local 1",
                 contenido = "Contenido local",
-                fechaModificacion = System.currentTimeMillis(),
+                fechaModificacion = getCurrentTimestamp(),
                 eliminado = false
             ),
             DatabaseNote(
                 id = "conflict-note",
                 titulo = "Nota con Conflicto Local",
                 contenido = "Versión local del conflicto",
-                fechaModificacion = System.currentTimeMillis() - 500,
+                fechaModificacion = getCurrentTimestamp() - 500,
                 eliminado = false
             )
         )
