@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import com.vicherarr.memora.di.CloudAuthInitializer
 import com.vicherarr.memora.platform.ActivityRegistry
 
 class MainActivity : ComponentActivity() {
@@ -15,6 +16,13 @@ class MainActivity : ComponentActivity() {
         
         // Register this activity for camera lifecycle
         ActivityRegistry.setCurrentActivity(this)
+        
+        // Initialize cloud authentication system
+        try {
+            CloudAuthInitializer.initializeCloudAuth(this)
+        } catch (e: Exception) {
+            println("MainActivity: Error inicializando CloudAuth - ${e.message}")
+        }
 
         setContent {
             App()

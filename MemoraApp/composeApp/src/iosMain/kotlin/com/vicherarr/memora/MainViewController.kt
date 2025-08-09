@@ -5,6 +5,8 @@ import com.vicherarr.memora.di.appModule
 import com.vicherarr.memora.di.databaseModule
 import com.vicherarr.memora.di.iosDatabaseModule
 import com.vicherarr.memora.di.platformModule
+import com.vicherarr.memora.di.cloudAuthModuleIOS
+import com.vicherarr.memora.di.cloudAuthViewModelModule
 import org.koin.compose.KoinApplication
 
 fun MainViewController() = ComposeUIViewController { 
@@ -14,7 +16,9 @@ fun MainViewController() = ComposeUIViewController {
                 appModule,
                 databaseModule,
                 iosDatabaseModule,
-                platformModule()
+                platformModule(),
+                cloudAuthModuleIOS,
+                cloudAuthViewModelModule
             )
         }
     ) {

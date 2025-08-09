@@ -37,7 +37,8 @@ class GoogleDriveStorageProvider(
     companion object {
         private const val TAG = "GoogleDriveStorage"
         private const val DB_FILE_NAME = "memora_sync.db"
-        private const val CLIENT_ID = "1042434065446-ki2509i6fqahlur1frnchutoutto0mr9.apps.googleusercontent.com"
+        // Web Client ID (para requestIdToken)
+        private const val WEB_CLIENT_ID = "1042434065446-nga3i4gt2c1vhadlfs87r44vcrk7e1mb.apps.googleusercontent.com"
     }
     
     private var driveService: Drive? = null
@@ -49,7 +50,7 @@ class GoogleDriveStorageProvider(
     
     private fun initializeGoogleSignIn() {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(CLIENT_ID)
+            .requestIdToken(WEB_CLIENT_ID)
             .requestEmail()
             .requestScopes(Scope(DriveScopes.DRIVE_APPDATA))
             .build()

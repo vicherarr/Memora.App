@@ -2,12 +2,15 @@ package com.vicherarr.memora.presentation.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,6 +23,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.vicherarr.memora.ui.components.MemoraButton
+import com.vicherarr.memora.platform.PlatformAuth
 
 class WelcomeScreen : Screen {
     
@@ -51,21 +55,12 @@ class WelcomeScreen : Screen {
                 color = MaterialTheme.colorScheme.onSurface
             )
             
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(48.dp))
             
             MemoraButton(
-                text = "Iniciar Sesión",
+                text = PlatformAuth.signInButtonText,
                 onClick = {
-                    navigator.push(LoginScreen())
-                }
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            MemoraButton(
-                text = "Crear Cuenta",
-                onClick = {
-                    navigator.push(RegisterScreen())
+                    navigator.push(CloudLoginScreen())
                 }
             )
         }

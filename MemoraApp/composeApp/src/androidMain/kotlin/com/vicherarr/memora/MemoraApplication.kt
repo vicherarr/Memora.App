@@ -4,6 +4,8 @@ import android.app.Application
 import com.vicherarr.memora.di.initKoin
 import com.vicherarr.memora.di.androidDatabaseModule
 import com.vicherarr.memora.di.androidMediaModule
+import com.vicherarr.memora.di.cloudAuthModuleAndroid
+import com.vicherarr.memora.di.cloudAuthViewModelModule
 import org.koin.android.ext.koin.androidContext
 
 /**
@@ -17,7 +19,12 @@ class MemoraApplication : Application() {
         // Initialize Koin using the central initializer
         initKoin {
             androidContext(this@MemoraApplication)
-            modules(androidDatabaseModule, androidMediaModule)
+            modules(
+                androidDatabaseModule, 
+                androidMediaModule,
+                cloudAuthModuleAndroid,
+                cloudAuthViewModelModule
+            )
         }
     }
 }
