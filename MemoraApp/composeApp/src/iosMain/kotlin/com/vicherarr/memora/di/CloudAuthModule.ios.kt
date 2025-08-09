@@ -6,6 +6,9 @@ import com.vicherarr.memora.domain.repository.CloudAuthRepository
 import com.vicherarr.memora.domain.usecase.auth.CloudSignInUseCase
 import com.vicherarr.memora.domain.usecase.auth.CloudSignOutUseCase
 import com.vicherarr.memora.domain.usecase.auth.GetCurrentCloudUserUseCase
+import com.vicherarr.memora.sync.CloudStorageProvider
+import com.vicherarr.memora.sync.iCloudStorageProvider
+import com.vicherarr.memora.sync.SyncEngine
 import org.koin.dsl.module
 
 /**
@@ -29,4 +32,12 @@ val cloudAuthModuleIOS = module {
     factory { CloudSignInUseCase(get()) }
     factory { CloudSignOutUseCase(get()) }
     factory { GetCurrentCloudUserUseCase(get()) }
+    
+    // iCloud Storage Provider (Mock)
+    single<CloudStorageProvider> { 
+        iCloudStorageProvider() 
+    }
+    
+    // Sync Engine
+    single { SyncEngine(get()) }
 }

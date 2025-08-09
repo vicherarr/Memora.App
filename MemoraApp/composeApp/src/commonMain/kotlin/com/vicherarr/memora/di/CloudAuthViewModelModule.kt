@@ -1,10 +1,11 @@
 package com.vicherarr.memora.di
 
 import com.vicherarr.memora.presentation.viewmodel.CloudLoginViewModel
+import com.vicherarr.memora.presentation.viewmodel.SyncViewModel
 import org.koin.dsl.module
 
 /**
- * Módulo común de inyección de dependencias para ViewModels de autenticación cloud
+ * Módulo común de inyección de dependencias para ViewModels de autenticación cloud y sync
  */
 val cloudAuthViewModelModule = module {
     
@@ -14,5 +15,11 @@ val cloudAuthViewModelModule = module {
             signOutUseCase = get(),
             getCurrentUserUseCase = get()
         ) 
+    }
+    
+    factory { 
+        SyncViewModel(
+            syncEngine = get()
+        )
     }
 }
