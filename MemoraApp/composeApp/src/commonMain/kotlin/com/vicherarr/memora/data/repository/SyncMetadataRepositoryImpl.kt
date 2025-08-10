@@ -203,16 +203,16 @@ class SyncMetadataRepositoryImpl(
             println("SyncMetadataRepository: 🔨 Generando metadata actual para usuario: $userId")
             
             // Generar fingerprint basado en datos actuales
-            val contentFingerprint = fingerprintGenerator.generateContentFingerprint(userId)
+            val fingerprintResult = fingerprintGenerator.generateContentFingerprint(userId)
             val now = getCurrentTimestamp()
             
-            // Obtener conteos reales (esto se podría optimizar)
-            val existingMetadata = getLocalSyncMetadata(userId)
+            // ✅ CORREGIDO: Usar conteos reales de la base de datos
+            val contentFingerprint = fingerprintResult.fingerprint
+            val notesCount = fingerprintResult.notesCount
+            val attachmentsCount = fingerprintResult.attachmentsCount
             
-            // TODO: Obtener conteos reales de la base de datos
-            // Por ahora, usar conteos del metadata existente o valores por defecto
-            val notesCount = existingMetadata?.notesCount ?: 0
-            val attachmentsCount = existingMetadata?.attachmentsCount ?: 0
+            // Obtener metadata existente para preservar otros campos
+            val existingMetadata = getLocalSyncMetadata(userId)
             
             val newMetadata = if (existingMetadata != null) {
                 existingMetadata.withLocalUpdate(
@@ -231,7 +231,9 @@ class SyncMetadataRepositoryImpl(
                 )
             }
             
-            println("SyncMetadataRepository: ✅ Metadata actual generado: fingerprint=${contentFingerprint.take(16)}...")
+            println("SyncMetadataRepository: ✅ Metadata actual generado:")
+            println("SyncMetadataRepository:   - Fingerprint: ${contentFingerprint.take(16)}...")
+            println("SyncMetadataRepository:   - Notas: $notesCount, Attachments: $attachmentsCount")
             Result.success(newMetadata)
             
         } catch (e: Exception) {

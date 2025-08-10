@@ -28,8 +28,10 @@ class FingerprintGenerator(
      * - Timestamp de última modificación de notas
      * - Hash de todos los IDs y fechas de modificación de notas
      * - Hash de todos los IDs y estados de sync de attachments
+     * 
+     * @return FingerprintResult con fingerprint y conteos reales de BD
      */
-    suspend fun generateContentFingerprint(userId: String): String {
+    suspend fun generateContentFingerprint(userId: String): FingerprintResult {
         try {
             // Obtener datos de notas
             val notes = notesDao.getNotesByUserId(userId)
@@ -71,12 +73,23 @@ class FingerprintGenerator(
             val finalFingerprint = fingerprintData.sha256Hash()
             println("FingerprintGenerator: Fingerprint final: $finalFingerprint")
             
-            return finalFingerprint
+            return FingerprintResult(
+                fingerprint = finalFingerprint,
+                notesCount = notesCount,
+                attachmentsCount = attachmentsCount,
+                lastModifiedTimestamp = lastNoteModified
+            )
             
         } catch (e: Exception) {
             println("FingerprintGenerator: Error generando fingerprint: ${e.message}")
             // Fallback: usar timestamp actual para forzar sync
-            return "error_${getCurrentTimestamp()}"
+            val errorTimestamp = getCurrentTimestamp()
+            return FingerprintResult(
+                fingerprint = "error_${errorTimestamp}",
+                notesCount = 0,
+                attachmentsCount = 0,
+                lastModifiedTimestamp = errorTimestamp
+            )
         }
     }
     

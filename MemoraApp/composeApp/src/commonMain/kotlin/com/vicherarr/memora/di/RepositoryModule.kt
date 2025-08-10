@@ -2,9 +2,11 @@ package com.vicherarr.memora.di
 
 import com.vicherarr.memora.data.repository.AuthRepositoryImpl
 import com.vicherarr.memora.data.repository.NotesRepositoryImpl
+import com.vicherarr.memora.data.repository.AttachmentsRepositoryImpl
 import com.vicherarr.memora.data.repository.SimplifiedMediaRepository
 import com.vicherarr.memora.domain.repository.AuthRepository
 import com.vicherarr.memora.domain.repository.NotesRepository
+import com.vicherarr.memora.domain.repository.AttachmentsRepository
 import com.vicherarr.memora.domain.repository.MediaRepository
 import com.vicherarr.memora.domain.validation.ValidationService
 import com.vicherarr.memora.domain.validation.ValidationServiceImpl
@@ -21,7 +23,16 @@ val repositoryModule = module {
             attachmentsDao = get(),
             notesApi = get(),
             fileManager = get(),
-            cloudAuthProvider = get()
+            cloudAuthProvider = get(),
+            syncMetadataRepository = get()
+        ) 
+    }
+    single<AttachmentsRepository> { 
+        AttachmentsRepositoryImpl(
+            attachmentsDao = get(),
+            fileManager = get(),
+            cloudAuthProvider = get(),
+            syncMetadataRepository = get()
         ) 
     }
     single<MediaRepository> { SimplifiedMediaRepository() }

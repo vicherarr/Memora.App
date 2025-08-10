@@ -34,7 +34,8 @@ class NotesRepositoryImpl(
     private val attachmentsDao: AttachmentsDao,
     private val notesApi: NotesApi,
     private val fileManager: FileManager,
-    private val cloudAuthProvider: CloudAuthProvider
+    private val cloudAuthProvider: CloudAuthProvider,
+    private val syncMetadataRepository: com.vicherarr.memora.domain.repository.SyncMetadataRepository
 ) : NotesRepository {
 
     private fun getCurrentUserId(): String {
@@ -52,6 +53,28 @@ class NotesRepositoryImpl(
         }
         println("==============================================")
         return userId
+    }
+    
+    /**
+     * Actualiza metadatos locales después de operaciones de nota
+     * Esto garantiza que el sistema de sincronización inteligente detecte cambios
+     */
+    private suspend fun updateSyncMetadataAfterNoteOperation() {
+        try {
+            val userId = getCurrentUserId()
+            println("NotesRepository: 📊 Actualizando metadata tras operación de nota...")
+            
+            val metadataResult = syncMetadataRepository.generateCurrentSyncMetadata(userId)
+            if (metadataResult.isSuccess) {
+                val newMetadata = metadataResult.getOrNull()!!
+                syncMetadataRepository.saveLocalSyncMetadata(newMetadata)
+                println("NotesRepository: ✅ Metadata local actualizado - Notas: ${newMetadata.notesCount}")
+            } else {
+                println("NotesRepository: ⚠️ Error generando metadata: ${metadataResult.exceptionOrNull()?.message}")
+            }
+        } catch (e: Exception) {
+            println("NotesRepository: ⚠️ Error actualizando metadata: ${e.message}")
+        }
     }
     
     override suspend fun getNotes(): Result<List<Note>> {
@@ -110,6 +133,9 @@ class NotesRepositoryImpl(
                 fechaModificacion = getCurrentTimestamp(),
                 usuarioId = getCurrentUserId()
             )
+            
+            // ✅ NUEVO: Actualizar metadata para que sync inteligente detecte el cambio
+            updateSyncMetadataAfterNoteOperation()
             
             // TODO: Background sync will be handled by SyncRepository
             Result.success(createdNote)
@@ -188,6 +214,9 @@ class NotesRepositoryImpl(
                 archivosAdjuntos = attachmentsList
             )
             
+            // ✅ NUEVO: Actualizar metadata para que sync inteligente detecte el cambio
+            updateSyncMetadataAfterNoteOperation()
+            
             // TODO: Background sync will be handled by SyncRepository
             Result.success(createdNote)
         } catch (e: Exception) {
@@ -210,6 +239,9 @@ class NotesRepositoryImpl(
             // Get updated note to return
             val updatedNote = notesDao.getNoteById(id)
             if (updatedNote != null) {
+                // ✅ NUEVO: Actualizar metadata para que sync inteligente detecte el cambio
+                updateSyncMetadataAfterNoteOperation()
+                
                 // TODO: Background sync will be handled by SyncRepository
                 Result.success(updatedNote.toDomainModel())
             } else {
@@ -274,6 +306,9 @@ class NotesRepositoryImpl(
             // 4. Return the fully updated note
             val updatedNote = notesDao.getNoteById(noteId)
             if (updatedNote != null) {
+                // ✅ NUEVO: Actualizar metadata para que sync inteligente detecte el cambio
+                updateSyncMetadataAfterNoteOperation()
+                
                 Result.success(updatedNote.toDomainModelWithAttachments())
             } else {
                 Result.failure(Exception("Note not found after update"))
@@ -287,6 +322,9 @@ class NotesRepositoryImpl(
         return try {
             // LOCAL-FIRST: Delete from local database immediately
             notesDao.deleteNote(id)
+            
+            // ✅ NUEVO: Actualizar metadata para que sync inteligente detecte el cambio
+            updateSyncMetadataAfterNoteOperation()
             
             // TODO: Background sync will be handled by SyncRepository
             Result.success(Unit)
