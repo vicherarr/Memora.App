@@ -26,6 +26,15 @@ class AttachmentsDao(private val database: MemoraDatabase) {
     }
     
     /**
+     * Get all attachments as Flow (reactive) - for observing sync changes
+     */
+    fun getAllAttachmentsFlow(): Flow<List<Attachments>> {
+        return queries.getAllAttachments()
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+    }
+    
+    /**
      * Get all attachments for a specific note (one-time query)
      */
     suspend fun getAttachmentsByNoteId(noteId: String): List<Attachments> {

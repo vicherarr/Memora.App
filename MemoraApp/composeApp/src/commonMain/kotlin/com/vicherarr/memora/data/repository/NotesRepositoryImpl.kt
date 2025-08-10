@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 
 /**
  * Local-first implementation of NotesRepository
@@ -327,14 +328,22 @@ class NotesRepositoryImpl(
     
     /**
      * Private helper to get notes with attachments as Flow
+     * Uses MVVM + Clean Architecture: combines notes and attachments flows for reactive updates
      */
     private fun getNotesWithAttachmentsFlow(userId: String): Flow<List<Note>> {
-        return notesDao.getNotesByUserIdFlow(userId).map { notesList ->
-            // For each note, synchronously fetch its attachments
-            // This is safe because we're in a Flow transformation
+        // CLEAN ARCHITECTURE: Combine flows from different data sources
+        // This ensures UI refreshes when EITHER notes OR attachments change
+        return combine(
+            notesDao.getNotesByUserIdFlow(userId), // Flow for notes changes
+            attachmentsDao.getAllAttachmentsFlow()  // Flow for ANY attachment changes
+        ) { notesList, allAttachments ->
+            
+            // Create a map for efficient attachment lookup by note_id
+            val attachmentsByNoteId = allAttachments.groupBy { it.nota_id }
+            
+            // Transform notes with their corresponding attachments
             notesList.map { note ->
-                // Get attachments using the synchronous method
-                val attachments = attachmentsDao.getAttachmentsByNoteIdSync(note.id)
+                val noteAttachments = attachmentsByNoteId[note.id] ?: emptyList()
                 
                 // Convert to domain model with attachments
                 Note(
@@ -344,7 +353,7 @@ class NotesRepositoryImpl(
                     fechaCreacion = note.fecha_creacion.toLongOrNull() ?: getCurrentTimestamp(),
                     fechaModificacion = note.fecha_modificacion.toLongOrNull() ?: getCurrentTimestamp(),
                     usuarioId = note.usuario_id,
-                    archivosAdjuntos = attachments.map { it.toDomainModel() }
+                    archivosAdjuntos = noteAttachments.map { it.toDomainModel() }
                 )
             }
         }
