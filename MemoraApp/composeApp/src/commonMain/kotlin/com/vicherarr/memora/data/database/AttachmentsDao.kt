@@ -185,6 +185,7 @@ class AttachmentsDao(private val database: MemoraDatabase) {
         )
     }
     
+    
     /**
      * Count attachments for a specific note (useful for UI badges)
      */

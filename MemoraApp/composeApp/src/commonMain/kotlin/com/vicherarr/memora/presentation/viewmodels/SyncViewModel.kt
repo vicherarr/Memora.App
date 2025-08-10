@@ -44,7 +44,8 @@ class SyncViewModel(
     }
 
     /**
-     * Inicia sincronización manual (ej. con un botón de 'refrescar')
+     * Inicia sincronización manual completa (notas + attachments)
+     * Incluye refresh explícito del repositorio
      */
     fun iniciarSincronizacionManual() {
         viewModelScope.launch {
@@ -53,11 +54,15 @@ class SyncViewModel(
             if (authState is AuthState.Authenticated) {
                 println("SyncViewModel: Iniciando sincronización manual completa.")
                 try {
-                    // Sincronizar notas
+                    // Sincronizar notas primero
                     syncEngine.iniciarSincronizacion()
                     
-                    // Sincronizar attachments
+                    // Sincronizar attachments (incluye descarga de imágenes)
                     syncAttachments(authState.user.email)
+                    
+                    // Los flows reactivos del repositorio se actualizarán automáticamente
+                    println("SyncViewModel: Sincronización completa finalizada")
+                    
                 } catch (e: Exception) {
                     println("SyncViewModel: Error en sincronización manual - ${e.message}")
                 }

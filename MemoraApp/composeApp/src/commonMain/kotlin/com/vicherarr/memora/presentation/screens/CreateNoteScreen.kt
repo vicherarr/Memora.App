@@ -32,6 +32,8 @@ import com.vicherarr.memora.platform.camera.rememberGalleryManager
 import com.vicherarr.memora.platform.camera.rememberVideoPickerManager
 import com.vicherarr.memora.presentation.viewmodels.CreateNoteViewModel
 import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
+import com.vicherarr.memora.presentation.viewmodels.SyncViewModel
+import com.vicherarr.memora.presentation.components.SyncStatusIndicator
 import org.koin.compose.getKoin
 import org.koin.compose.koinInject
 
@@ -45,13 +47,18 @@ class CreateNoteScreen : Screen {
         // Use the same MediaViewModel instance that CreateNoteViewModel receives
         val mediaViewModel: MediaViewModel = remember { koin.get() }
         val createNoteViewModel: CreateNoteViewModel = remember { koin.get() }
+        val syncViewModel: SyncViewModel = remember { koin.get() }
         
         // Observe UI States from both ViewModels
         val noteUiState by createNoteViewModel.uiState.collectAsState()
         val mediaUiState by mediaViewModel.uiState.collectAsState()
+        val syncState by syncViewModel.syncState.collectAsState()
+        val attachmentSyncState by syncViewModel.attachmentSyncState.collectAsState()
         
-        // Simple navigation - when note is saved, navigate back
+        // Auto-sync after creating note and navigate back
         if (noteUiState.isNoteSaved) {
+            // Trigger sync for attachments after successful note creation
+            syncViewModel.iniciarSincronizacionManual()
             navigator.pop()
             return
         }
@@ -356,6 +363,15 @@ class CreateNoteScreen : Screen {
                     Spacer(modifier = Modifier.height(80.dp))
                 }
             }
+            
+            // Sync Status Indicator - floating at top-end
+            SyncStatusIndicator(
+                syncState = syncState,
+                attachmentSyncState = attachmentSyncState,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 78.dp, end = 16.dp) // Below the top bar
+            )
             
             // Extended FAB with loading state
             ExtendedFloatingActionButton(

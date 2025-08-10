@@ -37,8 +37,10 @@ import com.vicherarr.memora.platform.camera.rememberGalleryManager
 import com.vicherarr.memora.platform.camera.rememberVideoPickerManager
 import com.vicherarr.memora.presentation.viewmodels.NoteDetailViewModel
 import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
+import com.vicherarr.memora.presentation.viewmodels.SyncViewModel
 import com.vicherarr.memora.presentation.components.ImageFullScreenViewer
 import com.vicherarr.memora.presentation.components.VideoPlayerDialog
+import com.vicherarr.memora.presentation.components.SyncStatusIndicator
 import com.vicherarr.memora.ui.components.MemoraTextField
 import org.koin.compose.getKoin
 
@@ -54,8 +56,11 @@ data class NoteDetailScreen(private val noteId: String) : Screen {
         val koin = getKoin()
         val viewModel: NoteDetailViewModel = remember { koin.get() }
         val mediaViewModel: MediaViewModel = remember { koin.get() }
+        val syncViewModel: SyncViewModel = remember { koin.get() }
         val uiState by viewModel.uiState.collectAsState()
         val mediaUiState by mediaViewModel.uiState.collectAsState()
+        val syncState by syncViewModel.syncState.collectAsState()
+        val attachmentSyncState by syncViewModel.attachmentSyncState.collectAsState()
         
         // Media managers for multimedia functionality
         val cameraManager = rememberCameraManager { mediaFile ->
@@ -82,9 +87,11 @@ data class NoteDetailScreen(private val noteId: String) : Screen {
             }
         }
         
-        // Load note when screen appears
+        // Load note when screen appears + auto-sync attachments
         LaunchedEffect(noteId) {
             viewModel.loadNote(noteId)
+            // Auto-sync attachments when viewing note detail
+            syncViewModel.iniciarSincronizacionManual()
         }
         
         // Handle navigation after delete
@@ -182,6 +189,15 @@ data class NoteDetailScreen(private val noteId: String) : Screen {
                     }
                 }
             }
+            
+            // Sync Status Indicator - floating at top-end
+            SyncStatusIndicator(
+                syncState = syncState,
+                attachmentSyncState = attachmentSyncState,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 78.dp, end = 16.dp) // Below the top bar
+            )
         }
 
         // Full screen image viewer - Following MVVM pattern

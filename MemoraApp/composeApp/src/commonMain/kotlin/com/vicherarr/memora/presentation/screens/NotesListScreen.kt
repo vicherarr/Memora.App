@@ -36,6 +36,8 @@ import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.domain.models.TipoDeArchivo
 import com.vicherarr.memora.presentation.screens.CreateNoteScreen
 import com.vicherarr.memora.presentation.viewmodels.NotesViewModel
+import com.vicherarr.memora.presentation.viewmodels.SyncViewModel
+import com.vicherarr.memora.presentation.components.SyncStatusIndicator
 import org.koin.compose.getKoin
 
 /**
@@ -49,8 +51,11 @@ class NotesListScreen : Screen {
         val navigator = LocalNavigator.currentOrThrow
         val koin = getKoin()
         val notesViewModel: NotesViewModel = remember { koin.get() }
+        val syncViewModel: SyncViewModel = remember { koin.get() }
         
         val uiState by notesViewModel.uiState.collectAsState()
+        val syncState by syncViewModel.syncState.collectAsState()
+        val attachmentSyncState by syncViewModel.attachmentSyncState.collectAsState()
         
         // Debug logging for notes data
         println("NotesListScreen: Total notes loaded: ${uiState.notes.size}")
@@ -131,7 +136,7 @@ class NotesListScreen : Screen {
                         contentPadding = PaddingValues(
                             start = 16.dp,
                             end = 16.dp,
-                            top = 8.dp,
+                            top = 8.dp, // Normal top padding
                             bottom = 80.dp // Space for bottom navigation bar
                         ),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -166,6 +171,15 @@ class NotesListScreen : Screen {
                     tint = MaterialTheme.colorScheme.onPrimary
                 )
             }
+            
+            // Sync Status Indicator - favicon style, floating at top-end
+            SyncStatusIndicator(
+                syncState = syncState,
+                attachmentSyncState = attachmentSyncState,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 12.dp, end = 16.dp)
+            )
         }
     }
 }

@@ -27,15 +27,27 @@ import com.vicherarr.memora.presentation.screens.CreateNoteScreen
 import com.vicherarr.memora.presentation.tabs.NotesTab
 import com.vicherarr.memora.presentation.tabs.SearchTab
 import com.vicherarr.memora.presentation.tabs.ProfileTab
+import com.vicherarr.memora.presentation.viewmodels.SyncViewModel
+import androidx.compose.runtime.LaunchedEffect
+import org.koin.compose.koinInject
 
 class MainScreen : Screen {
     
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val syncViewModel: SyncViewModel = koinInject()
         
         TabNavigator(NotesTab) {
             val tabNavigator = LocalTabNavigator.current
+            val currentTab = tabNavigator.current
+            
+            // Auto-sync cuando se cambia a NotesTab
+            LaunchedEffect(currentTab) {
+                if (currentTab == NotesTab) {
+                    syncViewModel.iniciarSincronizacionManual()
+                }
+            }
             
             Scaffold(
                 contentWindowInsets = WindowInsets.safeDrawing,
