@@ -36,3 +36,4 @@ actual class HashCalculator {
         return joinToString("") { "%02x".format(it) }
     }
 }
+

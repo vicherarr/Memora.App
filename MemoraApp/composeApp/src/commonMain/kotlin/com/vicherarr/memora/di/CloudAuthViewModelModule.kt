@@ -18,6 +18,7 @@ val cloudAuthViewModelModule = module {
     factory { 
         SyncViewModel(
             syncEngine = get(),
+            attachmentSyncEngine = get(),
             cloudAuthProvider = get(),
             notesRepository = get<com.vicherarr.memora.domain.repository.NotesRepository>()
         )

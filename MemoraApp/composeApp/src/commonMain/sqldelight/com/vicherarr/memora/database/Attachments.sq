@@ -169,3 +169,12 @@ updateCacheStatus:
 UPDATE attachments 
 SET is_cached_locally = ?
 WHERE id = ?;
+
+-- Additional queries for AttachmentSyncEngine
+getAttachmentByRemoteId:
+SELECT * FROM attachments WHERE remote_file_id = ?;
+
+updateContentHash:
+UPDATE attachments 
+SET content_hash = ?
+WHERE id = ?;

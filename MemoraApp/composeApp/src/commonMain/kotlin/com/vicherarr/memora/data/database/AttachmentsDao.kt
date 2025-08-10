@@ -40,10 +40,19 @@ class AttachmentsDao(private val database: MemoraDatabase) {
     }
     
     /**
-     * Get a specific attachment by ID
+     * Get a specific attachment by ID (SQLDelight model)
      */
     suspend fun getAttachmentById(attachmentId: String): Attachments? {
         return queries.getAttachmentById(attachmentId).executeAsOneOrNull()
+    }
+    
+    /**
+     * Get a specific attachment by ID (Domain model for sync)
+     */
+    suspend fun getAttachmentByIdDomain(attachmentId: String): Attachment? {
+        return queries.getAttachmentById(attachmentId).executeAsOneOrNull()?.let { 
+            mapToAttachment(it) 
+        }
     }
     
     /**
@@ -297,6 +306,128 @@ class AttachmentsDao(private val database: MemoraDatabase) {
         queries.updateCacheStatus(
             is_cached_locally = if (isCached) 1 else 0,
             id = attachmentId
+        )
+    }
+    
+    // ===== METHODS FOR ATTACHMENT SYNC ENGINE =====
+    
+    /**
+     * Get attachments pending sync for a specific user
+     */
+    suspend fun getAttachmentsPendingSync(userId: String): List<Attachment> {
+        return queries.getAttachmentsNeedingUpload().executeAsList().map { attachments ->
+            mapToAttachment(attachments)
+        }
+    }
+    
+    /**
+     * Mark attachment as locally deleted
+     */
+    suspend fun markAsLocallyDeleted(attachmentId: String) {
+        queries.updateSyncStatus(
+            sync_status = "LOCALLY_DELETED",
+            needs_upload = 0,
+            last_sync_attempt = getCurrentTimestamp(),
+            id = attachmentId
+        )
+    }
+    
+    /**
+     * Update content hash for an attachment
+     */
+    suspend fun updateContentHash(attachmentId: String, contentHash: String) {
+        queries.updateContentHash(
+            content_hash = contentHash,
+            id = attachmentId
+        )
+    }
+    
+    /**
+     * Mark attachment as synced with remote details
+     */
+    suspend fun markAsSynced(attachmentId: String, remoteId: String, contentHash: String) {
+        val now = getCurrentTimestamp()
+        queries.updateSyncMetadata(
+            remote_file_id = remoteId,
+            remote_path = "appDataFolder/Memora_Attachments/$remoteId",
+            content_hash = contentHash,
+            sync_status = "SYNCED",
+            needs_upload = 0,
+            last_sync_attempt = now,
+            id = attachmentId
+        )
+    }
+    
+    /**
+     * Get attachment by remote ID
+     */
+    suspend fun getAttachmentByRemoteId(remoteId: String): Attachment? {
+        return queries.getAttachmentByRemoteId(remoteId).executeAsOneOrNull()?.let { 
+            mapToAttachment(it) 
+        }
+    }
+    
+    /**
+     * Get conflicted attachments for a user
+     */
+    suspend fun getConflictedAttachments(userId: String): List<Attachment> {
+        // TODO: Implement proper conflict detection query
+        // For now, return empty list
+        return emptyList()
+    }
+    
+    /**
+     * Insert attachment with enhanced sync support
+     */
+    suspend fun insertAttachment(attachment: Attachment) {
+        queries.insertAttachment(
+            id = attachment.id,
+            file_path = attachment.ruta_local ?: "",
+            nombre_original = attachment.nombre_original,
+            tipo_archivo = attachment.tipo_archivo.toLong(),
+            tipo_mime = attachment.tipo_mime,
+            tamano_bytes = attachment.tamano_bytes,
+            fecha_subida = attachment.fecha_subida.toString(),
+            nota_id = attachment.nota_id,
+            sync_status = attachment.sync_status?.name ?: "PENDING",
+            needs_upload = if (attachment.needs_upload) 1 else 0,
+            local_created_at = attachment.local_created_at ?: getCurrentTimestamp(),
+            remote_url = null,
+            remote_path = attachment.remote_path,
+            remote_file_id = attachment.remote_id,
+            content_hash = attachment.content_hash,
+            download_status = "COMPLETED",
+            is_cached_locally = 1,
+            is_structured_path = 0
+        )
+    }
+    
+    /**
+     * Map SQLDelight Attachments to domain Attachment
+     */
+    private fun mapToAttachment(attachments: Attachments): Attachment {
+        return Attachment(
+            id = attachments.id,
+            datos_archivo = null, // No used in sync workflow
+            nombre_original = attachments.nombre_original,
+            tipo_archivo = attachments.tipo_archivo.toInt(),
+            tipo_mime = attachments.tipo_mime,
+            tamano_bytes = attachments.tamano_bytes,
+            fecha_subida = attachments.fecha_subida.toLong(),
+            nota_id = attachments.nota_id,
+            ruta_local = attachments.file_path,
+            sync_status = try { 
+                com.vicherarr.memora.sync.SyncStatus.valueOf(attachments.sync_status ?: "PENDING") 
+            } catch (e: Exception) { 
+                com.vicherarr.memora.sync.SyncStatus.PENDING 
+            },
+            needs_upload = attachments.needs_upload == 1L,
+            remote_id = attachments.remote_file_id,
+            content_hash = attachments.content_hash,
+            last_sync_attempt = attachments.last_sync_attempt,
+            sync_retry_count = 0, // TODO: Add to schema if needed
+            local_created_at = attachments.local_created_at,
+            remote_path = attachments.remote_path
         )
     }
 }

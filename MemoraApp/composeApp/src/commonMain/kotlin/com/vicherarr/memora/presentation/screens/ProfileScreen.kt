@@ -213,6 +213,26 @@ class ProfileScreen : Screen {
                     
                     Spacer(modifier = Modifier.height(12.dp))
                     
+                    // Botón de test attachment sync
+                    Button(
+                        onClick = { syncViewModel.iniciarSincronizacionManual() },
+                        enabled = currentSyncState !is SyncState.Syncing,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.CloudSync,
+                            contentDescription = "Test Attachment Sync",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("📎 TEST ATTACHMENT SYNC")
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
                     // Botón de reset completo
                     Button(
                         onClick = { syncViewModel.forceCompleteReset() },

@@ -6,11 +6,18 @@ import com.vicherarr.memora.domain.repository.CloudAuthRepository
 import com.vicherarr.memora.domain.usecase.auth.CloudSignInUseCase
 import com.vicherarr.memora.domain.usecase.auth.CloudSignOutUseCase
 import com.vicherarr.memora.domain.usecase.auth.GetCurrentCloudUserUseCase
+import com.vicherarr.memora.sync.AttachmentSyncEngine
+import com.vicherarr.memora.sync.AttachmentSyncRepository
 import com.vicherarr.memora.sync.CloudStorageProvider
 import com.vicherarr.memora.sync.DatabaseMerger
 import com.vicherarr.memora.sync.DatabaseSyncService
 import com.vicherarr.memora.sync.GoogleDriveStorageProvider
+import com.vicherarr.memora.sync.GoogleDriveAttachmentSyncRepository
+import com.vicherarr.memora.sync.LazyGoogleDriveAttachmentSyncRepository
+import com.vicherarr.memora.sync.HashCalculator
 import com.vicherarr.memora.sync.SyncEngine
+import com.vicherarr.memora.data.database.AttachmentsDao
+import com.vicherarr.memora.domain.platform.FileManager
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -54,4 +61,25 @@ val cloudAuthModuleAndroid = module {
     
     // Sync Engine
     single { SyncEngine(get(), get(), get(), get()) }
+    
+    // Attachment Sync Components
+    single<HashCalculator> { 
+        HashCalculator() 
+    }
+    
+    single<AttachmentSyncRepository> { 
+        LazyGoogleDriveAttachmentSyncRepository(
+            context = androidContext(),
+            cloudStorageProvider = get<CloudStorageProvider>() as GoogleDriveStorageProvider
+        ) 
+    }
+    
+    single { 
+        AttachmentSyncEngine(
+            attachmentsDao = get<AttachmentsDao>(),
+            fileManager = get<FileManager>(),
+            attachmentSyncRepository = get<AttachmentSyncRepository>(),
+            hashCalculator = get<HashCalculator>()
+        ) 
+    }
 }

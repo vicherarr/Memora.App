@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.data.auth.CloudAuthProvider
 import com.vicherarr.memora.domain.model.AuthState
 import com.vicherarr.memora.domain.repository.NotesRepository
+import com.vicherarr.memora.sync.AttachmentSyncEngine
+import com.vicherarr.memora.sync.AttachmentSyncState
 import com.vicherarr.memora.sync.SyncEngine
 import com.vicherarr.memora.sync.SyncState
 import kotlinx.coroutines.flow.StateFlow
@@ -16,11 +18,13 @@ import kotlinx.coroutines.launch
  */
 class SyncViewModel(
     private val syncEngine: SyncEngine,
+    private val attachmentSyncEngine: AttachmentSyncEngine,
     private val cloudAuthProvider: CloudAuthProvider,
     private val notesRepository: NotesRepository
 ) : ViewModel() {
 
     val syncState: StateFlow<SyncState> = syncEngine.syncState
+    val attachmentSyncState: StateFlow<AttachmentSyncState> = attachmentSyncEngine.syncState
     private var isFirstSyncDone = false
 
     init {
@@ -31,7 +35,9 @@ class SyncViewModel(
                 if (authState is AuthState.Authenticated && !isFirstSyncDone) {
                     println("SyncViewModel: Usuario autenticado. Iniciando primera sincronización automática.")
                     isFirstSyncDone = true
+                    // Sincronizar notas primero, luego attachments
                     syncEngine.iniciarSincronizacion()
+                    syncAttachments(authState.user.email)
                 }
             }
         }
@@ -43,15 +49,59 @@ class SyncViewModel(
     fun iniciarSincronizacionManual() {
         viewModelScope.launch {
             // Asegurarse de que el usuario está autenticado antes de intentar una sincronización manual
-            if (cloudAuthProvider.authState.value is AuthState.Authenticated) {
-                println("SyncViewModel: Iniciando sincronización manual.")
+            val authState = cloudAuthProvider.authState.value
+            if (authState is AuthState.Authenticated) {
+                println("SyncViewModel: Iniciando sincronización manual completa.")
                 try {
+                    // Sincronizar notas
                     syncEngine.iniciarSincronizacion()
+                    
+                    // Sincronizar attachments
+                    syncAttachments(authState.user.email)
                 } catch (e: Exception) {
                     println("SyncViewModel: Error en sincronización manual - ${e.message}")
                 }
             } else {
                 println("SyncViewModel: No se puede iniciar sincronización manual. Usuario no autenticado.")
+            }
+        }
+    }
+    
+    /**
+     * Sincronizar attachments para un usuario
+     */
+    private suspend fun syncAttachments(userId: String) {
+        try {
+            println("SyncViewModel: 📎 Iniciando sincronización de attachments para $userId")
+            val result = attachmentSyncEngine.startFullSync(userId)
+            
+            if (result.isSuccess) {
+                val syncResult = result.getOrNull()
+                println("SyncViewModel: 📎 ✅ Attachments sincronizados: ${syncResult?.uploadedCount} subidos, ${syncResult?.downloadedCount} descargados")
+            } else {
+                println("SyncViewModel: 📎 ❌ Error sincronizando attachments: ${result.exceptionOrNull()?.message}")
+            }
+        } catch (e: Exception) {
+            println("SyncViewModel: 📎 ❌ Error en sync de attachments: ${e.message}")
+        }
+    }
+    
+    /**
+     * Sincronizar un attachment específico (on-demand)
+     */
+    fun syncSingleAttachment(attachmentId: String) {
+        viewModelScope.launch {
+            try {
+                println("SyncViewModel: 📎 Sincronizando attachment individual: $attachmentId")
+                val result = attachmentSyncEngine.syncSingleAttachment(attachmentId)
+                
+                if (result.isSuccess) {
+                    println("SyncViewModel: 📎 ✅ Attachment sincronizado exitosamente")
+                } else {
+                    println("SyncViewModel: 📎 ❌ Error sincronizando attachment: ${result.exceptionOrNull()?.message}")
+                }
+            } catch (e: Exception) {
+                println("SyncViewModel: 📎 ❌ Error en sync individual: ${e.message}")
             }
         }
     }

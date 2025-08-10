@@ -48,6 +48,12 @@ class GoogleDriveStorageProvider(
     private var driveService: Drive? = null
     private var memoraFolderId: String? = null
     
+    /**
+     * Get Drive service for AttachmentSyncRepository
+     * Should only be called after autenticar() has been successful
+     */
+    fun getDriveService(): Drive? = driveService
+    
     override suspend fun autenticar() {
         try {
             Log.d(TAG, "Iniciando autenticación para Google Drive...")
@@ -356,4 +362,50 @@ actual fun getCloudStorageProvider(): CloudStorageProvider {
  */
 fun getCloudStorageProvider(context: Context, cloudAuthProvider: CloudAuthProvider): CloudStorageProvider {
     return GoogleDriveStorageProvider(context, cloudAuthProvider)
+}
+
+/**
+ * Lazy wrapper for AttachmentSyncRepository that waits for Google Drive service to be initialized
+ */
+class LazyGoogleDriveAttachmentSyncRepository(
+    private val context: Context,
+    private val cloudStorageProvider: GoogleDriveStorageProvider
+) : AttachmentSyncRepository {
+    
+    private var _repository: GoogleDriveAttachmentSyncRepository? = null
+    
+    private suspend fun getRepository(): GoogleDriveAttachmentSyncRepository {
+        if (_repository == null) {
+            val driveService = cloudStorageProvider.getDriveService()
+                ?: throw IllegalStateException("Google Drive service not initialized. Please authenticate first.")
+            _repository = GoogleDriveAttachmentSyncRepository(context, driveService)
+        }
+        return _repository!!
+    }
+    
+    override suspend fun uploadAttachment(
+        attachment: com.vicherarr.memora.data.database.Attachment,
+        fileData: ByteArray,
+        userId: String
+    ): Result<String> = getRepository().uploadAttachment(attachment, fileData, userId)
+    
+    override suspend fun downloadAttachment(remoteId: String): Result<ByteArray> =
+        getRepository().downloadAttachment(remoteId)
+    
+    override suspend fun listRemoteAttachments(userId: String): List<com.vicherarr.memora.sync.RemoteAttachmentInfo> =
+        getRepository().listRemoteAttachments(userId)
+    
+    override suspend fun deleteRemoteAttachment(remoteId: String): Result<Boolean> =
+        getRepository().deleteRemoteAttachment(remoteId)
+    
+    override suspend fun remoteAttachmentExists(remoteId: String): Result<Boolean> =
+        getRepository().remoteAttachmentExists(remoteId)
+    
+    override suspend fun getRemoteAttachmentMetadata(remoteId: String): Result<com.vicherarr.memora.sync.RemoteAttachmentMetadata> =
+        getRepository().getRemoteAttachmentMetadata(remoteId)
+    
+    override suspend fun updateRemoteAttachmentMetadata(
+        remoteId: String, 
+        metadata: com.vicherarr.memora.sync.RemoteAttachmentMetadata
+    ): Result<Boolean> = getRepository().updateRemoteAttachmentMetadata(remoteId, metadata)
 }
