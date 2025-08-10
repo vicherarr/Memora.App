@@ -1,0 +1,81 @@
+-- SyncMetadata table schema for incremental synchronization
+-- Stores metadata fingerprints to compare local vs remote state efficiently
+
+CREATE TABLE sync_metadata (
+    user_id TEXT NOT NULL PRIMARY KEY,
+    last_sync_timestamp INTEGER NOT NULL,
+    notes_count INTEGER NOT NULL,
+    attachments_count INTEGER NOT NULL,
+    content_fingerprint TEXT NOT NULL,        -- SHA256 hash of critical local metadata
+    remote_fingerprint TEXT,                  -- SHA256 hash from Google Drive metadata
+    sync_version INTEGER NOT NULL DEFAULT 1, -- For future schema compatibility
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+-- Index for efficient lookups
+CREATE INDEX sync_metadata_user_id_idx ON sync_metadata(user_id);
+CREATE INDEX sync_metadata_last_sync_idx ON sync_metadata(last_sync_timestamp);
+
+-- Queries for SyncMetadataDao
+
+-- Get sync metadata for a specific user
+getSyncMetadataByUserId:
+SELECT * FROM sync_metadata WHERE user_id = ?;
+
+-- Insert new sync metadata
+insertSyncMetadata:
+INSERT INTO sync_metadata (
+    user_id, last_sync_timestamp, notes_count, attachments_count,
+    content_fingerprint, remote_fingerprint, sync_version, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Update existing sync metadata
+updateSyncMetadata:
+UPDATE sync_metadata 
+SET 
+    last_sync_timestamp = ?,
+    notes_count = ?,
+    attachments_count = ?,
+    content_fingerprint = ?,
+    remote_fingerprint = ?,
+    updated_at = ?
+WHERE user_id = ?;
+
+-- Update only remote fingerprint (after successful remote metadata save)
+updateRemoteFingerprint:
+UPDATE sync_metadata 
+SET 
+    remote_fingerprint = ?,
+    updated_at = ?
+WHERE user_id = ?;
+
+-- Update only local data (after local changes)
+updateLocalData:
+UPDATE sync_metadata 
+SET 
+    last_sync_timestamp = ?,
+    notes_count = ?,
+    attachments_count = ?,
+    content_fingerprint = ?,
+    updated_at = ?
+WHERE user_id = ?;
+
+-- Delete sync metadata for a user
+deleteSyncMetadata:
+DELETE FROM sync_metadata WHERE user_id = ?;
+
+-- Get all sync metadata (for debugging/admin purposes)
+getAllSyncMetadata:
+SELECT * FROM sync_metadata ORDER BY updated_at DESC;
+
+-- Check if sync metadata exists for user
+syncMetadataExists:
+SELECT COUNT(*) FROM sync_metadata WHERE user_id = ?;
+
+-- Get users with outdated sync (for background maintenance)
+getOutdatedSyncUsers:
+SELECT user_id, last_sync_timestamp 
+FROM sync_metadata 
+WHERE last_sync_timestamp < ? 
+ORDER BY last_sync_timestamp ASC;

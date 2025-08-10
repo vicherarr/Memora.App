@@ -35,6 +35,13 @@ class AttachmentsDao(private val database: MemoraDatabase) {
     }
     
     /**
+     * Get all attachments (one-time query) - for fingerprint generation
+     */
+    suspend fun getAllAttachments(): List<Attachments> {
+        return queries.getAllAttachments().executeAsList()
+    }
+    
+    /**
      * Get all attachments for a specific note (one-time query)
      */
     suspend fun getAttachmentsByNoteId(noteId: String): List<Attachments> {
@@ -391,6 +398,33 @@ class AttachmentsDao(private val database: MemoraDatabase) {
      */
     suspend fun insertAttachment(attachment: Attachment) {
         queries.insertAttachment(
+            id = attachment.id,
+            file_path = attachment.ruta_local ?: "",
+            nombre_original = attachment.nombre_original,
+            tipo_archivo = attachment.tipo_archivo.toLong(),
+            tipo_mime = attachment.tipo_mime,
+            tamano_bytes = attachment.tamano_bytes,
+            fecha_subida = attachment.fecha_subida.toString(),
+            nota_id = attachment.nota_id,
+            sync_status = attachment.sync_status?.name ?: "PENDING",
+            needs_upload = if (attachment.needs_upload) 1 else 0,
+            local_created_at = attachment.local_created_at ?: getCurrentTimestamp(),
+            remote_url = null,
+            remote_path = attachment.remote_path,
+            remote_file_id = attachment.remote_id,
+            content_hash = attachment.content_hash,
+            download_status = "COMPLETED",
+            is_cached_locally = 1,
+            is_structured_path = 0
+        )
+    }
+    
+    /**
+     * UPSERT attachment: Insert if new, update if exists (solves UNIQUE constraint conflicts)
+     * This is the SAFE method to use in sync operations
+     */
+    suspend fun upsertAttachment(attachment: Attachment) {
+        queries.upsertAttachment(
             id = attachment.id,
             file_path = attachment.ruta_local ?: "",
             nombre_original = attachment.nombre_original,

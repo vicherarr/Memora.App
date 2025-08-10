@@ -260,7 +260,8 @@ class AttachmentSyncEngine(
                                     remote_path = remoteAttachment.remotePath
                                 )
                                 
-                                attachmentsDao.insertAttachment(localAttachment)
+                                // Use UPSERT to prevent UNIQUE constraint conflicts
+                                attachmentsDao.upsertAttachment(localAttachment)
                                 downloadedCount++
                                 println("AttachmentSyncEngine: ✅ Descargado exitosamente: ${remoteAttachment.fileName}")
                                 

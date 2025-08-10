@@ -42,10 +42,11 @@ class MainScreen : Screen {
             val tabNavigator = LocalTabNavigator.current
             val currentTab = tabNavigator.current
             
-            // Auto-sync cuando se cambia a NotesTab
+            // 🧠 Smart Auto-sync cuando se cambia a NotesTab
             LaunchedEffect(currentTab) {
                 if (currentTab == NotesTab) {
-                    syncViewModel.iniciarSincronizacionManual()
+                    // Use Smart Sync instead of traditional sync for better performance
+                    syncViewModel.iniciarSmartSync()
                 }
             }
             

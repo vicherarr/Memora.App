@@ -41,6 +41,37 @@ expect interface CloudStorageProvider {
      * TODO: Remove this method after testing
      */
     suspend fun forceDeleteAllRemoteFiles(): Result<Boolean>
+    
+    // ========== NUEVOS MÉTODOS: METADATA MANAGEMENT ==========
+    
+    /**
+     * Guarda metadatos de sincronización en el almacenamiento remoto
+     * @param userId ID del usuario
+     * @param metadataContent Contenido JSON de los metadatos
+     * @return Result con el ID del archivo remoto creado
+     */
+    suspend fun saveMetadata(userId: String, metadataContent: String): Result<String>
+    
+    /**
+     * Carga metadatos de sincronización desde el almacenamiento remoto
+     * @param userId ID del usuario
+     * @return Result con el contenido JSON o null si no existe
+     */
+    suspend fun loadMetadata(userId: String): Result<String?>
+    
+    /**
+     * Elimina metadatos de sincronización del almacenamiento remoto
+     * @param userId ID del usuario
+     * @return Result indicando si la eliminación fue exitosa
+     */
+    suspend fun deleteMetadata(userId: String): Result<Boolean>
+    
+    /**
+     * Verifica si existen metadatos de sincronización para un usuario
+     * @param userId ID del usuario
+     * @return Result indicando si los metadatos existen
+     */
+    suspend fun metadataExists(userId: String): Result<Boolean>
 }
 
 /**

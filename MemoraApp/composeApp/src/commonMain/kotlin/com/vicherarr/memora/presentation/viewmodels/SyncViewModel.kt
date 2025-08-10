@@ -20,7 +20,9 @@ class SyncViewModel(
     private val syncEngine: SyncEngine,
     private val attachmentSyncEngine: AttachmentSyncEngine,
     private val cloudAuthProvider: CloudAuthProvider,
-    private val notesRepository: NotesRepository
+    private val notesRepository: NotesRepository,
+    // NUEVO: IncrementalSyncUseCase para Smart Sync
+    private val incrementalSyncUseCase: com.vicherarr.memora.domain.usecase.IncrementalSyncUseCase
 ) : ViewModel() {
 
     val syncState: StateFlow<SyncState> = syncEngine.syncState
@@ -28,19 +30,19 @@ class SyncViewModel(
     private var isFirstSyncDone = false
 
     init {
-        // Iniciar sincronización automática cuando el usuario se autentique por primera vez
+        // 🧠 SMART AUTO-SYNC - Enabled with intelligent sync
         viewModelScope.launch {
             // Espera hasta que el estado sea 'Authenticated'
             cloudAuthProvider.authState.collect { authState ->
                 if (authState is AuthState.Authenticated && !isFirstSyncDone) {
-                    println("SyncViewModel: Usuario autenticado. Iniciando primera sincronización automática.")
+                    println("SyncViewModel: 🧠 Usuario autenticado. Iniciando primera Smart Sync automática.")
                     isFirstSyncDone = true
-                    // Sincronizar notas primero, luego attachments
-                    syncEngine.iniciarSincronizacion()
-                    syncAttachments(authState.user.email)
+                    // Use Smart Sync for better performance
+                    iniciarSmartSync()
                 }
             }
         }
+        println("SyncViewModel: 🧠 SMART AUTO-SYNC ENABLED - Intelligent sync activated")
     }
 
     /**
@@ -192,6 +194,108 @@ class SyncViewModel(
                 
             } catch (e: Exception) {
                 println("SyncViewModel: 🚨🚨🚨 ❌ Error en reset completo: ${e.message}")
+            }
+        }
+    }
+    
+    /**
+     * 🧠 NUEVO: Sincronización inteligente usando metadata
+     * 
+     * Usa IncrementalSyncUseCase para decidir si hacer sync o no:
+     * - Si los datos coinciden → Skip sync (súper rápido ⚡)
+     * - Si hay cambios → Sync completo + actualizar metadata
+     * - Con manejo robusto de errores de inicialización
+     */
+    fun iniciarSmartSync() {
+        viewModelScope.launch {
+            val authState = cloudAuthProvider.authState.value
+            if (authState is AuthState.Authenticated) {
+                println("SyncViewModel: 🧠 Iniciando SMART SYNC...")
+                try {
+                    // Usar IncrementalSyncUseCase directamente (arquitectura correcta)
+                    val result = incrementalSyncUseCase.execute(authState.user.email)
+                    
+                    if (result.isSuccess) {
+                        val syncResult = result.getOrNull()!!
+                        println("SyncViewModel: 🧠 ✅ Smart sync completado: $syncResult")
+                        
+                        // Si se hizo sync completo, también sincronizar attachments
+                        when (syncResult) {
+                            is com.vicherarr.memora.domain.usecase.IncrementalSyncResult.FullSyncCompleted,
+                            is com.vicherarr.memora.domain.usecase.IncrementalSyncResult.FirstSyncCompleted,
+                            is com.vicherarr.memora.domain.usecase.IncrementalSyncResult.VersionMismatchResolved -> {
+                                println("SyncViewModel: 🧠 Sync completo ejecutado - sincronizando attachments...")
+                                syncAttachments(authState.user.email)
+                            }
+                            is com.vicherarr.memora.domain.usecase.IncrementalSyncResult.AlreadyInSync -> {
+                                println("SyncViewModel: 🧠 ⚡ Datos ya sincronizados - attachments también están actualizados")
+                            }
+                            is com.vicherarr.memora.domain.usecase.IncrementalSyncResult.SyncFailed -> {
+                                println("SyncViewModel: 🧠 ❌ Smart sync falló: ${syncResult.error}")
+                            }
+                        }
+                    } else {
+                        val error = result.exceptionOrNull()?.message ?: "Error desconocido"
+                        println("SyncViewModel: 🧠 ❌ Error en smart sync: $error")
+                        
+                        // Si es error de inicialización, reintentar después de delay
+                        if (error.contains("not initialized", ignoreCase = true)) {
+                            println("SyncViewModel: 🧠 🔄 Google Drive no inicializado, reintentando en 3s...")
+                            kotlinx.coroutines.delay(3000)
+                            iniciarSmartSyncRetry()
+                        }
+                    }
+                } catch (e: Exception) {
+                    println("SyncViewModel: 🧠 ❌ Error ejecutando smart sync: ${e.message}")
+                    
+                    // Si es error de inicialización, reintentar después de delay
+                    if (e.message?.contains("not initialized", ignoreCase = true) == true) {
+                        println("SyncViewModel: 🧠 🔄 Google Drive no inicializado, reintentando en 3s...")
+                        kotlinx.coroutines.delay(3000)
+                        iniciarSmartSyncRetry()
+                    }
+                }
+            } else {
+                println("SyncViewModel: 🧠 No se puede hacer smart sync. Usuario no autenticado.")
+            }
+        }
+    }
+    
+    /**
+     * Reintentar Smart Sync con lógica de fallback a sync tradicional
+     */
+    private fun iniciarSmartSyncRetry() {
+        viewModelScope.launch {
+            val authState = cloudAuthProvider.authState.value
+            if (authState is AuthState.Authenticated) {
+                println("SyncViewModel: 🧠 🔄 REINTENTANDO SMART SYNC...")
+                try {
+                    val result = incrementalSyncUseCase.execute(authState.user.email)
+                    
+                    if (result.isSuccess) {
+                        val syncResult = result.getOrNull()!!
+                        println("SyncViewModel: 🧠 ✅ Smart sync retry exitoso: $syncResult")
+                        
+                        when (syncResult) {
+                            is com.vicherarr.memora.domain.usecase.IncrementalSyncResult.FullSyncCompleted,
+                            is com.vicherarr.memora.domain.usecase.IncrementalSyncResult.FirstSyncCompleted,
+                            is com.vicherarr.memora.domain.usecase.IncrementalSyncResult.VersionMismatchResolved -> {
+                                syncAttachments(authState.user.email)
+                            }
+                            else -> {
+                                println("SyncViewModel: 🧠 Smart sync retry completado")
+                            }
+                        }
+                    } else {
+                        // Si falla de nuevo, usar sync tradicional como fallback
+                        println("SyncViewModel: 🧠 ⚠️ Smart sync falló después de retry - usando sync tradicional como fallback")
+                        iniciarSincronizacionManual()
+                    }
+                } catch (e: Exception) {
+                    // Si falla de nuevo, usar sync tradicional como fallback
+                    println("SyncViewModel: 🧠 ⚠️ Smart sync retry falló - usando sync tradicional: ${e.message}")
+                    iniciarSincronizacionManual()
+                }
             }
         }
     }

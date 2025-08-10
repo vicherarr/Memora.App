@@ -28,6 +28,12 @@ actual interface CloudStorageProvider {
     actual suspend fun obtenerMetadatosRemotos(): Long?
     actual suspend fun forceDeleteRemoteDatabase(): Result<Boolean>
     actual suspend fun forceDeleteAllRemoteFiles(): Result<Boolean>
+    
+    // NUEVOS MÉTODOS: Metadata management para sincronización incremental
+    actual suspend fun saveMetadata(userId: String, metadataContent: String): Result<String>
+    actual suspend fun loadMetadata(userId: String): Result<String?>
+    actual suspend fun deleteMetadata(userId: String): Result<Boolean>
+    actual suspend fun metadataExists(userId: String): Result<Boolean>
 }
 
 /**
@@ -345,6 +351,137 @@ class GoogleDriveStorageProvider(
         } catch (e: Exception) {
             Log.e(TAG, "🚨🚨 NUCLEAR DELETE: Error en eliminación masiva: ${e.message}", e)
             return@withContext Result.failure(Exception("Error en eliminación masiva: ${e.message}"))
+        }
+    }
+    
+    // ========== NUEVOS MÉTODOS: METADATA MANAGEMENT ==========
+    
+    override suspend fun saveMetadata(userId: String, metadataContent: String): Result<String> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            val service = driveService ?: throw Exception("Google Drive service not initialized")
+            val fileName = getMetadataFileName(userId)
+            
+            Log.d(TAG, "💾 Guardando metadata para usuario $userId como archivo: $fileName")
+            
+            // Buscar archivo existente
+            val existingFile = findFileByName(fileName)
+            
+            val fileMetadata = File().apply {
+                if (existingFile == null) {
+                    name = fileName
+                    parents = listOf("appDataFolder") // Guardar en AppDataFolder para privacidad
+                }
+            }
+            
+            val mediaContent = ByteArrayContent("application/json", metadataContent.toByteArray())
+            
+            val savedFile = if (existingFile != null) {
+                // Actualizar archivo existente
+                Log.d(TAG, "📝 Actualizando archivo de metadata existente: ${existingFile.id}")
+                service.files().update(existingFile.id, fileMetadata, mediaContent).execute()
+            } else {
+                // Crear nuevo archivo
+                Log.d(TAG, "📄 Creando nuevo archivo de metadata")
+                service.files().create(fileMetadata, mediaContent).execute()
+            }
+            
+            Log.d(TAG, "✅ Metadata guardado exitosamente. File ID: ${savedFile.id}")
+            Result.success(savedFile.id)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error guardando metadata: ${e.message}", e)
+            Result.failure(Exception("Error guardando metadata: ${e.message}"))
+        }
+    }
+    
+    override suspend fun loadMetadata(userId: String): Result<String?> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            val service = driveService ?: throw Exception("Google Drive service not initialized")
+            val fileName = getMetadataFileName(userId)
+            
+            Log.d(TAG, "📖 Cargando metadata para usuario $userId desde archivo: $fileName")
+            
+            val file = findFileByName(fileName)
+            if (file == null) {
+                Log.d(TAG, "📄 No se encontró archivo de metadata para usuario $userId")
+                return@withContext Result.success(null)
+            }
+            
+            val content = service.files().get(file.id).executeMediaAsInputStream()
+            val metadataContent = content.readBytes().toString(Charsets.UTF_8)
+            
+            Log.d(TAG, "✅ Metadata cargado exitosamente. Tamaño: ${metadataContent.length} chars")
+            Result.success(metadataContent)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error cargando metadata: ${e.message}", e)
+            Result.failure(Exception("Error cargando metadata: ${e.message}"))
+        }
+    }
+    
+    override suspend fun deleteMetadata(userId: String): Result<Boolean> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            val service = driveService ?: throw Exception("Google Drive service not initialized")
+            val fileName = getMetadataFileName(userId)
+            
+            Log.d(TAG, "🗑️ Eliminando metadata para usuario $userId archivo: $fileName")
+            
+            val file = findFileByName(fileName)
+            if (file == null) {
+                Log.d(TAG, "📄 No se encontró archivo de metadata para eliminar")
+                return@withContext Result.success(true) // No existe, consideramos éxito
+            }
+            
+            service.files().delete(file.id).execute()
+            Log.d(TAG, "✅ Metadata eliminado exitosamente")
+            Result.success(true)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error eliminando metadata: ${e.message}", e)
+            Result.failure(Exception("Error eliminando metadata: ${e.message}"))
+        }
+    }
+    
+    override suspend fun metadataExists(userId: String): Result<Boolean> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            val service = driveService ?: throw Exception("Google Drive service not initialized")
+            val fileName = getMetadataFileName(userId)
+            
+            Log.d(TAG, "🔍 Verificando si existe metadata para usuario $userId archivo: $fileName")
+            
+            val file = findFileByName(fileName)
+            val exists = file != null
+            
+            Log.d(TAG, "✅ Resultado verificación metadata: $exists")
+            Result.success(exists)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error verificando metadata: ${e.message}", e)
+            Result.failure(Exception("Error verificando metadata: ${e.message}"))
+        }
+    }
+    
+    // ========== MÉTODOS AUXILIARES PARA METADATA ==========
+    
+    private fun getMetadataFileName(userId: String): String {
+        return "memora_sync_metadata_${userId.hashCode().toString(16)}.json"
+    }
+    
+    private suspend fun findFileByName(fileName: String): File? = withContext(Dispatchers.IO) {
+        return@withContext try {
+            val service = driveService ?: return@withContext null
+            
+            val result = service.files()
+                .list()
+                .setSpaces("appDataFolder")
+                .setQ("name='$fileName' and trashed=false")
+                .setFields("files(id, name, modifiedTime)")
+                .execute()
+            
+            result.files?.firstOrNull()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error buscando archivo por nombre '$fileName': ${e.message}")
+            null
         }
     }
 }

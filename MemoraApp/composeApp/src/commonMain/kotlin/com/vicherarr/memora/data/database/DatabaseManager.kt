@@ -26,6 +26,13 @@ class DatabaseManager(private val driverFactory: DatabaseDriverFactory) {
     }
     
     /**
+     * SyncMetadata Data Access Object
+     */
+    val syncMetadataDao: SyncMetadataDao by lazy {
+        SyncMetadataDao(database)
+    }
+    
+    /**
      * Get direct access to database if needed
      */
     fun getDatabase(): MemoraDatabase = database

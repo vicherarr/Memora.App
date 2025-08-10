@@ -199,4 +199,14 @@ class SyncEngine(
         // TODO: Consultar base de datos local para cambios no sincronizados
         return false
     }
+    
 }
+
+/**
+ * Resultado básico de sync completo (para compatibilidad)
+ */
+data class SyncResult(
+    val syncedNotesCount: Int,
+    val syncedAttachmentsCount: Int,
+    val message: String
+)

@@ -178,3 +178,11 @@ updateContentHash:
 UPDATE attachments 
 SET content_hash = ?
 WHERE id = ?;
+
+-- UPSERT attachment: Insert if not exists, update if exists (solves UNIQUE constraint conflicts)
+upsertAttachment:
+INSERT OR REPLACE INTO attachments (
+    id, file_path, nombre_original, tipo_archivo, tipo_mime,
+    tamano_bytes, fecha_subida, nota_id, sync_status, needs_upload, local_created_at, remote_url,
+    remote_path, remote_file_id, content_hash, download_status, is_cached_locally, is_structured_path
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);

@@ -4,6 +4,7 @@ import com.vicherarr.memora.data.database.AttachmentsDao
 import com.vicherarr.memora.data.database.DatabaseDriverFactory
 import com.vicherarr.memora.data.database.DatabaseManager
 import com.vicherarr.memora.data.database.NotesDao
+import com.vicherarr.memora.data.database.SyncMetadataDao
 import org.koin.dsl.module
 
 /**
@@ -28,5 +29,10 @@ val databaseModule = module {
     // AttachmentsDao - from DatabaseManager
     single<AttachmentsDao> {
         get<DatabaseManager>().attachmentsDao
+    }
+    
+    // SyncMetadataDao - from DatabaseManager
+    single<SyncMetadataDao> {
+        get<DatabaseManager>().syncMetadataDao
     }
 }
