@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CloudSync
@@ -37,10 +39,13 @@ class ProfileScreen : Screen {
         val syncState by syncViewModel.syncState.collectAsState()
         val currentSyncState = syncState // Make it available in entire scope
         
+        val scrollState = rememberScrollState()
+        
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing)
+                .verticalScroll(scrollState)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -123,7 +128,7 @@ class ProfileScreen : Screen {
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    // Botón de sincronización
+                    // Botón de sincronización completa manual
                     Button(
                         onClick = { syncViewModel.iniciarSincronizacionManual() },
                         enabled = currentSyncState !is SyncState.Syncing,
@@ -135,7 +140,7 @@ class ProfileScreen : Screen {
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Sincronizar ahora")
+                        Text("Sincronizar todo")
                     }
                 }
             }
@@ -267,7 +272,7 @@ class ProfileScreen : Screen {
                     
                     Spacer(modifier = Modifier.height(12.dp))
                     
-                    // Botón de test attachment sync
+                    // Botón de test attachment sync completo
                     Button(
                         onClick = { syncViewModel.iniciarSincronizacionManual() },
                         enabled = currentSyncState !is SyncState.Syncing,
@@ -282,7 +287,7 @@ class ProfileScreen : Screen {
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("📎 TEST ATTACHMENT SYNC")
+                        Text("📎 Test Sync Completo + Attachments")
                     }
                     
                     Spacer(modifier = Modifier.height(8.dp))
@@ -305,7 +310,8 @@ class ProfileScreen : Screen {
                         Text("🚨 RESET COMPLETO 🚨")
                     }
                     
-                    Spacer(modifier = Modifier.height(8.dp))
+                    // Extra space para scroll completo, especialmente en dispositivos con bottom navigation
+                    Spacer(modifier = Modifier.height(120.dp))
                     
                     Text(
                         text = "TODO: Remover después del testing",
