@@ -1,5 +1,4 @@
 package com.vicherarr.memora.presentation.screens
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.WindowInsets
@@ -9,8 +8,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import kotlin.math.ceil
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -26,8 +23,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
@@ -45,35 +40,33 @@ import com.vicherarr.memora.presentation.screens.CreateNoteScreen
 import com.vicherarr.memora.presentation.viewmodels.NotesViewModel
 import com.vicherarr.memora.presentation.viewmodels.SyncViewModel
 import com.vicherarr.memora.presentation.components.SyncStatusIndicator
+import com.vicherarr.memora.presentation.components.FiltersSection
+import com.vicherarr.memora.domain.models.DateFilter
+import com.vicherarr.memora.domain.models.FileTypeFilter
+import com.vicherarr.memora.domain.utils.DateTimeUtils
 import org.koin.compose.getKoin
-
 /**
  * Notes List Screen - Shows list of notes with navigation to detail
  * Following Voyager nested navigation best practices 2025
  */
 class NotesListScreen : Screen {
-    
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val koin = getKoin()
         val notesViewModel: NotesViewModel = remember { koin.get() }
         val syncViewModel: SyncViewModel = remember { koin.get() }
-        
         val uiState by notesViewModel.uiState.collectAsState()
         val syncState by syncViewModel.syncState.collectAsState()
         val attachmentSyncState by syncViewModel.attachmentSyncState.collectAsState()
-        
         // ✅ NUEVO: Estados para búsqueda y filtros avanzados
         var searchQuery by rememberSaveable { mutableStateOf("") }
         var showFilters by rememberSaveable { mutableStateOf(false) }
         var selectedDateFilter by rememberSaveable { mutableStateOf(DateFilter.ALL) }
         var selectedFileType by rememberSaveable { mutableStateOf(FileTypeFilter.ALL) }
-        
         // ✅ NUEVO: Filtrado avanzado con múltiples criterios
         val filteredNotes = remember(uiState.notes, searchQuery, selectedDateFilter, selectedFileType) {
             var notes = uiState.notes
-            
             // Filtro por texto
             if (searchQuery.isNotBlank()) {
                 notes = notes.filter { note ->
@@ -81,22 +74,19 @@ class NotesListScreen : Screen {
                     note.contenido.contains(searchQuery, ignoreCase = true)
                 }
             }
-            
-            // Filtro por fecha
-            val now = System.currentTimeMillis()
+            // Filtro por fecha usando utilidades del domain
             notes = when (selectedDateFilter) {
                 DateFilter.TODAY -> notes.filter { 
-                    (now - it.fechaModificacion) < 24 * 60 * 60 * 1000L 
+                    DateTimeUtils.isWithinTimeRange(it.fechaModificacion, DateTimeUtils.TimeRanges.ONE_DAY)
                 }
                 DateFilter.WEEK -> notes.filter { 
-                    (now - it.fechaModificacion) < 7 * 24 * 60 * 60 * 1000L 
+                    DateTimeUtils.isWithinTimeRange(it.fechaModificacion, DateTimeUtils.TimeRanges.ONE_WEEK)
                 }
                 DateFilter.MONTH -> notes.filter { 
-                    (now - it.fechaModificacion) < 30 * 24 * 60 * 60 * 1000L 
+                    DateTimeUtils.isWithinTimeRange(it.fechaModificacion, DateTimeUtils.TimeRanges.ONE_MONTH)
                 }
                 DateFilter.ALL -> notes
             }
-            
             // Filtro por tipo de archivo
             notes = when (selectedFileType) {
                 FileTypeFilter.WITH_IMAGES -> notes.filter { note ->
@@ -113,17 +103,14 @@ class NotesListScreen : Screen {
                 }
                 FileTypeFilter.ALL -> notes
             }
-            
             notes
         }
-        
         // Debug logging for notes data
         println("NotesListScreen: Total notes loaded: ${uiState.notes.size}")
         println("NotesListScreen: Filtered notes: ${filteredNotes.size} (query: '$searchQuery')")
         filteredNotes.forEachIndexed { index, note ->
             println("NotesListScreen: Note $index - id: ${note.id}, title: '${note.titulo}', attachments: ${note.archivosAdjuntos.size}")
         }
-        
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -135,7 +122,6 @@ class NotesListScreen : Screen {
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
-                
                 uiState.errorMessage != null -> {
                     Column(
                         modifier = Modifier
@@ -156,11 +142,8 @@ class NotesListScreen : Screen {
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.error
                         )
-                        
-                        
                     }
                 }
-                
                 uiState.notes.isEmpty() -> {
                     Column(
                         modifier = Modifier
@@ -190,7 +173,6 @@ class NotesListScreen : Screen {
                         )
                     }
                 }
-                
                 else -> {
                     Column(
                         modifier = Modifier.fillMaxSize()
@@ -233,7 +215,6 @@ class NotesListScreen : Screen {
                             },
                             singleLine = true
                         )
-                        
                         // Filtros expandibles
                         if (showFilters) {
                             FiltersSection(
@@ -244,7 +225,6 @@ class NotesListScreen : Screen {
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
-                        
                         // Lista de notas filtradas
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
@@ -269,7 +249,6 @@ class NotesListScreen : Screen {
                     }
                 }
             }
-            
             // FAB moved to here from MainScreen (proper nested navigation pattern)
             FloatingActionButton(
                 onClick = {
@@ -287,7 +266,6 @@ class NotesListScreen : Screen {
                     tint = MaterialTheme.colorScheme.onPrimary
                 )
             }
-            
             // Sync Status Indicator - más pequeño y con espacio para SearchBar
             SyncStatusIndicator(
                 syncState = syncState,
@@ -300,7 +278,6 @@ class NotesListScreen : Screen {
         }
     }
 }
-
 @Composable
 internal fun EnhancedNoteCard(
     note: Note,
@@ -319,17 +296,14 @@ internal fun EnhancedNoteCard(
         Column {
             // Debug logging for note card
             println("NoteCard: Rendering note ${note.id} with ${note.archivosAdjuntos.size} attachments")
-            
             // Multimedia preview section
             if (note.archivosAdjuntos.isNotEmpty()) {
                 AttachmentsGrid(
                     attachments = note.archivosAdjuntos,
                     modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 16.dp)
                 )
-                
                 Spacer(modifier = Modifier.height(8.dp))
             }
-            
             // Note content section
             Column(
                 modifier = Modifier.padding(
@@ -350,7 +324,6 @@ internal fun EnhancedNoteCard(
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                 }
-                
                 // Content preview
                 Text(
                     text = note.contenido,
@@ -360,7 +333,6 @@ internal fun EnhancedNoteCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
-                
                 // Footer with date and attachment summary
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -369,11 +341,10 @@ internal fun EnhancedNoteCard(
                 ) {
                     // Date
                     Text(
-                        text = formatRelativeTime(note.fechaCreacion),
+                        text = DateTimeUtils.formatRelativeTime(note.fechaCreacion),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    
                     // Attachment summary
                     if (note.archivosAdjuntos.isNotEmpty()) {
                         AttachmentSummary(attachments = note.archivosAdjuntos)
@@ -383,7 +354,6 @@ internal fun EnhancedNoteCard(
         }
     }
 }
-
 @Composable
 private fun AttachmentsGrid(
     attachments: List<ArchivoAdjunto>,
@@ -394,7 +364,6 @@ private fun AttachmentsGrid(
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         val chunkedAttachments = attachments.chunked(3) // Divide en grupos de 3
-        
         chunkedAttachments.forEach { rowAttachments ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -405,7 +374,6 @@ private fun AttachmentsGrid(
                         CompactAttachmentPreview(attachment = attachment)
                     }
                 }
-                
                 // Fill remaining spaces in the row with empty boxes
                 repeat(3 - rowAttachments.size) {
                     Spacer(modifier = Modifier.weight(1f))
@@ -414,7 +382,6 @@ private fun AttachmentsGrid(
         }
     }
 }
-
 @Composable
 private fun CompactAttachmentPreview(attachment: ArchivoAdjunto) {
     Card(
@@ -446,7 +413,6 @@ private fun CompactAttachmentPreview(attachment: ArchivoAdjunto) {
                             modifier = Modifier.fillMaxSize(),
                             color = MaterialTheme.colorScheme.surfaceVariant
                         ) {}
-                        
                         // Play button overlay - smaller for compact view
                         Surface(
                             modifier = Modifier.size(32.dp),
@@ -465,7 +431,6 @@ private fun CompactAttachmentPreview(attachment: ArchivoAdjunto) {
                     }
                 }
             }
-            
             // File type indicator - smaller for compact view
             Surface(
                 modifier = Modifier
@@ -484,7 +449,6 @@ private fun CompactAttachmentPreview(attachment: ArchivoAdjunto) {
         }
     }
 }
-
 @Composable
 private fun AttachmentPreview(attachment: ArchivoAdjunto) {
     Card(
@@ -516,7 +480,6 @@ private fun AttachmentPreview(attachment: ArchivoAdjunto) {
                             modifier = Modifier.fillMaxSize(),
                             color = MaterialTheme.colorScheme.surfaceVariant
                         ) {}
-                        
                         // Play button overlay
                         Surface(
                             modifier = Modifier.size(56.dp),
@@ -535,7 +498,6 @@ private fun AttachmentPreview(attachment: ArchivoAdjunto) {
                     }
                 }
             }
-            
             // File type indicator
             Surface(
                 modifier = Modifier
@@ -554,7 +516,6 @@ private fun AttachmentPreview(attachment: ArchivoAdjunto) {
         }
     }
 }
-
 @Composable
 private fun AttachmentSummary(attachments: List<ArchivoAdjunto>) {
     Row(
@@ -563,7 +524,6 @@ private fun AttachmentSummary(attachments: List<ArchivoAdjunto>) {
     ) {
         val imageCount = attachments.count { it.tipoArchivo == TipoDeArchivo.Imagen }
         val videoCount = attachments.count { it.tipoArchivo == TipoDeArchivo.Video }
-        
         if (imageCount > 0) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -580,7 +540,6 @@ private fun AttachmentSummary(attachments: List<ArchivoAdjunto>) {
                 )
             }
         }
-        
         if (videoCount > 0) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -598,147 +557,4 @@ private fun AttachmentSummary(attachments: List<ArchivoAdjunto>) {
             }
         }
     }
-}
-
-// Utility function to format relative time
-private fun formatRelativeTime(timestamp: Long): String {
-    val now = com.vicherarr.memora.data.database.getCurrentTimestamp()
-    val diff = now - timestamp
-    
-    return when {
-        diff < 60_000 -> "Hace un momento"
-        diff < 3_600_000 -> {
-            val minutes = diff / 60_000
-            "Hace ${minutes}min"
-        }
-        diff < 86_400_000 -> {
-            val hours = diff / 3_600_000
-            "Hace ${hours}h"
-        }
-        diff < 604_800_000 -> {
-            val days = diff / 86_400_000
-            "Hace ${days}d"
-        }
-        else -> {
-            val weeks = diff / 604_800_000
-            "Hace ${weeks}sem"
-        }
-    }
-}
-
-@Composable
-private fun FiltersSection(
-    selectedDateFilter: DateFilter,
-    onDateFilterChanged: (DateFilter) -> Unit,
-    selectedFileType: FileTypeFilter,
-    onFileTypeChanged: (FileTypeFilter) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            // Filtro por fecha
-            Text(
-                text = "Filtrar por fecha",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            
-            Column(Modifier.selectableGroup()) {
-                DateFilter.values().forEach { filter ->
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .selectable(
-                                selected = (selectedDateFilter == filter),
-                                onClick = { onDateFilterChanged(filter) },
-                                role = Role.RadioButton
-                            )
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = (selectedDateFilter == filter),
-                            onClick = null
-                        )
-                        Text(
-                            text = filter.displayName,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    }
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Filtro por tipo de archivo
-            Text(
-                text = "Filtrar por contenido",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            
-            Column(Modifier.selectableGroup()) {
-                FileTypeFilter.values().forEach { filter ->
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .selectable(
-                                selected = (selectedFileType == filter),
-                                onClick = { onFileTypeChanged(filter) },
-                                role = Role.RadioButton
-                            )
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = (selectedFileType == filter),
-                            onClick = null
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(start = 8.dp)
-                        ) {
-                            Icon(
-                                imageVector = filter.icon,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = filter.displayName,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-// Enums para filtros
-enum class DateFilter(val displayName: String) {
-    ALL("Todas las fechas"),
-    TODAY("Hoy"),
-    WEEK("Esta semana"),
-    MONTH("Este mes")
-}
-
-enum class FileTypeFilter(val displayName: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    ALL("Todas las notas", Icons.Default.Description),
-    WITH_IMAGES("Con imágenes", Icons.Default.Image),
-    WITH_VIDEOS("Con videos", Icons.Default.Videocam),
-    WITH_ATTACHMENTS("Con archivos adjuntos", Icons.Default.Attachment),
-    TEXT_ONLY("Solo texto", Icons.Default.TextFields)
 }
