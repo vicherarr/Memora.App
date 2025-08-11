@@ -8,6 +8,7 @@ import com.vicherarr.memora.database.MemoraDatabase
 import com.vicherarr.memora.database.Notes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -164,5 +165,21 @@ class NotesDao(private val database: MemoraDatabase) {
             last_sync_attempt = now,
             id = noteId
         )
+    }
+    
+    /**
+     * ✅ NUEVO: Buscar notas por título y contenido
+     */
+    suspend fun searchNotes(userId: String, query: String): List<Notes> = withContext(Dispatchers.Default) {
+        println("NotesDao: 🔍 Buscando notas para usuario '$userId' con query '$query'")
+        
+        val results = queries.searchNotes(
+            usuario_id = userId,
+            query, // Primer parámetro LIKE para título
+            query  // Segundo parámetro LIKE para contenido
+        ).executeAsList()
+        
+        println("NotesDao: 🔍 Encontradas ${results.size} notas que coinciden con '$query'")
+        return@withContext results
     }
 }

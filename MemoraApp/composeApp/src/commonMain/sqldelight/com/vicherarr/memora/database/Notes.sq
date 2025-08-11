@@ -71,3 +71,10 @@ markSyncFailed:
 UPDATE notes 
 SET sync_status = 'FAILED', last_sync_attempt = ?
 WHERE id = ?;
+
+-- ✅ NUEVO: Búsqueda en título y contenido
+searchNotes:
+SELECT * FROM notes 
+WHERE usuario_id = ? 
+AND (titulo LIKE '%' || ? || '%' OR contenido LIKE '%' || ? || '%')
+ORDER BY fecha_modificacion DESC;

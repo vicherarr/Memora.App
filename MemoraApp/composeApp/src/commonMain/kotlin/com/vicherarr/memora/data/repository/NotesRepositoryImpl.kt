@@ -363,6 +363,25 @@ class NotesRepositoryImpl(
         }
     }
     
+    override suspend fun searchNotes(query: String): Result<List<Note>> {
+        return try {
+            if (query.isBlank()) {
+                // Si query vacía, devolver todas las notas
+                return getNotes()
+            }
+            
+            // LOCAL-FIRST: Buscar en base de datos local
+            val searchResults = notesDao.searchNotes(getCurrentUserId(), query)
+            val domainNotes = searchResults.map { note ->
+                note.toDomainModelWithAttachments()
+            }
+            
+            Result.success(domainNotes)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
     /**
      * Get notes as Flow for reactive UI updates
      */

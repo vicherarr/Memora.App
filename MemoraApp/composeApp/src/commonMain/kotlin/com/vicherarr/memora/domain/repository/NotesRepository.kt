@@ -24,6 +24,9 @@ interface NotesRepository {
     ): Result<Note>
     suspend fun deleteNote(id: String): Result<Unit>
     
+    // ✅ NUEVO: Búsqueda en base de datos
+    suspend fun searchNotes(query: String): Result<List<Note>>
+    
     // TESTING: Delete all notes for a specific user
     suspend fun deleteAllNotesForUser(userId: String): Result<Unit>
 }
