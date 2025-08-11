@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import kotlin.math.ceil
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,6 +26,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
@@ -60,19 +64,57 @@ class NotesListScreen : Screen {
         val syncState by syncViewModel.syncState.collectAsState()
         val attachmentSyncState by syncViewModel.attachmentSyncState.collectAsState()
         
-        // ✅ NUEVO: Estado para búsqueda local
+        // ✅ NUEVO: Estados para búsqueda y filtros avanzados
         var searchQuery by rememberSaveable { mutableStateOf("") }
+        var showFilters by rememberSaveable { mutableStateOf(false) }
+        var selectedDateFilter by rememberSaveable { mutableStateOf(DateFilter.ALL) }
+        var selectedFileType by rememberSaveable { mutableStateOf(FileTypeFilter.ALL) }
         
-        // ✅ NUEVO: Filtrar notas basado en query de búsqueda
-        val filteredNotes = remember(uiState.notes, searchQuery) {
-            if (searchQuery.isBlank()) {
-                uiState.notes
-            } else {
-                uiState.notes.filter { note ->
+        // ✅ NUEVO: Filtrado avanzado con múltiples criterios
+        val filteredNotes = remember(uiState.notes, searchQuery, selectedDateFilter, selectedFileType) {
+            var notes = uiState.notes
+            
+            // Filtro por texto
+            if (searchQuery.isNotBlank()) {
+                notes = notes.filter { note ->
                     note.titulo?.contains(searchQuery, ignoreCase = true) == true ||
                     note.contenido.contains(searchQuery, ignoreCase = true)
                 }
             }
+            
+            // Filtro por fecha
+            val now = System.currentTimeMillis()
+            notes = when (selectedDateFilter) {
+                DateFilter.TODAY -> notes.filter { 
+                    (now - it.fechaModificacion) < 24 * 60 * 60 * 1000L 
+                }
+                DateFilter.WEEK -> notes.filter { 
+                    (now - it.fechaModificacion) < 7 * 24 * 60 * 60 * 1000L 
+                }
+                DateFilter.MONTH -> notes.filter { 
+                    (now - it.fechaModificacion) < 30 * 24 * 60 * 60 * 1000L 
+                }
+                DateFilter.ALL -> notes
+            }
+            
+            // Filtro por tipo de archivo
+            notes = when (selectedFileType) {
+                FileTypeFilter.WITH_IMAGES -> notes.filter { note ->
+                    note.archivosAdjuntos.any { it.tipoArchivo == TipoDeArchivo.Imagen }
+                }
+                FileTypeFilter.WITH_VIDEOS -> notes.filter { note ->
+                    note.archivosAdjuntos.any { it.tipoArchivo == TipoDeArchivo.Video }
+                }
+                FileTypeFilter.WITH_ATTACHMENTS -> notes.filter { note ->
+                    note.archivosAdjuntos.isNotEmpty()
+                }
+                FileTypeFilter.TEXT_ONLY -> notes.filter { note ->
+                    note.archivosAdjuntos.isEmpty()
+                }
+                FileTypeFilter.ALL -> notes
+            }
+            
+            notes
         }
         
         // Debug logging for notes data
@@ -170,17 +212,38 @@ class NotesListScreen : Screen {
                                 )
                             },
                             trailingIcon = {
-                                if (searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { searchQuery = "" }) {
+                                Row {
+                                    if (searchQuery.isNotEmpty()) {
+                                        IconButton(onClick = { searchQuery = "" }) {
+                                            Icon(
+                                                Icons.Default.Clear,
+                                                contentDescription = "Limpiar búsqueda"
+                                            )
+                                        }
+                                    }
+                                    IconButton(onClick = { showFilters = !showFilters }) {
                                         Icon(
-                                            Icons.Default.Clear,
-                                            contentDescription = "Limpiar búsqueda"
+                                            if (showFilters) Icons.Default.FilterListOff else Icons.Default.FilterList,
+                                            contentDescription = "Filtros",
+                                            tint = if (selectedDateFilter != DateFilter.ALL || selectedFileType != FileTypeFilter.ALL) 
+                                                MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
                             },
                             singleLine = true
                         )
+                        
+                        // Filtros expandibles
+                        if (showFilters) {
+                            FiltersSection(
+                                selectedDateFilter = selectedDateFilter,
+                                onDateFilterChanged = { selectedDateFilter = it },
+                                selectedFileType = selectedFileType,
+                                onFileTypeChanged = { selectedFileType = it },
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
                         
                         // Lista de notas filtradas
                         LazyColumn(
@@ -239,7 +302,7 @@ class NotesListScreen : Screen {
 }
 
 @Composable
-private fun EnhancedNoteCard(
+internal fun EnhancedNoteCard(
     note: Note,
     onClick: () -> Unit
 ) {
@@ -561,4 +624,121 @@ private fun formatRelativeTime(timestamp: Long): String {
             "Hace ${weeks}sem"
         }
     }
+}
+
+@Composable
+private fun FiltersSection(
+    selectedDateFilter: DateFilter,
+    onDateFilterChanged: (DateFilter) -> Unit,
+    selectedFileType: FileTypeFilter,
+    onFileTypeChanged: (FileTypeFilter) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            // Filtro por fecha
+            Text(
+                text = "Filtrar por fecha",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            
+            Column(Modifier.selectableGroup()) {
+                DateFilter.values().forEach { filter ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = (selectedDateFilter == filter),
+                                onClick = { onDateFilterChanged(filter) },
+                                role = Role.RadioButton
+                            )
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (selectedDateFilter == filter),
+                            onClick = null
+                        )
+                        Text(
+                            text = filter.displayName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Filtro por tipo de archivo
+            Text(
+                text = "Filtrar por contenido",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            
+            Column(Modifier.selectableGroup()) {
+                FileTypeFilter.values().forEach { filter ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = (selectedFileType == filter),
+                                onClick = { onFileTypeChanged(filter) },
+                                role = Role.RadioButton
+                            )
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (selectedFileType == filter),
+                            onClick = null
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(start = 8.dp)
+                        ) {
+                            Icon(
+                                imageVector = filter.icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = filter.displayName,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Enums para filtros
+enum class DateFilter(val displayName: String) {
+    ALL("Todas las fechas"),
+    TODAY("Hoy"),
+    WEEK("Esta semana"),
+    MONTH("Este mes")
+}
+
+enum class FileTypeFilter(val displayName: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    ALL("Todas las notas", Icons.Default.Description),
+    WITH_IMAGES("Con imágenes", Icons.Default.Image),
+    WITH_VIDEOS("Con videos", Icons.Default.Videocam),
+    WITH_ATTACHMENTS("Con archivos adjuntos", Icons.Default.Attachment),
+    TEXT_ONLY("Solo texto", Icons.Default.TextFields)
 }
