@@ -159,6 +159,8 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            // Coroutines testing
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
         }
     }
 }
