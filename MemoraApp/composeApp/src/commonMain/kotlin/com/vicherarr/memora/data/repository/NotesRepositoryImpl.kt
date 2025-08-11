@@ -35,7 +35,8 @@ class NotesRepositoryImpl(
     private val notesApi: NotesApi,
     private val fileManager: FileManager,
     private val cloudAuthProvider: CloudAuthProvider,
-    private val syncMetadataRepository: com.vicherarr.memora.domain.repository.SyncMetadataRepository
+    private val syncMetadataRepository: com.vicherarr.memora.domain.repository.SyncMetadataRepository,
+    private val deletionsDao: com.vicherarr.memora.data.database.DeletionsDao
 ) : NotesRepository {
 
     private fun getCurrentUserId(): String {
@@ -276,6 +277,13 @@ class NotesRepositoryImpl(
             val attachmentsToDelete = originalAttachments.filter { it.id !in existingIds }
 
             for (attachment in attachmentsToDelete) {
+                // ✅ NUEVO: Crear tombstone ANTES de eliminar attachment
+                deletionsDao.insertDeletion(
+                    tableName = "attachments",
+                    recordId = attachment.id,
+                    userId = getCurrentUserId()
+                )
+                
                 // Delete file from disk and then from DB
                 fileManager.deleteFile(attachment.file_path)
                 attachmentsDao.deleteAttachment(attachment.id)
@@ -320,6 +328,16 @@ class NotesRepositoryImpl(
     
     override suspend fun deleteNote(id: String): Result<Unit> {
         return try {
+            val userId = getCurrentUserId()
+            
+            // ✅ NUEVO: Crear tombstone ANTES de eliminar físicamente
+            // Esto permite que el sync sepa que esta nota fue eliminada intencionalmente
+            deletionsDao.insertDeletion(
+                tableName = "notes",
+                recordId = id,
+                userId = userId
+            )
+            
             // LOCAL-FIRST: Delete from local database immediately
             notesDao.deleteNote(id)
             

@@ -33,6 +33,13 @@ class DatabaseManager(private val driverFactory: DatabaseDriverFactory) {
     }
     
     /**
+     * Deletions Data Access Object (Tombstones)
+     */
+    val deletionsDao: DeletionsDao by lazy {
+        DeletionsDao(database)
+    }
+    
+    /**
      * Get direct access to database if needed
      */
     fun getDatabase(): MemoraDatabase = database

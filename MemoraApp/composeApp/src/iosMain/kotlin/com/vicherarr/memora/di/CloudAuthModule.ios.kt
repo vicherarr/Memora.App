@@ -46,7 +46,7 @@ val cloudAuthModuleIOS = module {
     }
     
     // Database Merger
-    single { DatabaseMerger() }
+    single { DatabaseMerger(deletionsDao = get()) }
     
     // Database Sync Service
     single { DatabaseSyncService(get()) }

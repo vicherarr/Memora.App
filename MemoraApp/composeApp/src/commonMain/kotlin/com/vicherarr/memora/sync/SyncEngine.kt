@@ -22,7 +22,7 @@ sealed class SyncState {
  */
 class SyncEngine(
     private val cloudProvider: CloudStorageProvider,
-    private val databaseMerger: DatabaseMerger = DatabaseMerger(),
+    private val databaseMerger: DatabaseMerger,
     private val databaseSyncService: DatabaseSyncService,
     private val cloudAuthProvider: com.vicherarr.memora.data.auth.CloudAuthProvider
 ) {
@@ -62,9 +62,10 @@ class SyncEngine(
                 println("SyncEngine: DB remota encontrada (${dbRemota.size} bytes)")
                 println("SyncEngine: Iniciando fusión con datos REALES...")
                 
-                // Deserializar datos remotos REALES
-                val remoteNotes = databaseSyncService.deserializeRemoteDatabase(dbRemota)
+                // ✅ NUEVO: Deserializar datos remotos CON tombstones
+                val (remoteNotes, remoteDeletions) = databaseSyncService.deserializeRemoteDatabaseWithDeletions(dbRemota)
                 println("SyncEngine: ${remoteNotes.size} notas deserializadas de la DB remota")
+                println("SyncEngine: ${remoteDeletions.size} tombstones remotos encontrados")
                 
                 // Obtener notas locales REALES
                 val localNotes = databaseSyncService.getLocalNotesForMerging(currentUserId)
@@ -74,7 +75,8 @@ class SyncEngine(
                 val mergeResult = databaseMerger.mergeNotes(
                     localNotes = localNotes,
                     remoteNotes = remoteNotes,
-                    strategy = ConflictResolutionStrategy.KEEP_NEWER
+                    strategy = ConflictResolutionStrategy.KEEP_NEWER,
+                    userId = currentUserId
                 )
                 
                 println("SyncEngine: Fusión completada - ${mergeResult.notasInsertadas} insertadas, " +
@@ -84,6 +86,12 @@ class SyncEngine(
                 // Aplicar notas fusionadas a la DB local
                 databaseSyncService.applyMergedNotes(mergeResult.mergedNotes, currentUserId)
                 println("SyncEngine: Notas fusionadas aplicadas a la base de datos local")
+                
+                // ✅ NUEVO: Aplicar tombstones remotos (eliminar notas borradas en otros dispositivos)
+                if (remoteDeletions.isNotEmpty()) {
+                    databaseSyncService.applyRemoteDeletions(remoteDeletions, currentUserId)
+                    println("SyncEngine: Tombstones remotos aplicados - ${remoteDeletions.size} eliminaciones procesadas")
+                }
                        
                 if (mergeResult.conflicts.isNotEmpty()) {
                     println("SyncEngine: Se encontraron ${mergeResult.conflicts.size} conflictos que fueron resueltos automáticamente")
@@ -99,6 +107,9 @@ class SyncEngine(
             
             println("SyncEngine: Subiendo ${dbLocal.size} bytes a la nube...")
             cloudProvider.subirDB(dbLocal)
+            
+            // ✅ NUEVO: Marcar tombstones locales como sincronizados
+            databaseSyncService.markLocalDeletionsAsSynced(currentUserId)
             
             _syncState.value = SyncState.Success("Sincronización completada exitosamente")
             println("SyncEngine: Sincronización completada exitosamente")

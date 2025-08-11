@@ -63,7 +63,8 @@ data class MergeResult(
  * Implementa múltiples estrategias de resolución de conflictos.
  */
 class DatabaseMerger(
-    private val defaultStrategy: ConflictResolutionStrategy = ConflictResolutionStrategy.KEEP_NEWER
+    private val defaultStrategy: ConflictResolutionStrategy = ConflictResolutionStrategy.KEEP_NEWER,
+    private val deletionsDao: com.vicherarr.memora.data.database.DeletionsDao? = null
 ) {
     
     /**
@@ -92,7 +93,7 @@ class DatabaseMerger(
             println("DatabaseMerger: ${localNotes.size} notas locales encontradas")
             
             // PASO 3: Fusionar notas aplicando la estrategia
-            val mergeResult = mergeNotes(localNotes, remoteNotes, strategy)
+            val mergeResult = mergeNotes(localNotes, remoteNotes, strategy, null)
             
             // PASO 4: Aplicar cambios a la base de datos local (simulado)
             applyMergedNotesToLocalDatabase(mergeResult.mergedNotes)
@@ -115,7 +116,8 @@ class DatabaseMerger(
     suspend fun mergeNotes(
         localNotes: List<DatabaseNote>,
         remoteNotes: List<DatabaseNote>,
-        strategy: ConflictResolutionStrategy
+        strategy: ConflictResolutionStrategy,
+        userId: String? = null
     ): MergeResult = withContext(Dispatchers.Default) {
         
         val localMap = localNotes.associateBy { it.id }
@@ -143,8 +145,18 @@ class DatabaseMerger(
                 
                 // CASO 2: Solo existe remotamente  
                 localNote == null && remoteNote != null -> {
-                    mergedNotes.add(remoteNote)
-                    if (!remoteNote.eliminado) notasInsertadas++
+                    // ✅ NUEVO: Verificar tombstones antes de agregar nota remota
+                    val isDeletedLocally = if (deletionsDao != null && userId != null) {
+                        deletionsDao.isRecordDeleted("notes", remoteNote.id, userId)
+                    } else false
+                    
+                    if (isDeletedLocally) {
+                        println("DatabaseMerger: 🪦 Nota ${remoteNote.id} ignorada - existe tombstone local")
+                        // NO agregar la nota porque fue eliminada localmente
+                    } else {
+                        mergedNotes.add(remoteNote)
+                        if (!remoteNote.eliminado) notasInsertadas++
+                    }
                 }
                 
                 // CASO 3: Existe en ambos lados - POSIBLE CONFLICTO

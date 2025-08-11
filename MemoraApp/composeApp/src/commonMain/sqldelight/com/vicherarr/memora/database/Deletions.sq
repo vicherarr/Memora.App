@@ -1,0 +1,58 @@
+-- Deletions (Tombstones) table for tracking deleted records
+-- Allows sync system to know what was deleted without modifying original tables
+
+CREATE TABLE deletions (
+    id TEXT NOT NULL PRIMARY KEY,           -- Unique tombstone ID
+    table_name TEXT NOT NULL,               -- "notes" or "attachments" 
+    record_id TEXT NOT NULL,                -- ID of deleted record
+    usuario_id TEXT NOT NULL,               -- User who deleted it
+    deleted_at INTEGER NOT NULL,            -- Timestamp when deleted
+    sync_status TEXT NOT NULL DEFAULT 'PENDING', -- Sync status for tombstone
+    needs_upload INTEGER NOT NULL DEFAULT 1      -- Whether needs sync to server
+);
+
+-- Indexes for efficient queries
+CREATE INDEX deletions_usuario_id_idx ON deletions(usuario_id);
+CREATE INDEX deletions_table_name_idx ON deletions(table_name);
+CREATE INDEX deletions_record_id_idx ON deletions(record_id);
+CREATE INDEX deletions_sync_status_idx ON deletions(sync_status);
+
+-- Queries
+getAllDeletions:
+SELECT * FROM deletions ORDER BY deleted_at DESC;
+
+getDeletionsByUserId:
+SELECT * FROM deletions 
+WHERE usuario_id = ? 
+ORDER BY deleted_at DESC;
+
+getDeletionsByTableName:
+SELECT * FROM deletions 
+WHERE table_name = ? 
+ORDER BY deleted_at DESC;
+
+getDeletionsNeedingSync:
+SELECT * FROM deletions 
+WHERE sync_status = 'PENDING' OR sync_status = 'FAILED'
+ORDER BY deleted_at ASC;
+
+insertDeletion:
+INSERT INTO deletions (
+    id, table_name, record_id, usuario_id, 
+    deleted_at, sync_status, needs_upload
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+markDeletionAsSynced:
+UPDATE deletions 
+SET sync_status = 'SYNCED', needs_upload = 0 
+WHERE id = ?;
+
+markDeletionSyncFailed:
+UPDATE deletions 
+SET sync_status = 'FAILED' 
+WHERE id = ?;
+
+-- Clean up old synced deletions (for maintenance)
+deleteOldSyncedDeletions:
+DELETE FROM deletions 
+WHERE sync_status = 'SYNCED' AND deleted_at < ?;

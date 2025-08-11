@@ -25,13 +25,27 @@ data class SerializableNote(
 )
 
 /**
+ * Formato serializable para tombstones (registros de eliminación)
+ */
+@Serializable
+data class SerializableDeletion(
+    val id: String,
+    val tableName: String,
+    val recordId: String,
+    val usuarioId: String,
+    val deletedAt: Long,
+    val syncStatus: String = "PENDING"
+)
+
+/**
  * Formato serializable para la base de datos completa
  */
 @Serializable
 data class SerializableDatabase(
     val version: String = "1.0",
     val timestamp: Long,
-    val notas: List<SerializableNote>
+    val notas: List<SerializableNote>,
+    val deletions: List<SerializableDeletion> = emptyList() // ✅ NUEVO: Compatible con versiones anteriores
 )
 
 /**
@@ -41,6 +55,9 @@ data class SerializableDatabase(
 class DatabaseSyncService(
     private val databaseManager: DatabaseManager
 ) {
+    
+    // ✅ NUEVO: Acceso a DeletionsDao a través de DatabaseManager
+    private val deletionsDao get() = databaseManager.deletionsDao
     
     private val json = Json { 
         prettyPrint = true
@@ -87,10 +104,26 @@ class DatabaseSyncService(
                 )
             }
             
+            // ✅ NUEVO: Obtener tombstones pendientes de sincronización
+            val localDeletions = deletionsDao.getDeletionsNeedingSync()
+            println("DatabaseSyncService: Encontrados ${localDeletions.size} tombstones pendientes de sync")
+            
+            val serializableDeletions = localDeletions.map { deletion ->
+                SerializableDeletion(
+                    id = deletion.id,
+                    tableName = deletion.table_name,
+                    recordId = deletion.record_id,
+                    usuarioId = deletion.usuario_id,
+                    deletedAt = deletion.deleted_at,
+                    syncStatus = deletion.sync_status
+                )
+            }
+            
             // Crear estructura de base de datos serializable
             val serializableDb = SerializableDatabase(
                 timestamp = getCurrentTimestamp(),
-                notas = serializableNotes
+                notas = serializableNotes,
+                deletions = serializableDeletions // ✅ NUEVO: Incluir tombstones
             )
             
             // Serializar a JSON y convertir a ByteArray
@@ -162,6 +195,37 @@ class DatabaseSyncService(
             // Si falla la deserialización, retornar lista vacía en lugar de fallar
             println("DatabaseSyncService: Retornando lista vacía debido al error")
             return@withContext emptyList()
+        }
+    }
+    
+    /**
+     * ✅ NUEVO: Deserializa la base de datos remota Y retorna tombstones
+     */
+    suspend fun deserializeRemoteDatabaseWithDeletions(remoteDbBytes: ByteArray): Pair<List<DatabaseNote>, List<SerializableDeletion>> = withContext(Dispatchers.Default) {
+        try {
+            val jsonString = remoteDbBytes.decodeToString()
+            val serializableDb = json.decodeFromString<SerializableDatabase>(jsonString)
+            
+            println("DatabaseSyncService: ✅ NUEVO - DB remota con tombstones:")
+            println("  - Notas: ${serializableDb.notas.size}")
+            println("  - Tombstones: ${serializableDb.deletions.size}")
+            
+            // Convertir notas
+            val databaseNotes = serializableDb.notas.map { note ->
+                DatabaseNote(
+                    id = note.id,
+                    titulo = note.titulo,
+                    contenido = note.contenido,
+                    fechaModificacion = parseTimestamp(note.fechaModificacion),
+                    eliminado = note.eliminado
+                )
+            }
+            
+            return@withContext Pair(databaseNotes, serializableDb.deletions)
+            
+        } catch (e: Exception) {
+            println("DatabaseSyncService: Error deserializando con tombstones: ${e.message}")
+            return@withContext Pair(emptyList(), emptyList())
         }
     }
     
@@ -255,6 +319,57 @@ class DatabaseSyncService(
         } catch (e: Exception) {
             println("DatabaseSyncService: Error aplicando notas fusionadas: ${e.message}")
             throw e
+        }
+    }
+    
+    /**
+     * ✅ NUEVO: Aplica tombstones remotos (elimina notas que fueron borradas en otros dispositivos)
+     */
+    suspend fun applyRemoteDeletions(remoteDeletions: List<SerializableDeletion>, userId: String) = withContext(Dispatchers.Default) {
+        try {
+            println("DatabaseSyncService: ✅ NUEVO - Aplicando ${remoteDeletions.size} tombstones remotos")
+            
+            remoteDeletions.forEach { deletion ->
+                if (deletion.usuarioId == userId) { // Solo procesar tombstones del usuario actual
+                    when (deletion.tableName) {
+                        "notes" -> {
+                            println("  🪦 Eliminando nota remota: ${deletion.recordId}")
+                            databaseManager.notesDao.deleteNote(deletion.recordId)
+                        }
+                        "attachments" -> {
+                            println("  🪦 Eliminando attachment remoto: ${deletion.recordId}")
+                            // TODO: Implementar eliminación de attachments
+                        }
+                    }
+                }
+            }
+            
+            println("DatabaseSyncService: ✅ Tombstones remotos aplicados exitosamente")
+            
+        } catch (e: Exception) {
+            println("DatabaseSyncService: ❌ Error aplicando tombstones remotos: ${e.message}")
+            throw e
+        }
+    }
+    
+    /**
+     * ✅ NUEVO: Marcar tombstones locales como sincronizados
+     */
+    suspend fun markLocalDeletionsAsSynced(userId: String) = withContext(Dispatchers.Default) {
+        try {
+            val pendingDeletions = deletionsDao.getDeletionsNeedingSync()
+            val userDeletions = pendingDeletions.filter { it.usuario_id == userId }
+            
+            println("DatabaseSyncService: Marcando ${userDeletions.size} tombstones como sincronizados")
+            
+            userDeletions.forEach { deletion ->
+                deletionsDao.markDeletionAsSynced(deletion.id)
+            }
+            
+            println("DatabaseSyncService: ✅ Tombstones marcados como sincronizados")
+            
+        } catch (e: Exception) {
+            println("DatabaseSyncService: ❌ Error marcando tombstones como sincronizados: ${e.message}")
         }
     }
     

@@ -3,6 +3,7 @@ package com.vicherarr.memora.di
 import com.vicherarr.memora.data.database.AttachmentsDao
 import com.vicherarr.memora.data.database.DatabaseDriverFactory
 import com.vicherarr.memora.data.database.DatabaseManager
+import com.vicherarr.memora.data.database.DeletionsDao
 import com.vicherarr.memora.data.database.NotesDao
 import com.vicherarr.memora.data.database.SyncMetadataDao
 import org.koin.dsl.module
@@ -34,5 +35,10 @@ val databaseModule = module {
     // SyncMetadataDao - from DatabaseManager
     single<SyncMetadataDao> {
         get<DatabaseManager>().syncMetadataDao
+    }
+    
+    // DeletionsDao - for tombstones tracking
+    single<DeletionsDao> {
+        get<DatabaseManager>().deletionsDao
     }
 }
