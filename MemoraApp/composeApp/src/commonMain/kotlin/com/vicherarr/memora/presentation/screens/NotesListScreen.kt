@@ -18,6 +18,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,9 +60,25 @@ class NotesListScreen : Screen {
         val syncState by syncViewModel.syncState.collectAsState()
         val attachmentSyncState by syncViewModel.attachmentSyncState.collectAsState()
         
+        // ✅ NUEVO: Estado para búsqueda local
+        var searchQuery by rememberSaveable { mutableStateOf("") }
+        
+        // ✅ NUEVO: Filtrar notas basado en query de búsqueda
+        val filteredNotes = remember(uiState.notes, searchQuery) {
+            if (searchQuery.isBlank()) {
+                uiState.notes
+            } else {
+                uiState.notes.filter { note ->
+                    note.titulo?.contains(searchQuery, ignoreCase = true) == true ||
+                    note.contenido.contains(searchQuery, ignoreCase = true)
+                }
+            }
+        }
+        
         // Debug logging for notes data
         println("NotesListScreen: Total notes loaded: ${uiState.notes.size}")
-        uiState.notes.forEachIndexed { index, note ->
+        println("NotesListScreen: Filtered notes: ${filteredNotes.size} (query: '$searchQuery')")
+        filteredNotes.forEachIndexed { index, note ->
             println("NotesListScreen: Note $index - id: ${note.id}, title: '${note.titulo}', attachments: ${note.archivosAdjuntos.size}")
         }
         
@@ -131,24 +150,58 @@ class NotesListScreen : Screen {
                 }
                 
                 else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 8.dp, // Normal top padding
-                            bottom = 80.dp // Space for bottom navigation bar
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    Column(
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        items(uiState.notes) { note ->
-                            println("NotesListScreen: Rendering note ${note.id} - attachments: ${note.archivosAdjuntos.size}")
-                            EnhancedNoteCard(
-                                note = note,
-                                onClick = {
-                                    navigator.push(NoteDetailScreen(note.id))
+                        // ✅ NUEVO: Search Bar
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            placeholder = { 
+                                Text("Buscar en notas...") 
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = "Buscar"
+                                )
+                            },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { searchQuery = "" }) {
+                                        Icon(
+                                            Icons.Default.Clear,
+                                            contentDescription = "Limpiar búsqueda"
+                                        )
+                                    }
                                 }
-                            )
+                            },
+                            singleLine = true
+                        )
+                        
+                        // Lista de notas filtradas
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = 4.dp,
+                                bottom = 80.dp
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(filteredNotes) { note ->
+                                println("NotesListScreen: Rendering note ${note.id} - attachments: ${note.archivosAdjuntos.size}")
+                                EnhancedNoteCard(
+                                    note = note,
+                                    onClick = {
+                                        navigator.push(NoteDetailScreen(note.id))
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -172,13 +225,14 @@ class NotesListScreen : Screen {
                 )
             }
             
-            // Sync Status Indicator - favicon style, floating at top-end
+            // Sync Status Indicator - más pequeño y con espacio para SearchBar
             SyncStatusIndicator(
                 syncState = syncState,
                 attachmentSyncState = attachmentSyncState,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 12.dp, end = 16.dp)
+                    .padding(top = 68.dp, end = 20.dp), // ✅ Más abajo para no interferir con SearchBar
+                iconSize = 16.dp // ✅ Más pequeño
             )
         }
     }

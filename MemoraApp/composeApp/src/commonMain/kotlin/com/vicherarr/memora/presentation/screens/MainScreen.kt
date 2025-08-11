@@ -7,7 +7,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -25,7 +24,6 @@ import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabNavigator
 import com.vicherarr.memora.presentation.screens.CreateNoteScreen
 import com.vicherarr.memora.presentation.tabs.NotesTab
-import com.vicherarr.memora.presentation.tabs.SearchTab
 import com.vicherarr.memora.presentation.tabs.ProfileTab
 import com.vicherarr.memora.presentation.viewmodels.SyncViewModel
 import androidx.compose.runtime.LaunchedEffect
@@ -55,7 +53,6 @@ class MainScreen : Screen {
                 bottomBar = {
                     NavigationBar {
                         TabNavigationItem(NotesTab)
-                        TabNavigationItem(SearchTab)
                         TabNavigationItem(ProfileTab)
                     }
                 }

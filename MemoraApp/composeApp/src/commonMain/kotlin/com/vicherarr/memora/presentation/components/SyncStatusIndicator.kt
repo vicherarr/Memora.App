@@ -26,7 +26,8 @@ import com.vicherarr.memora.sync.SyncState
 fun SyncStatusIndicator(
     syncState: SyncState,
     attachmentSyncState: AttachmentSyncState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    iconSize: androidx.compose.ui.unit.Dp = 20.dp // ✅ NUEVO: Tamaño configurable
 ) {
     // Determinar icono y color según el estado
     val (icon, color) = when {
@@ -48,12 +49,12 @@ fun SyncStatusIndicator(
         )
     )
     
-    // Icono flotante compacto
+    // Icono flotante compacto - tamaño configurable
     Surface(
-        modifier = modifier.size(32.dp),
+        modifier = modifier.size(iconSize + 8.dp), // ✅ Surface un poco más grande que el ícono
         shape = CircleShape,
         color = color.copy(alpha = 0.1f),
-        shadowElevation = 4.dp
+        shadowElevation = 2.dp // ✅ Menos elevación para ícono más pequeño
     ) {
         Icon(
             imageVector = icon,
@@ -64,7 +65,7 @@ fun SyncStatusIndicator(
             },
             tint = color,
             modifier = Modifier
-                .size(20.dp)
+                .size(iconSize) // ✅ Usar tamaño configurable
                 .let { modifier ->
                     if (syncState is SyncState.Syncing || attachmentSyncState is AttachmentSyncState.Syncing) 
                         modifier.rotate(rotation)
