@@ -1,30 +1,22 @@
 package com.vicherarr.memora.presentation.screens
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.layout.Arrangement
-import kotlin.math.ceil
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,7 +28,6 @@ import coil3.compose.AsyncImage
 import com.vicherarr.memora.domain.models.ArchivoAdjunto
 import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.domain.models.TipoDeArchivo
-import com.vicherarr.memora.presentation.screens.CreateNoteScreen
 import com.vicherarr.memora.presentation.viewmodels.NotesViewModel
 import com.vicherarr.memora.presentation.viewmodels.SyncViewModel
 import com.vicherarr.memora.presentation.components.SyncStatusIndicator
@@ -45,10 +36,8 @@ import com.vicherarr.memora.domain.models.DateFilter
 import com.vicherarr.memora.domain.models.FileTypeFilter
 import com.vicherarr.memora.domain.utils.DateTimeUtils
 import org.koin.compose.getKoin
-/**
- * Notes List Screen - Shows list of notes with navigation to detail
- * Following Voyager nested navigation best practices 2025
- */
+import kotlin.math.abs
+
 class NotesListScreen : Screen {
     @Composable
     override fun Content() {
@@ -59,35 +48,31 @@ class NotesListScreen : Screen {
         val uiState by notesViewModel.uiState.collectAsState()
         val syncState by syncViewModel.syncState.collectAsState()
         val attachmentSyncState by syncViewModel.attachmentSyncState.collectAsState()
-        // ✅ NUEVO: Estados para búsqueda y filtros avanzados
         var searchQuery by rememberSaveable { mutableStateOf("") }
         var showFilters by rememberSaveable { mutableStateOf(false) }
         var selectedDateFilter by rememberSaveable { mutableStateOf(DateFilter.ALL) }
         var selectedFileType by rememberSaveable { mutableStateOf(FileTypeFilter.ALL) }
-        // ✅ NUEVO: Filtrado avanzado con múltiples criterios
+
         val filteredNotes = remember(uiState.notes, searchQuery, selectedDateFilter, selectedFileType) {
             var notes = uiState.notes
-            // Filtro por texto
             if (searchQuery.isNotBlank()) {
                 notes = notes.filter { note ->
                     note.titulo?.contains(searchQuery, ignoreCase = true) == true ||
-                    note.contenido.contains(searchQuery, ignoreCase = true)
+                            note.contenido.contains(searchQuery, ignoreCase = true)
                 }
             }
-            // Filtro por fecha usando utilidades del domain
             notes = when (selectedDateFilter) {
-                DateFilter.TODAY -> notes.filter { 
+                DateFilter.TODAY -> notes.filter {
                     DateTimeUtils.isWithinTimeRange(it.fechaModificacion, DateTimeUtils.TimeRanges.ONE_DAY)
                 }
-                DateFilter.WEEK -> notes.filter { 
+                DateFilter.WEEK -> notes.filter {
                     DateTimeUtils.isWithinTimeRange(it.fechaModificacion, DateTimeUtils.TimeRanges.ONE_WEEK)
                 }
-                DateFilter.MONTH -> notes.filter { 
+                DateFilter.MONTH -> notes.filter {
                     DateTimeUtils.isWithinTimeRange(it.fechaModificacion, DateTimeUtils.TimeRanges.ONE_MONTH)
                 }
                 DateFilter.ALL -> notes
             }
-            // Filtro por tipo de archivo
             notes = when (selectedFileType) {
                 FileTypeFilter.WITH_IMAGES -> notes.filter { note ->
                     note.archivosAdjuntos.any { it.tipoArchivo == TipoDeArchivo.Imagen }
@@ -105,456 +90,319 @@ class NotesListScreen : Screen {
             }
             notes
         }
-        // Debug logging for notes data
-        println("NotesListScreen: Total notes loaded: ${uiState.notes.size}")
-        println("NotesListScreen: Filtered notes: ${filteredNotes.size} (query: '$searchQuery')")
-        filteredNotes.forEachIndexed { index, note ->
-            println("NotesListScreen: Note $index - id: ${note.id}, title: '${note.titulo}', attachments: ${note.archivosAdjuntos.size}")
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-        ) {
-            when {
-                uiState.isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
+
+        Scaffold(
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = {
+                        navigator.push(CreateNoteScreen())
+                    },
+                    modifier = Modifier.padding(bottom = 72.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Agregar nota",
+                        tint = MaterialTheme.colorScheme.onPrimary
                     )
                 }
-                uiState.errorMessage != null -> {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            Icons.Default.ErrorOutline,
-                            contentDescription = "Error",
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = uiState.errorMessage ?: "Error desconocido",
-                            style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-                uiState.notes.isEmpty() -> {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            Icons.Default.Assignment,
-                            contentDescription = "Sin notas",
-                            modifier = Modifier.size(80.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "No tienes notas aún",
-                            style = MaterialTheme.typography.headlineSmall,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "Toca el botón + para crear tu primera nota",
-                            style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
-                    }
-                }
-                else -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        // ✅ NUEVO: Search Bar
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            placeholder = { 
-                                Text("Buscar en notas...") 
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Search,
-                                    contentDescription = "Buscar"
-                                )
-                            },
-                            trailingIcon = {
-                                Row {
-                                    if (searchQuery.isNotEmpty()) {
-                                        IconButton(onClick = { searchQuery = "" }) {
-                                            Icon(
-                                                Icons.Default.Clear,
-                                                contentDescription = "Limpiar búsqueda"
-                                            )
-                                        }
-                                    }
-                                    IconButton(onClick = { showFilters = !showFilters }) {
-                                        Icon(
-                                            if (showFilters) Icons.Default.FilterListOff else Icons.Default.FilterList,
-                                            contentDescription = "Filtros",
-                                            tint = if (selectedDateFilter != DateFilter.ALL || selectedFileType != FileTypeFilter.ALL) 
-                                                MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+            }
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    SearchBarAndFilters(
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = { searchQuery = it },
+                        showFilters = showFilters,
+                        onShowFiltersChange = { showFilters = it },
+                        selectedDateFilter = selectedDateFilter,
+                        onDateFilterChanged = { selectedDateFilter = it },
+                        selectedFileType = selectedFileType,
+                        onFileTypeChanged = { selectedFileType = it }
+                    )
+
+                    when {
+                        uiState.isLoading -> {
+                            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 32.dp))
+                        }
+                        uiState.errorMessage != null -> {
+                            ErrorState(message = uiState.errorMessage ?: "Error desconocido")
+                        }
+                        filteredNotes.isEmpty() && uiState.notes.isNotEmpty() -> {
+                            EmptyState(isFiltering = true)
+                        }
+                        uiState.notes.isEmpty() -> {
+                            EmptyState(isFiltering = false)
+                        }
+                        else -> {
+                            NotesGrid(
+                                notes = filteredNotes,
+                                onNoteClick = {
+                                    navigator.push(NoteDetailScreen(it))
                                 }
-                            },
-                            singleLine = true
-                        )
-                        // Filtros expandibles
-                        if (showFilters) {
-                            FiltersSection(
-                                selectedDateFilter = selectedDateFilter,
-                                onDateFilterChanged = { selectedDateFilter = it },
-                                selectedFileType = selectedFileType,
-                                onFileTypeChanged = { selectedFileType = it },
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
-                        // Lista de notas filtradas
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(
-                                start = 16.dp,
-                                end = 16.dp,
-                                top = 4.dp,
-                                bottom = 80.dp
-                            ),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(filteredNotes) { note ->
-                                println("NotesListScreen: Rendering note ${note.id} - attachments: ${note.archivosAdjuntos.size}")
-                                EnhancedNoteCard(
-                                    note = note,
-                                    onClick = {
-                                        navigator.push(NoteDetailScreen(note.id))
-                                    }
-                                )
-                            }
-                        }
                     }
                 }
-            }
-            // FAB moved to here from MainScreen (proper nested navigation pattern)
-            FloatingActionButton(
-                onClick = {
-                    navigator.push(CreateNoteScreen())
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 88.dp, end = 16.dp), // Extra padding para evitar que lo tape la barra de tabs
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(
-                    Icons.Default.Add, 
-                    contentDescription = "Agregar nota",
-                    tint = MaterialTheme.colorScheme.onPrimary
+
+                SyncStatusIndicator(
+                    syncState = syncState,
+                    attachmentSyncState = attachmentSyncState,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 12.dp, end = 20.dp),
+                    iconSize = 16.dp
                 )
             }
-            // Sync Status Indicator - más pequeño y con espacio para SearchBar
-            SyncStatusIndicator(
-                syncState = syncState,
-                attachmentSyncState = attachmentSyncState,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 68.dp, end = 20.dp), // ✅ Más abajo para no interferir con SearchBar
-                iconSize = 16.dp // ✅ Más pequeño
+        }
+    }
+}
+
+@Composable
+private fun SearchBarAndFilters(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    showFilters: Boolean,
+    onShowFiltersChange: (Boolean) -> Unit,
+    selectedDateFilter: DateFilter,
+    onDateFilterChanged: (DateFilter) -> Unit,
+    selectedFileType: FileTypeFilter,
+    onFileTypeChanged: (FileTypeFilter) -> Unit
+) {
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            placeholder = { Text("Buscar en notas...") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
+            trailingIcon = {
+                Row {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { onSearchQueryChange("") }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Limpiar búsqueda")
+                        }
+                    }
+                    IconButton(onClick = { onShowFiltersChange(!showFilters) }) {
+                        Icon(
+                            if (showFilters) Icons.Default.FilterListOff else Icons.Default.FilterList,
+                            contentDescription = "Filtros",
+                            tint = if (selectedDateFilter != DateFilter.ALL || selectedFileType != FileTypeFilter.ALL)
+                                MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(32.dp)
+        )
+        if (showFilters) {
+            FiltersSection(
+                selectedDateFilter = selectedDateFilter,
+                onDateFilterChanged = onDateFilterChanged,
+                selectedFileType = selectedFileType,
+                onFileTypeChanged = onFileTypeChanged,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
         }
     }
 }
+
 @Composable
-internal fun EnhancedNoteCard(
+private fun NotesGrid(notes: List<Note>, onNoteClick: (String) -> Unit) {
+    val noteColors = remember {
+        listOf(
+            Color(0xFFFFF0F0), Color(0xFFE6F4EA), Color(0xFFE0F7FA),
+            Color(0xFFF3E5F5), Color(0xFFFFFDE7), Color(0xFFF5F5F5)
+        )
+    }
+
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Fixed(2),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalItemSpacing = 12.dp
+    ) { 
+        items(notes, key = { it.id }) { note ->
+            val colorIndex = remember(note.id) { abs(note.id.hashCode()) % noteColors.size }
+            RedesignedNoteCard(
+                note = note,
+                onClick = { onNoteClick(note.id) },
+                backgroundColor = noteColors[colorIndex]
+            )
+        }
+    }
+}
+
+@Composable
+internal fun RedesignedNoteCard(
     note: Note,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    backgroundColor: Color
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
-        Column {
-            // Debug logging for note card
-            println("NoteCard: Rendering note ${note.id} with ${note.archivosAdjuntos.size} attachments")
-            // Multimedia preview section
+        Column(modifier = Modifier.padding(16.dp)) {
             if (note.archivosAdjuntos.isNotEmpty()) {
-                AttachmentsGrid(
-                    attachments = note.archivosAdjuntos,
-                    modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 16.dp)
+                AttachmentsGridPreview(
+                    attachments = note.archivosAdjuntos.take(4)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            if (!note.titulo.isNullOrBlank()) {
+                Text(
+                    text = note.titulo,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
-            // Note content section
-            Column(
-                modifier = Modifier.padding(
-                    start = 16.dp,
-                    end = 16.dp,
-                    top = if (note.archivosAdjuntos.isEmpty()) 16.dp else 8.dp,
-                    bottom = 16.dp
-                )
-            ) {
-                // Title (if exists)
-                if (!note.titulo.isNullOrBlank()) {
-                    Text(
-                        text = note.titulo,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                }
-                // Content preview
-                Text(
-                    text = note.contenido,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-                // Footer with date and attachment summary
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Date
-                    Text(
-                        text = DateTimeUtils.formatRelativeTime(note.fechaCreacion),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    // Attachment summary
-                    if (note.archivosAdjuntos.isNotEmpty()) {
-                        AttachmentSummary(attachments = note.archivosAdjuntos)
-                    }
-                }
-            }
-        }
-    }
-}
-@Composable
-private fun AttachmentsGrid(
-    attachments: List<ArchivoAdjunto>,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        val chunkedAttachments = attachments.chunked(3) // Divide en grupos de 3
-        chunkedAttachments.forEach { rowAttachments ->
+
+            Text(
+                text = note.contenido,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = if (note.archivosAdjuntos.isEmpty()) 8 else 4,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                rowAttachments.forEach { attachment ->
-                    Box(modifier = Modifier.weight(1f)) {
-                        CompactAttachmentPreview(attachment = attachment)
-                    }
-                }
-                // Fill remaining spaces in the row with empty boxes
-                repeat(3 - rowAttachments.size) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-@Composable
-private fun CompactAttachmentPreview(attachment: ArchivoAdjunto) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f), // Square aspect ratio
-        shape = RoundedCornerShape(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            when (attachment.tipoArchivo) {
-                TipoDeArchivo.Imagen -> {
-                    AsyncImage(
-                        model = attachment.filePath,
-                        contentDescription = "Imagen adjunta",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-                TipoDeArchivo.Video -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // Video thumbnail placeholder
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.surfaceVariant
-                        ) {}
-                        // Play button overlay - smaller for compact view
-                        Surface(
-                            modifier = Modifier.size(32.dp),
-                            shape = androidx.compose.foundation.shape.CircleShape,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-                        ) {
-                            Icon(
-                                Icons.Default.PlayArrow,
-                                contentDescription = "Video",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(6.dp),
-                                tint = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
-                    }
-                }
-            }
-            // File type indicator - smaller for compact view
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
-                shape = RoundedCornerShape(3.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (attachment.tipoArchivo == TipoDeArchivo.Imagen) "IMG" else "VID",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
-                )
-            }
-        }
-    }
-}
-@Composable
-private fun AttachmentPreview(attachment: ArchivoAdjunto) {
-    Card(
-        modifier = Modifier
-            .width(150.dp)
-            .height(200.dp),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            when (attachment.tipoArchivo) {
-                TipoDeArchivo.Imagen -> {
-                    AsyncImage(
-                        model = attachment.filePath,
-                        contentDescription = "Imagen adjunta",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-                TipoDeArchivo.Video -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(12.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // Video thumbnail placeholder
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.surfaceVariant
-                        ) {}
-                        // Play button overlay
-                        Surface(
-                            modifier = Modifier.size(56.dp),
-                            shape = androidx.compose.foundation.shape.CircleShape,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-                        ) {
-                            Icon(
-                                Icons.Default.PlayArrow,
-                                contentDescription = "Video",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(12.dp),
-                                tint = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
-                    }
-                }
-            }
-            // File type indicator
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
-                shape = RoundedCornerShape(4.dp)
-            ) {
-                Text(
-                    text = if (attachment.tipoArchivo == TipoDeArchivo.Imagen) "IMG" else "VID",
+                    text = DateTimeUtils.formatRelativeTime(note.fechaCreacion),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
+                if (note.archivosAdjuntos.isNotEmpty()) {
+                    AttachmentSummaryIcons(attachments = note.archivosAdjuntos)
+                }
             }
         }
     }
 }
+
 @Composable
-private fun AttachmentSummary(attachments: List<ArchivoAdjunto>) {
+private fun AttachmentsGridPreview(attachments: List<ArchivoAdjunto>) {
+    // Each image takes full width, creating a larger preview while maintaining a square aspect ratio.
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        attachments.forEach { attachment ->
+            AsyncImage(
+                model = attachment.filePath,
+                contentDescription = "Attachment",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f) // Maintain square aspect ratio
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop
+            )
+        }
+    }
+}
+
+@Composable
+private fun AttachmentSummaryIcons(attachments: List<ArchivoAdjunto>) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        val imageCount = attachments.count { it.tipoArchivo == TipoDeArchivo.Imagen }
-        val videoCount = attachments.count { it.tipoArchivo == TipoDeArchivo.Video }
-        if (imageCount > 0) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.Image,
-                    contentDescription = "Imágenes",
-                    modifier = Modifier.size(14.dp),
-                    tint = MaterialTheme.colorScheme.secondary
-                )
-                Spacer(modifier = Modifier.width(2.dp))
-                Text(
-                    text = imageCount.toString(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
+        if (attachments.any { it.tipoArchivo == TipoDeArchivo.Imagen }) {
+            Icon(
+                Icons.Default.Image,
+                contentDescription = "Imágenes",
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
         }
-        if (videoCount > 0) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.Videocam,
-                    contentDescription = "Videos",
-                    modifier = Modifier.size(14.dp),
-                    tint = MaterialTheme.colorScheme.secondary
-                )
-                Spacer(modifier = Modifier.width(2.dp))
-                Text(
-                    text = videoCount.toString(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
+        if (attachments.any { it.tipoArchivo == TipoDeArchivo.Video }) {
+            Icon(
+                Icons.Default.Videocam,
+                contentDescription = "Videos",
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
         }
+    }
+}
+
+@Composable
+private fun EmptyState(isFiltering: Boolean) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        val message = if (isFiltering) "No se encontraron notas" else "Tu lienzo en blanco"
+        val subMessage = if (isFiltering) "Prueba a cambiar los filtros o el texto de búsqueda." else "Toca el botón + para que tus ideas cobren vida."
+
+        Icon(
+            imageVector = if (isFiltering) Icons.Default.SearchOff else Icons.Default.Assignment,
+            contentDescription = null,
+            modifier = Modifier.size(80.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = message,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = subMessage,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = Color.Gray
+        )
+    }
+}
+
+@Composable
+private fun ErrorState(message: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            Icons.Default.ErrorOutline,
+            contentDescription = "Error",
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.error
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.error
+        )
     }
 }
