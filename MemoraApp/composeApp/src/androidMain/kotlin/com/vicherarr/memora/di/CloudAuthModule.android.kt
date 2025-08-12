@@ -79,7 +79,8 @@ val cloudAuthModuleAndroid = module {
             attachmentsDao = get<AttachmentsDao>(),
             fileManager = get<FileManager>(),
             attachmentSyncRepository = get<AttachmentSyncRepository>(),
-            hashCalculator = get<HashCalculator>()
+            hashCalculator = get<HashCalculator>(),
+            tombstoneService = get<com.vicherarr.memora.sync.TombstoneService>()
         ) 
     }
 }

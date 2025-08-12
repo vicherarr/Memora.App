@@ -40,6 +40,7 @@ class AttachmentSyncEngine(
     private val fileManager: FileManager,
     private val attachmentSyncRepository: AttachmentSyncRepository,
     private val hashCalculator: HashCalculator,
+    private val tombstoneService: TombstoneService,
     private val config: AttachmentSyncConfig = AttachmentSyncConfig()
 ) {
     
@@ -191,9 +192,19 @@ class AttachmentSyncEngine(
             val remoteAttachments = attachmentSyncRepository.listRemoteAttachments(userId)
             println("AttachmentSyncEngine: ${remoteAttachments.size} attachments remotos encontrados")
             
-            // Filtrar los que no tenemos localmente
+            // Filtrar los que no tenemos localmente Y que NO tienen tombstones
             val newRemoteAttachments = remoteAttachments.filter { remote ->
-                attachmentsDao.getAttachmentByRemoteId(remote.remoteId) == null
+                // Verificar que no existe localmente
+                val notExistsLocally = attachmentsDao.getAttachmentByRemoteId(remote.remoteId) == null
+                
+                // Verificar que no tiene tombstone (fue eliminado localmente)
+                val notDeleted = !tombstoneService.isAttachmentDeleted(remote.attachmentId, userId)
+                
+                if (!notDeleted) {
+                    println("AttachmentSyncEngine: 🪦 Attachment ${remote.attachmentId} ignorado - tiene tombstone local")
+                }
+                
+                notExistsLocally && notDeleted
             }
             
             println("AttachmentSyncEngine: ${newRemoteAttachments.size} attachments nuevos para descargar")

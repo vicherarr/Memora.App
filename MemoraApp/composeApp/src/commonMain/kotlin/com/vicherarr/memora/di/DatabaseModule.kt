@@ -41,4 +41,11 @@ val databaseModule = module {
     single<DeletionsDao> {
         get<DatabaseManager>().deletionsDao
     }
+    
+    // TombstoneService - for Clean Architecture tombstone management
+    single<com.vicherarr.memora.sync.TombstoneService> {
+        com.vicherarr.memora.sync.TombstoneService(
+            deletionsDao = get<DeletionsDao>()
+        )
+    }
 }

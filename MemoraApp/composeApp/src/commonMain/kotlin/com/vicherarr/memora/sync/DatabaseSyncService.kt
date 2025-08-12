@@ -314,11 +314,80 @@ class DatabaseSyncService(
                 }
             }
             
+            // ✅ NUEVO: Aplicar tombstones de attachments después de procesar notas
+            applyLocalAttachmentTombstones(userId)
+            
             println("DatabaseSyncService: Notas fusionadas aplicadas exitosamente")
             
         } catch (e: Exception) {
             println("DatabaseSyncService: Error aplicando notas fusionadas: ${e.message}")
             throw e
+        }
+    }
+    
+    /**
+     * ✅ NUEVO: Aplica tombstones locales de attachments (elimina attachments borrados localmente)
+     * Esta función se ejecuta después de aplicar notas sincronizadas para limpiar attachments
+     * que fueron eliminados localmente pero que pueden haber reaparecido durante la sync.
+     */
+    private suspend fun applyLocalAttachmentTombstones(userId: String) = withContext(Dispatchers.Default) {
+        try {
+            // Obtener todos los tombstones locales de attachments para este usuario
+            val allUserDeletions = deletionsDao.getDeletionsByUserId(userId)
+            val localAttachmentDeletions = allUserDeletions.filter { deletion ->
+                deletion.table_name == "attachments"
+            }
+            
+            if (localAttachmentDeletions.isEmpty()) {
+                println("DatabaseSyncService: No hay tombstones de attachments que aplicar")
+                return@withContext
+            }
+            
+            println("DatabaseSyncService: Aplicando ${localAttachmentDeletions.size} tombstones de attachments locales")
+            
+            // Eliminar cada attachment que tenga tombstone
+            localAttachmentDeletions.forEach { deletion ->
+                try {
+                    // Verificar si el attachment aún existe en la DB local
+                    val existingAttachment = databaseManager.attachmentsDao.getAttachmentById(deletion.record_id)
+                    
+                    if (existingAttachment != null) {
+                        println("DatabaseSyncService: 🪦 Eliminando attachment con tombstone: ${deletion.record_id}")
+                        
+                        // Eliminar archivo del disco si existe
+                        // TODO: Implementar limpieza de archivos si es necesario
+                        
+                        // Eliminar de la base de datos
+                        databaseManager.attachmentsDao.deleteAttachment(deletion.record_id)
+                    } else {
+                        println("DatabaseSyncService: Attachment ${deletion.record_id} ya no existe, tombstone aplicado correctamente")
+                    }
+                } catch (e: Exception) {
+                    println("DatabaseSyncService: Error aplicando tombstone de attachment ${deletion.record_id}: ${e.message}")
+                }
+            }
+            
+            println("DatabaseSyncService: Tombstones de attachments aplicados exitosamente")
+            
+        } catch (e: Exception) {
+            println("DatabaseSyncService: Error aplicando tombstones de attachments: ${e.message}")
+            // No lanzar excepción para no interrumpir la sincronización
+        }
+    }
+    
+    /**
+     * ✅ NUEVO: Helper function to check if an attachment should be excluded due to tombstones
+     * Respeta principios SOLID - Single Responsibility Principle
+     */
+    suspend fun isAttachmentDeleted(attachmentId: String, userId: String): Boolean {
+        return try {
+            val userDeletions = deletionsDao.getDeletionsByUserId(userId)
+            userDeletions.any { deletion ->
+                deletion.table_name == "attachments" && deletion.record_id == attachmentId
+            }
+        } catch (e: Exception) {
+            println("DatabaseSyncService: Error checking attachment tombstone: ${e.message}")
+            false // Si hay error, no bloquear la descarga
         }
     }
     
