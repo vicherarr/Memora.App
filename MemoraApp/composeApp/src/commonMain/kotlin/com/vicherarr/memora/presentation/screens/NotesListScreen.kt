@@ -39,6 +39,7 @@ import org.koin.compose.getKoin
 import kotlin.math.abs
 
 class NotesListScreen : Screen {
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -92,6 +93,19 @@ class NotesListScreen : Screen {
         }
 
         Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Memora", fontWeight = FontWeight.Bold) },
+                    actions = {
+                        SyncStatusIndicator(
+                            syncState = syncState,
+                            attachmentSyncState = attachmentSyncState,
+                            modifier = Modifier.padding(end = 8.dp),
+                            iconSize = 24.dp
+                        )
+                    }
+                )
+            },
             floatingActionButton = {
                 FloatingActionButton(
                     onClick = {
@@ -150,14 +164,7 @@ class NotesListScreen : Screen {
                     }
                 }
 
-                SyncStatusIndicator(
-                    syncState = syncState,
-                    attachmentSyncState = attachmentSyncState,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 12.dp, end = 20.dp),
-                    iconSize = 16.dp
-                )
+                
             }
         }
     }
