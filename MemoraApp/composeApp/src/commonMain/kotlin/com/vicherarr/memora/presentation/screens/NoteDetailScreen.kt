@@ -605,19 +605,40 @@ private fun AttachmentItem(
                     }
                 }
                 TipoDeArchivo.Video -> {
-                    // Show video thumbnail with play icon
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                            .background(
+                                androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.8f),
+                                RoundedCornerShape(12.dp)
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             Icons.Default.PlayArrow,
                             contentDescription = "Video",
                             modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = androidx.compose.ui.graphics.Color.White
                         )
+                        // Mostrar nombre del archivo en la parte inferior
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .background(
+                                    androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
+                                    RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
+                                )
+                                .padding(4.dp)
+                                .fillMaxWidth()
+                        ) {
+                            Text(
+                                text = attachment.nombreOriginal ?: "Video",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = androidx.compose.ui.graphics.Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
@@ -684,15 +705,37 @@ private fun EditableAttachmentItem(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                            .background(
+                                androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.8f),
+                                RoundedCornerShape(12.dp)
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             Icons.Default.PlayArrow,
                             contentDescription = "Video",
                             modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = androidx.compose.ui.graphics.Color.White
                         )
+                        // Mostrar nombre del archivo en la parte inferior
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .background(
+                                    androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
+                                    RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
+                                )
+                                .padding(4.dp)
+                                .fillMaxWidth()
+                        ) {
+                            Text(
+                                text = attachment.nombreOriginal ?: "Video",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = androidx.compose.ui.graphics.Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
@@ -764,19 +807,41 @@ private fun NewMediaThumbnail(
                     )
                 }
                 com.vicherarr.memora.domain.models.MediaType.VIDEO -> {
-                    // Video thumbnail placeholder with play icon
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                            .background(
+                                androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.8f),
+                                RoundedCornerShape(12.dp)
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             Icons.Default.PlayArrow,
                             contentDescription = "Video",
                             modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = androidx.compose.ui.graphics.Color.White
                         )
+                        // Mostrar nombre del archivo en la parte inferior
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .background(
+                                    androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
+                                    RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
+                                )
+                                .padding(4.dp)
+                                .fillMaxWidth()
+                        ) {
+                            Text(
+                                text = mediaFile.fileName ?: "Video",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = androidx.compose.ui.graphics.Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
                     }
                 }
             }

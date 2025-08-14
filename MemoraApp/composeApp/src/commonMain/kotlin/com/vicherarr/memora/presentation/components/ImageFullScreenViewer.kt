@@ -305,41 +305,5 @@ private fun ImageViewerContent(
             }
         }
 
-        // Gesture hint (show briefly when viewer opens)
-        var showHint by remember { mutableStateOf(true) }
-        
-        LaunchedEffect(Unit) {
-            kotlinx.coroutines.delay(2000)
-            showHint = false
-        }
-
-        AnimatedVisibility(
-            visible = showHint,
-            enter = fadeIn(animationSpec = tween(300)),
-            exit = fadeOut(animationSpec = tween(500)),
-            modifier = Modifier.align(Alignment.Center)
-        ) {
-            Surface(
-                color = Color.Black.copy(alpha = 0.7f),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "💡 Gestos disponibles",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "• Pellizca para hacer zoom\n• Toca para mostrar/ocultar controles\n• Arrastra para mover (cuando hay zoom)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-                }
-            }
-        }
     }
 }

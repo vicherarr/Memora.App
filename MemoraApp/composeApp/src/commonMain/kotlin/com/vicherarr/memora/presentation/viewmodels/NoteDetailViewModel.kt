@@ -7,30 +7,12 @@ import com.vicherarr.memora.domain.models.ArchivoAdjunto
 import com.vicherarr.memora.domain.models.MediaFile
 import com.vicherarr.memora.domain.repository.NotesRepository
 import com.vicherarr.memora.presentation.states.BaseUiState
+import com.vicherarr.memora.presentation.states.ImageViewerState
+import com.vicherarr.memora.presentation.states.VideoViewerState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-
-/**
- * Image Viewer State - Single Source of Truth for image viewer
- * Following Clean Code principles and MVVM pattern
- */
-data class ImageViewerState(
-    val isVisible: Boolean = false,
-    val imageData: Any? = null,
-    val imageName: String? = null
-)
-
-/**
- * Video Viewer State - Single Source of Truth for video viewer
- * Following Clean Code principles and MVVM pattern
- */
-data class VideoViewerState(
-    val isVisible: Boolean = false,
-    val videoData: Any? = null,
-    val videoName: String? = null
-)
 
 /**
  * Note Detail UI State - Single Source of Truth

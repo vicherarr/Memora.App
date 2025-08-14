@@ -416,21 +416,40 @@ private fun MediaThumbnail(
                     )
                 }
                 MediaType.VIDEO -> {
-                    // Video thumbnail placeholder with play icon
-                    Surface(
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .clip(RoundedCornerShape(8.dp)),
-                        color = MaterialTheme.colorScheme.surfaceVariant
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.8f),
+                                RoundedCornerShape(8.dp)
+                            ),
+                        contentAlignment = Alignment.Center
                     ) {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = "Video",
+                            modifier = Modifier.size(32.dp),
+                            tint = androidx.compose.ui.graphics.Color.White
+                        )
+                        // Mostrar nombre del archivo en la parte inferior
                         Box(
-                            contentAlignment = Alignment.Center
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .background(
+                                    androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
+                                    RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)
+                                )
+                                .padding(4.dp)
+                                .fillMaxWidth()
                         ) {
-                            Icon(
-                                Icons.Default.PlayArrow,
-                                contentDescription = "Video",
-                                modifier = Modifier.size(32.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                            Text(
+                                text = mediaFile.fileName ?: "Video",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = androidx.compose.ui.graphics.Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
                         }
                     }

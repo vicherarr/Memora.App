@@ -1,5 +1,6 @@
 package com.vicherarr.memora.presentation.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
@@ -33,6 +34,8 @@ import com.vicherarr.memora.presentation.viewmodels.NotesViewModel
 import com.vicherarr.memora.presentation.viewmodels.SyncViewModel
 import com.vicherarr.memora.presentation.components.SyncStatusIndicator
 import com.vicherarr.memora.presentation.components.FiltersSection
+import com.vicherarr.memora.presentation.components.ImageFullScreenViewer
+import com.vicherarr.memora.presentation.components.VideoPlayerDialog
 import com.vicherarr.memora.domain.models.DateFilter
 import com.vicherarr.memora.domain.models.FileTypeFilter
 import com.vicherarr.memora.domain.utils.DateTimeUtils
@@ -169,7 +172,8 @@ class NotesListScreen : Screen {
                                 notes = filteredNotes,
                                 onNoteClick = {
                                     navigator.push(NoteDetailScreen(it))
-                                }
+                                },
+                                onMediaClick = notesViewModel::showMediaViewer
                             )
                         }
                     }
@@ -177,6 +181,25 @@ class NotesListScreen : Screen {
 
                 
             }
+        }
+        
+        // Media viewers - following MVVM pattern
+        uiState.imageViewer.imageData?.let { imageData ->
+            ImageFullScreenViewer(
+                imageData = imageData,
+                fileName = uiState.imageViewer.imageName,
+                isVisible = uiState.imageViewer.isVisible,
+                onDismiss = notesViewModel::hideImageViewer
+            )
+        }
+        
+        uiState.videoViewer.videoData?.let { videoData ->
+            VideoPlayerDialog(
+                videoData = videoData,
+                fileName = uiState.videoViewer.videoName,
+                isVisible = uiState.videoViewer.isVisible,
+                onDismiss = notesViewModel::hideVideoViewer
+            )
         }
     }
 }
@@ -234,7 +257,11 @@ private fun SearchBarAndFilters(
 }
 
 @Composable
-private fun NotesGrid(notes: List<Note>, onNoteClick: (String) -> Unit) {
+private fun NotesGrid(
+    notes: List<Note>, 
+    onNoteClick: (String) -> Unit,
+    onMediaClick: (ArchivoAdjunto) -> Unit = {}
+) {
     val noteColors = remember {
         listOf(
             Color(0xFFFFF0F0), Color(0xFFE6F4EA), Color(0xFFE0F7FA),
@@ -254,7 +281,8 @@ private fun NotesGrid(notes: List<Note>, onNoteClick: (String) -> Unit) {
             RedesignedNoteCard(
                 note = note,
                 onClick = { onNoteClick(note.id) },
-                backgroundColor = noteColors[colorIndex]
+                backgroundColor = noteColors[colorIndex],
+                onMediaClick = onMediaClick
             )
         }
     }
@@ -264,7 +292,8 @@ private fun NotesGrid(notes: List<Note>, onNoteClick: (String) -> Unit) {
 internal fun RedesignedNoteCard(
     note: Note,
     onClick: () -> Unit,
-    backgroundColor: Color
+    backgroundColor: Color,
+    onMediaClick: (ArchivoAdjunto) -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -277,7 +306,8 @@ internal fun RedesignedNoteCard(
         Column(modifier = Modifier.padding(16.dp)) {
             if (note.archivosAdjuntos.isNotEmpty()) {
                 AttachmentsGridPreview(
-                    attachments = note.archivosAdjuntos.take(4)
+                    attachments = note.archivosAdjuntos.take(4),
+                    onMediaClick = onMediaClick
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
@@ -323,19 +353,66 @@ internal fun RedesignedNoteCard(
 }
 
 @Composable
-private fun AttachmentsGridPreview(attachments: List<ArchivoAdjunto>) {
-    // Each image takes full width, creating a larger preview while maintaining a square aspect ratio.
+private fun AttachmentsGridPreview(
+    attachments: List<ArchivoAdjunto>,
+    onMediaClick: (ArchivoAdjunto) -> Unit = {}
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         attachments.forEach { attachment ->
-            AsyncImage(
-                model = attachment.filePath,
-                contentDescription = "Attachment",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f) // Maintain square aspect ratio
-                    .clip(RoundedCornerShape(12.dp)),
-                contentScale = ContentScale.Crop
-            )
+            when (attachment.tipoArchivo) {
+                TipoDeArchivo.Imagen -> {
+                    AsyncImage(
+                        model = attachment.filePath,
+                        contentDescription = "Imagen adjunta",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onMediaClick(attachment) },
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                TipoDeArchivo.Video -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                Color.Black.copy(alpha = 0.8f),
+                                RoundedCornerShape(12.dp)
+                            )
+                            .clickable { onMediaClick(attachment) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = "Video adjunto",
+                            modifier = Modifier.size(48.dp),
+                            tint = Color.White
+                        )
+                        // Mostrar nombre del archivo en la parte inferior
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .background(
+                                    Color.Black.copy(alpha = 0.6f),
+                                    RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
+                                )
+                                .padding(8.dp)
+                                .fillMaxWidth()
+                        ) {
+                            Text(
+                                text = attachment.nombreOriginal ?: "Video",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

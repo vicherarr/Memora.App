@@ -3,8 +3,12 @@ package com.vicherarr.memora.presentation.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.domain.models.Note
+import com.vicherarr.memora.domain.models.ArchivoAdjunto
+import com.vicherarr.memora.domain.models.TipoDeArchivo
 import com.vicherarr.memora.domain.repository.NotesRepository
 import com.vicherarr.memora.presentation.states.BaseUiState
+import com.vicherarr.memora.presentation.states.ImageViewerState
+import com.vicherarr.memora.presentation.states.VideoViewerState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,6 +23,8 @@ import kotlinx.coroutines.launch
 data class NotesUiState(
     val notes: List<Note> = emptyList(),
     val selectedNote: Note? = null,
+    val imageViewer: ImageViewerState = ImageViewerState(), // Image viewer state following MVVM
+    val videoViewer: VideoViewerState = VideoViewerState(), // Video viewer state following MVVM
     override val isLoading: Boolean = false,
     override val errorMessage: String? = null
 ) : BaseUiState
@@ -114,5 +120,73 @@ class NotesViewModel(
     
     fun clearSelectedNote() {
         _uiState.value = _uiState.value.copy(selectedNote = null)
+    }
+    
+    // MARK: - Media Viewer Methods (following NoteDetailViewModel pattern)
+    
+    /**
+     * Show image viewer with specified image data
+     * Following MVVM pattern - state management in ViewModel
+     */
+    private fun showImageViewer(imageData: Any, imageName: String?) {
+        _uiState.value = _uiState.value.copy(
+            imageViewer = ImageViewerState(
+                isVisible = true,
+                imageData = imageData,
+                imageName = imageName
+            )
+        )
+    }
+    
+    /**
+     * Hide image viewer - Reset to initial state
+     * Following MVVM pattern - state management in ViewModel
+     */
+    fun hideImageViewer() {
+        _uiState.value = _uiState.value.copy(
+            imageViewer = ImageViewerState()
+        )
+    }
+    
+    /**
+     * Show video viewer with specified video data
+     * Following MVVM pattern - state management in ViewModel
+     */
+    private fun showVideoViewer(videoData: Any, videoName: String?) {
+        _uiState.value = _uiState.value.copy(
+            videoViewer = VideoViewerState(
+                isVisible = true,
+                videoData = videoData,
+                videoName = videoName
+            )
+        )
+    }
+    
+    /**
+     * Hide video viewer - Reset to initial state
+     * Following MVVM pattern - state management in ViewModel
+     */
+    fun hideVideoViewer() {
+        _uiState.value = _uiState.value.copy(
+            videoViewer = VideoViewerState()
+        )
+    }
+    
+    /**
+     * Universal media viewer - handles business logic for showing appropriate viewer
+     * Following Clean Code principles - View doesn't know about media types
+     * Single Responsibility: Determines which viewer to show based on attachment type
+     */
+    fun showMediaViewer(attachment: ArchivoAdjunto) {
+        if (attachment.filePath.isNullOrBlank()) return
+        
+        when (attachment.tipoArchivo) {
+            TipoDeArchivo.Imagen -> {
+                showImageViewer(attachment.filePath!!, attachment.nombreOriginal ?: "Imagen")
+            }
+            TipoDeArchivo.Video -> {
+                showVideoViewer(attachment.filePath!!, attachment.nombreOriginal ?: "Video")
+            }
+        }
     }
 }
