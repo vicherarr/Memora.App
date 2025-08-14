@@ -156,7 +156,6 @@ private fun VideoPlayerContent(
             }
         }
 
-
     }
 }
 
