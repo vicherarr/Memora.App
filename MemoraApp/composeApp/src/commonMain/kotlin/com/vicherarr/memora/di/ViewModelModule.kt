@@ -1,11 +1,14 @@
 package com.vicherarr.memora.di
 
+import com.vicherarr.memora.data.repository.UserRepositoryImpl
+import com.vicherarr.memora.domain.repository.UserRepository
 import com.vicherarr.memora.presentation.viewmodels.LoginViewModel
 import com.vicherarr.memora.presentation.viewmodels.RegisterViewModel
 import com.vicherarr.memora.presentation.viewmodels.CreateNoteViewModel
 import com.vicherarr.memora.presentation.viewmodels.NotesViewModel
 import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
 import com.vicherarr.memora.presentation.viewmodels.NoteDetailViewModel
+import com.vicherarr.memora.presentation.viewmodels.ProfileViewModel
 import org.koin.dsl.module
 
 /**
@@ -14,10 +17,16 @@ import org.koin.dsl.module
  * Dependency Inversion: All ViewModels depend on abstractions (interfaces)
  */
 val viewModelModule = module {
+    
+    // Repository Layer - Following Dependency Inversion Principle
+    single<UserRepository> { UserRepositoryImpl(get()) } // NotesRepository dependency
+    
+    // ViewModel Layer - Following Single Responsibility Principle
     factory { LoginViewModel(get(), get()) } // AuthRepository + ValidationService
     factory { RegisterViewModel(get(), get()) } // AuthRepository + ValidationService
     single { MediaViewModel() } // Singleton - shared across CreateNoteViewModel and CreateNoteScreen
     factory { CreateNoteViewModel(get(), get()) } // NotesRepository + MediaViewModel
     factory { NotesViewModel(get()) }
     factory { NoteDetailViewModel(get(), get()) } // NotesRepository + MediaViewModel
+    factory { ProfileViewModel(get()) } // UserRepository dependency
 }

@@ -5,322 +5,359 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CloudSync
-import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
-import org.koin.compose.getKoin
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
+import com.vicherarr.memora.config.FeatureFlags
+import com.vicherarr.memora.presentation.components.*
+import com.vicherarr.memora.presentation.viewmodels.ProfileViewModel
 import com.vicherarr.memora.presentation.viewmodels.SyncViewModel
 import com.vicherarr.memora.sync.SyncState
+import org.koin.compose.getKoin
 
 /**
- * Profile Screen - Content for ProfileTab
- * Following Voyager 2025 nested navigation pattern
+ * Profile Screen - Redesigned with MVVM and Clean Architecture
+ * 
+ * Features:
+ * - User profile with Google Auth integration
+ * - Advanced statistics (notes, files, storage local/remote)
+ * - App information and settings
+ * - Account management with logout
+ * - Developer testing section (conditional)
+ * 
+ * Following MVVM pattern with reactive state management.
  */
 class ProfileScreen : Screen {
     
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
+        val uriHandler = LocalUriHandler.current
         val koin = getKoin()
+        
+        // ViewModels following Dependency Injection
+        val profileViewModel: ProfileViewModel = remember { koin.get() }
         val syncViewModel: SyncViewModel = remember { koin.get() }
+        
+        // State observation following MVVM pattern
+        val profileUiState by profileViewModel.uiState.collectAsState()
         val syncState by syncViewModel.syncState.collectAsState()
-        val currentSyncState = syncState // Make it available in entire scope
         
         val scrollState = rememberScrollState()
         
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .verticalScroll(scrollState)
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Perfil Section
-            Icon(
-                Icons.Default.Person,
-                contentDescription = "Perfil",
-                modifier = Modifier.size(80.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Perfil de Usuario",
-                style = MaterialTheme.typography.headlineMedium,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            // Cloud Sync Section
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+        // Error handling with SnackBar
+        val snackbarHostState = remember { SnackbarHostState() }
+        
+        // Handle errors from ProfileViewModel
+        LaunchedEffect(profileUiState.errorMessage) {
+            profileUiState.errorMessage?.let { error ->
+                snackbarHostState.showSnackbar(
+                    message = error,
+                    actionLabel = "Reintentar",
+                    duration = SnackbarDuration.Long
                 )
+                profileViewModel.clearError()
+            }
+        }
+        
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { paddingValues ->
+            
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .verticalScroll(scrollState)
+                    .padding(paddingValues)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "🌥️ Sincronización Cloud",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Medium
+                    
+                    // Loading indicator
+                    if (profileUiState.isLoading) {
+                        ProfileLoadingState()
+                        return@Column
+                    }
+                    
+                    // User Profile Header
+                    profileUiState.userProfile?.let { userProfile ->
+                        UserProfileHeader(
+                            userProfile = userProfile,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    
+                    // User Statistics
+                    profileUiState.userStatistics?.let { statistics ->
+                        StatisticsSection(
+                            statistics = statistics,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    
+                    // Cloud Sync Section (existing functionality)
+                    CloudSyncSection(
+                        syncState = syncState,
+                        onSyncClick = { syncViewModel.iniciarSincronizacionManual() }
                     )
                     
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Estado de sincronización
-                    when (currentSyncState) {
-                        is SyncState.Idle -> {
-                            Text(
-                                text = "Listo para sincronizar",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        is SyncState.Syncing -> {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Sincronizando...",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                    // App Settings and Information
+                    SettingsSection(
+                        appInfo = profileUiState.appInfo,
+                        onTermsClick = { 
+                            profileUiState.appInfo.termsUrl?.let { 
+                                uriHandler.openUri(it) 
+                            }
+                        },
+                        onPrivacyClick = { 
+                            profileUiState.appInfo.privacyUrl?.let { 
+                                uriHandler.openUri(it) 
+                            }
+                        },
+                        onSupportClick = { 
+                            profileUiState.appInfo.supportEmail?.let { 
+                                uriHandler.openUri("mailto:$it") 
                             }
                         }
-                        is SyncState.Success -> {
-                            Text(
-                                text = "✅ ${currentSyncState.message}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color(0xFF4CAF50)
-                            )
-                        }
-                        is SyncState.Error -> {
-                            Text(
-                                text = "❌ ${currentSyncState.error}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
+                    )
                     
-                    Spacer(modifier = Modifier.height(16.dp))
+                    // Account Management
+                    AccountManagementSection(
+                        onLogout = { profileViewModel.logout() },
+                        isLoading = profileUiState.isLoading
+                    )
                     
-                    // Botón de sincronización completa manual
-                    Button(
-                        onClick = { syncViewModel.iniciarSincronizacionManual() },
-                        enabled = currentSyncState !is SyncState.Syncing,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            Icons.Default.CloudSync,
-                            contentDescription = "Sincronizar",
-                            modifier = Modifier.size(18.dp)
+                    // Developer Testing Section (conditional)
+                    if (FeatureFlags.isTestingEnabled) {
+                        DeveloperTestingSection(
+                            onTestingClick = { navigator.push(TestingScreen()) }
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Sincronizar todo")
                     }
-                }
+                    
+                // Bottom spacing for navigation
+                Spacer(modifier = Modifier.height(80.dp))
             }
-            
-            Spacer(modifier = Modifier.height(20.dp))
-            
-            // 🧠 NUEVA: Smart Sync Testing Section
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
+        }
+    }
+}
+
+/**
+ * Profile Loading State Component
+ * 
+ * Shows skeleton loading indicators while data is being fetched.
+ * Following Single Responsibility Principle.
+ */
+@Composable
+private fun ProfileLoadingState() {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Header skeleton
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "🧠 Smart Sync Testing",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Text(
-                        text = "Sincronización inteligente con metadata\n⚡ Si no hay cambios → Skip sync (súper rápido)\n🔄 Si hay cambios → Sync completo",
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        lineHeight = 18.sp
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Button(
-                        onClick = { syncViewModel.iniciarSmartSync() },
-                        enabled = currentSyncState !is SyncState.Syncing,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
-                        Icon(
-                            Icons.Default.AutoAwesome,
-                            contentDescription = "Smart Sync",
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("🧠 Iniciar Smart Sync")
-                    }
-                }
+                Surface(
+                    modifier = Modifier.size(80.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) { }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth(0.6f)
+                        .height(24.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) { }
             }
+        }
+        
+        // Statistics skeleton
+        repeat(2) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) { }
+        }
+    }
+}
+
+/**
+ * Cloud Sync Section Component
+ * 
+ * Maintains existing sync functionality in modular component.
+ * Following Single Responsibility Principle.
+ */
+@Composable
+private fun CloudSyncSection(
+    syncState: SyncState,
+    onSyncClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "🌥️ Sincronización Cloud",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Medium
+            )
             
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
-            // TESTING: Reset completo section (temporal)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+            // Sync status indicator
+            when (syncState) {
+                is SyncState.Idle -> {
                     Text(
-                        text = "🚨 Testing - Reset Completo",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onErrorContainer
+                        text = "Listo para sincronizar",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Text(
-                        text = "⚠️ ELIMINA TODOS LOS DATOS (local y remoto)",
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Botones de reset individual
+                }
+                is SyncState.Syncing -> {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Borrar datos remotos
-                        Button(
-                            onClick = { syncViewModel.forceDeleteRemoteData() },
-                            enabled = currentSyncState !is SyncState.Syncing,
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Icon(
-                                Icons.Default.CloudSync,
-                                contentDescription = "Borrar remoto",
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Remoto", style = MaterialTheme.typography.bodySmall)
-                        }
-                        
-                        // Borrar datos locales
-                        Button(
-                            onClick = { syncViewModel.forceDeleteLocalData() },
-                            enabled = currentSyncState !is SyncState.Syncing,
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Icon(
-                                Icons.Default.DeleteForever,
-                                contentDescription = "Borrar local",
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Local", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    // Botón de test attachment sync completo
-                    Button(
-                        onClick = { syncViewModel.iniciarSincronizacionManual() },
-                        enabled = currentSyncState !is SyncState.Syncing,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        Icon(
-                            Icons.Default.CloudSync,
-                            contentDescription = "Test Attachment Sync",
-                            modifier = Modifier.size(18.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("📎 Test Sync Completo + Attachments")
-                    }
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    // Botón de reset completo
-                    Button(
-                        onClick = { syncViewModel.forceCompleteReset() },
-                        enabled = currentSyncState !is SyncState.Syncing,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
+                        Text(
+                            text = "Sincronizando...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
                         )
-                    ) {
-                        Icon(
-                            Icons.Default.Warning,
-                            contentDescription = "Reset completo",
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("🚨 RESET COMPLETO 🚨")
                     }
-                    
-                    // Extra space para scroll completo, especialmente en dispositivos con bottom navigation
-                    Spacer(modifier = Modifier.height(120.dp))
-                    
+                }
+                is SyncState.Success -> {
                     Text(
-                        text = "TODO: Remover después del testing",
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                        text = "✅ ${syncState.message}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF4CAF50)
                     )
                 }
+                is SyncState.Error -> {
+                    Text(
+                        text = "❌ ${syncState.error}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Manual sync button
+            Button(
+                onClick = onSyncClick,
+                enabled = syncState !is SyncState.Syncing,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(
+                    Icons.Default.CloudSync,
+                    contentDescription = "Sincronizar",
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Sincronizar todo")
+            }
+        }
+    }
+}
+
+/**
+ * Developer Testing Section Component
+ * 
+ * Conditional testing section for development builds.
+ * Following Single Responsibility and Open/Closed principles.
+ */
+@Composable
+private fun DeveloperTestingSection(
+    onTestingClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        ),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "🧪 Desarrollo",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = "Acceso a funciones de testing y debug",
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Button(
+                onClick = onTestingClick,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(
+                    Icons.Default.Science,
+                    contentDescription = "Testing",
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Testing")
             }
         }
     }
