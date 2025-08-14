@@ -14,6 +14,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush // Added this line
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -95,7 +96,17 @@ class NotesListScreen : Screen {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Memora", fontWeight = FontWeight.Bold) },
+                    title = {
+                        val gradientColors = listOf(Color(0xFF1976D2), Color(0xFF00796B)) // Darker Blue to Darker Teal
+                        Text(
+                            text = "Memora",
+                            modifier = Modifier.fillMaxWidth().wrapContentWidth(Alignment.CenterHorizontally),
+                            fontWeight = FontWeight.ExtraBold,
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                brush = Brush.linearGradient(colors = gradientColors)
+                            )
+                        )
+                    },
                     actions = {
                         SyncStatusIndicator(
                             syncState = syncState,
