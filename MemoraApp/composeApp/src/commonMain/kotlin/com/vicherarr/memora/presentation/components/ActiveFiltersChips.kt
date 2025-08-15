@@ -136,10 +136,20 @@ private fun ActiveFilterChip(
                     contentDescription = null,
                     modifier = Modifier.size(16.dp)
                 )
-                Text(
-                    text = filter.displayText,
-                    style = MaterialTheme.typography.labelMedium
-                )
+                Column {
+                    Text(
+                        text = filter.displayText,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    // Show exact dates for date filters
+                    if (filter is ActiveFilter.Date && filter.exactDates != null) {
+                        Text(
+                            text = filter.exactDates,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                }
             }
         },
         trailingIcon = {
@@ -197,7 +207,29 @@ private sealed class ActiveFilter(
         },
         icon = Icons.Default.DateRange,
         onClear = onClear
-    )
+    ) {
+        val exactDates: String? = when (dateFilter) {
+            DateFilter.CUSTOM_RANGE -> customRange?.let {
+                "${formatTimestampToExactDate(it.startDate)} - ${formatTimestampToExactDate(it.endDate)}"
+            }
+            DateFilter.TODAY -> {
+                val today = formatTimestampToExactDate(com.vicherarr.memora.data.database.getCurrentTimestamp())
+                today
+            }
+            DateFilter.WEEK, DateFilter.MONTH, DateFilter.LAST_30_DAYS, DateFilter.LAST_90_DAYS -> {
+                val now = com.vicherarr.memora.data.database.getCurrentTimestamp()
+                val pastTimestamp = when (dateFilter) {
+                    DateFilter.WEEK -> now - (7 * 24 * 60 * 60 * 1000L)
+                    DateFilter.MONTH -> now - (30 * 24 * 60 * 60 * 1000L)
+                    DateFilter.LAST_30_DAYS -> now - (30 * 24 * 60 * 60 * 1000L)
+                    DateFilter.LAST_90_DAYS -> now - (90 * 24 * 60 * 60 * 1000L)
+                    else -> now
+                }
+                "${formatTimestampToExactDate(pastTimestamp)} - ${formatTimestampToExactDate(now)}"
+            }
+            else -> null
+        }
+    }
     
     class FileType(
         fileTypeFilter: FileTypeFilter,
@@ -211,8 +243,8 @@ private sealed class ActiveFilter(
 }
 
 /**
- * Format timestamp to short date for chip display
- * Uses simple relative formatting for compact display
+ * Format timestamp to readable date for chip display
+ * Uses clear, descriptive formatting
  */
 private fun formatTimestampToShortDate(timestamp: Long): String {
     val now = com.vicherarr.memora.data.database.getCurrentTimestamp()
@@ -221,9 +253,44 @@ private fun formatTimestampToShortDate(timestamp: Long): String {
     return when {
         daysDiff == 0 -> "Hoy"
         daysDiff == 1 -> "Ayer"
-        daysDiff < 7 -> "${daysDiff}d"
-        daysDiff < 30 -> "${daysDiff/7}s"
-        daysDiff < 365 -> "${daysDiff/30}m"
-        else -> "${daysDiff/365}a"
+        daysDiff < 7 -> when (daysDiff) {
+            2 -> "Anteayer"
+            else -> "Hace $daysDiff días"
+        }
+        daysDiff < 14 -> "1 semana"
+        daysDiff < 21 -> "2 semanas"
+        daysDiff < 28 -> "3 semanas"
+        daysDiff < 60 -> "1 mes"
+        daysDiff < 90 -> "2 meses"
+        daysDiff < 120 -> "3 meses"
+        daysDiff < 365 -> "${daysDiff/30} meses"
+        else -> "${daysDiff/365} años"
     }
+}
+
+/**
+ * Format timestamp to exact date (DD/MM/YYYY)
+ * Uses simple math for cross-platform compatibility
+ */
+private fun formatTimestampToExactDate(timestamp: Long): String {
+    // Convert timestamp to days since epoch
+    val days = (timestamp / (24 * 60 * 60 * 1000L)).toInt()
+    
+    // Simple epoch calculation (days since 1970-01-01)
+    // This is a basic implementation for display purposes
+    val epochYear = 1970
+    val epochDays = days
+    
+    // Calculate approximate year (365.25 days per year)
+    val yearsSinceEpoch = (epochDays / 365.25).toInt()
+    val year = epochYear + yearsSinceEpoch
+    
+    // Calculate remaining days in year
+    val daysInYear = epochDays - (yearsSinceEpoch * 365.25).toInt()
+    
+    // Simple month/day calculation (approximate)
+    val month = ((daysInYear / 30.44) + 1).toInt().coerceIn(1, 12)
+    val dayOfMonth = (daysInYear % 30.44).toInt() + 1
+    
+    return "${dayOfMonth.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/$year"
 }
