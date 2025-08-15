@@ -1,5 +1,10 @@
 package com.vicherarr.memora.presentation.screens
 
+import androidx.compose.foundation.Image
+import memora.composeapp.generated.resources.Res
+import memora.composeapp.generated.resources.ic_logo
+import org.jetbrains.compose.resources.painterResource
+
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -211,52 +216,17 @@ class SplashScreen : Screen {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // Central memory core - the heart of Memora with full title
-                Box(
+                // Logo animado
+                Image(
+                    painter = painterResource(Res.drawable.ic_logo),
+                    contentDescription = "Memora Logo",
                     modifier = Modifier
-                        .size(140.dp)
-                        .scale(centralOrbScale)
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                                    Color.Transparent
-                                ),
-                                radius = 140f
-                            ),
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // Inner core with brand text
-                    Box(
-                        modifier = Modifier
-                            .size(100.dp)
-                            .background(
-                                Brush.radialGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                                    )
-                                ),
-                                CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "memora",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontSize = 16.sp,
-                            letterSpacing = 1.sp
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(32.dp))
-                
+                        .size(120.dp)
+                        .alpha(titleAlpha) // Misma animación que el texto
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
                 // App title with breathing animation
                 Text(
                     text = "Memora",
