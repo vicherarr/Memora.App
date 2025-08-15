@@ -15,6 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +32,8 @@ import com.vicherarr.memora.domain.models.MediaType
 import com.vicherarr.memora.platform.camera.rememberCameraManager
 import com.vicherarr.memora.platform.camera.rememberGalleryManager
 import com.vicherarr.memora.platform.camera.rememberVideoPickerManager
+import com.vicherarr.memora.platform.camera.rememberCameraCaptureManager
+import com.vicherarr.memora.platform.camera.CameraCaptureMode
 import com.vicherarr.memora.presentation.viewmodels.CreateNoteViewModel
 import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
 import org.koin.compose.getKoin
@@ -56,8 +60,15 @@ class CreateNoteScreen : Screen {
             return
         }
         
+        // State for camera capture mode dialog
+        var showCameraCaptureDialog: Boolean by remember { mutableStateOf(false) }
+        
         // Media managers for direct integration
         val cameraManager = rememberCameraManager { mediaFile ->
+            mediaFile?.let { mediaViewModel.addToSelectedMedia(it) }
+        }
+        
+        val cameraCaptureManager = rememberCameraCaptureManager { mediaFile ->
             mediaFile?.let { mediaViewModel.addToSelectedMedia(it) }
         }
         
@@ -219,15 +230,15 @@ class CreateNoteScreen : Screen {
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                // Camera Button - Solo ícono
+                                // Camera Button - Muestra diálogo para elegir foto/video
                                 FilledTonalButton(
-                                    onClick = { cameraManager.launch() },
+                                    onClick = { showCameraCaptureDialog = true },
                                     enabled = !noteUiState.isLoading && !mediaUiState.isLoading,
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(
                                         Icons.Default.CameraAlt,
-                                        contentDescription = "Tomar foto",
+                                        contentDescription = "Tomar foto o video",
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -390,6 +401,21 @@ class CreateNoteScreen : Screen {
                 }
             }
         }
+        
+        // Camera Capture Mode Selection Dialog
+        if (showCameraCaptureDialog) {
+            CameraCaptureDialog(
+                onDismiss = { showCameraCaptureDialog = false },
+                onPhotoSelected = { 
+                    showCameraCaptureDialog = false
+                    cameraCaptureManager.launch(CameraCaptureMode.PHOTO)
+                },
+                onVideoSelected = { 
+                    showCameraCaptureDialog = false
+                    cameraCaptureManager.launch(CameraCaptureMode.VIDEO)
+                }
+            )
+        }
     }
 }
 
@@ -499,4 +525,69 @@ private fun MediaThumbnail(
             }
         }
     }
+}
+
+/**
+ * Dialog for selecting camera capture mode (Photo or Video)
+ * Following Material Design 3 guidelines
+ */
+@Composable
+private fun CameraCaptureDialog(
+    onDismiss: () -> Unit,
+    onPhotoSelected: () -> Unit,
+    onVideoSelected: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Capturar con Cámara",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
+        text = {
+            Text(
+                text = "¿Qué deseas capturar?",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Photo option
+                FilledTonalButton(
+                    onClick = onPhotoSelected,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        Icons.Default.PhotoCamera,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Foto")
+                }
+                
+                // Video option
+                FilledTonalButton(
+                    onClick = onVideoSelected,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        Icons.Default.Videocam,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Video")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
 }

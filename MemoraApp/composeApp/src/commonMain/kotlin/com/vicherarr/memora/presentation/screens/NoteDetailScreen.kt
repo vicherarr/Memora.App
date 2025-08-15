@@ -35,6 +35,8 @@ import com.vicherarr.memora.domain.models.TipoDeArchivo
 import com.vicherarr.memora.platform.camera.rememberCameraManager
 import com.vicherarr.memora.platform.camera.rememberGalleryManager
 import com.vicherarr.memora.platform.camera.rememberVideoPickerManager
+import com.vicherarr.memora.platform.camera.rememberCameraCaptureManager
+import com.vicherarr.memora.platform.camera.CameraCaptureMode
 import com.vicherarr.memora.presentation.viewmodels.NoteDetailViewModel
 import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
 import com.vicherarr.memora.presentation.components.ImageFullScreenViewer
@@ -57,8 +59,19 @@ data class NoteDetailScreen(private val noteId: String) : Screen {
         val uiState by viewModel.uiState.collectAsState()
         val mediaUiState by mediaViewModel.uiState.collectAsState()
         
+        // State for camera capture mode dialog
+        var showCameraCaptureDialog: Boolean by remember { mutableStateOf(false) }
+        
         // Media managers for multimedia functionality
         val cameraManager = rememberCameraManager { mediaFile ->
+            mediaFile?.let { 
+                mediaViewModel.addToSelectedMedia(it)
+                // Automatically add to note when media is captured
+                viewModel.addMediaToNote()
+            }
+        }
+        
+        val cameraCaptureManager = rememberCameraCaptureManager { mediaFile ->
             mediaFile?.let { 
                 mediaViewModel.addToSelectedMedia(it)
                 // Automatically add to note when media is captured
@@ -168,7 +181,7 @@ data class NoteDetailScreen(private val noteId: String) : Screen {
                                 onRemoveNewMedia = mediaViewModel::removeFromSelectedMedia,
                                 onAttachmentClick = { attachment -> viewModel.showMediaViewer(attachment) },
                                 onMediaFileClick = { mediaFile -> viewModel.showMediaViewer(mediaFile) },
-                                onCameraClick = { cameraManager.launch() },
+                                onCameraClick = { showCameraCaptureDialog = true },
                                 onGalleryClick = { galleryManager.launch() },
                                 onVideoPickerClick = { videoPickerManager.launch() },
                                 validationHint = viewModel.getValidationHint(uiState.editContenido)
@@ -201,6 +214,21 @@ data class NoteDetailScreen(private val noteId: String) : Screen {
                 fileName = uiState.videoViewer.videoName,
                 isVisible = uiState.videoViewer.isVisible,
                 onDismiss = viewModel::hideVideoViewer
+            )
+        }
+        
+        // Camera Capture Mode Selection Dialog
+        if (showCameraCaptureDialog) {
+            CameraCaptureDialog(
+                onDismiss = { showCameraCaptureDialog = false },
+                onPhotoSelected = { 
+                    showCameraCaptureDialog = false
+                    cameraCaptureManager.launch(CameraCaptureMode.PHOTO)
+                },
+                onVideoSelected = { 
+                    showCameraCaptureDialog = false
+                    cameraCaptureManager.launch(CameraCaptureMode.VIDEO)
+                }
             )
         }
     }
@@ -928,4 +956,69 @@ private fun formatRelativeTime(timestamp: Long): String {
             "Hace ${weeks}sem"
         }
     }
+}
+
+/**
+ * Dialog for selecting camera capture mode (Photo or Video)
+ * Following Material Design 3 guidelines
+ */
+@Composable
+private fun CameraCaptureDialog(
+    onDismiss: () -> Unit,
+    onPhotoSelected: () -> Unit,
+    onVideoSelected: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Capturar con Cámara",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
+        text = {
+            Text(
+                text = "¿Qué deseas capturar?",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Photo option
+                FilledTonalButton(
+                    onClick = onPhotoSelected,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        Icons.Default.PhotoCamera,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Foto")
+                }
+                
+                // Video option
+                FilledTonalButton(
+                    onClick = onVideoSelected,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        Icons.Default.Videocam,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Video")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
 }
