@@ -2,6 +2,7 @@ package com.vicherarr.memora.di
 
 import com.vicherarr.memora.data.mappers.AttachmentDomainMapper
 import com.vicherarr.memora.data.mappers.NoteDomainMapper
+import com.vicherarr.memora.data.mappers.CategoryDomainMapper
 import org.koin.dsl.module
 
 /**
@@ -13,7 +14,10 @@ val mapperModule = module {
     single<NoteDomainMapper> { 
         NoteDomainMapper(
             attachmentsDao = get(),
-            attachmentMapper = get()
+            attachmentMapper = get(),
+            noteCategoriesDao = get(),
+            categoryMapper = get()
         ) 
     }
+    single<CategoryDomainMapper> { CategoryDomainMapper() }
 }

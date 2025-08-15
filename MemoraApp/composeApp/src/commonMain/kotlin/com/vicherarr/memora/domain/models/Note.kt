@@ -10,7 +10,8 @@ data class Note(
     val fechaCreacion: Long, // timestamp in milliseconds
     val fechaModificacion: Long, // timestamp in milliseconds
     val usuarioId: String,
-    val archivosAdjuntos: List<ArchivoAdjunto> = emptyList()
+    val archivosAdjuntos: List<ArchivoAdjunto> = emptyList(),
+    val categories: List<Category> = emptyList() // Categories assigned to this note
 )
 
 /**

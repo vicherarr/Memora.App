@@ -12,14 +12,15 @@ import com.vicherarr.memora.domain.validation.ValidationService
  */
 class CreateNoteUseCase(
     private val notesRepository: NotesRepository,
-    private val validationService: ValidationService
+    private val validationService: ValidationService,
+    private val manageNoteCategoriesUseCase: ManageNoteCategoriesUseCase
 ) {
     
     /**
      * Create a note with text content only
      * Validates input and delegates to repository
      */
-    suspend fun execute(titulo: String?, contenido: String): Result<Note> {
+    suspend fun execute(titulo: String?, contenido: String, categoryIds: List<String> = emptyList()): Result<Note> {
         // Business logic: Validate input
         val validationResult = validationService.validateNoteContent(contenido)
         if (!validationResult.isValid) {
@@ -41,7 +42,14 @@ class CreateNoteUseCase(
         }
         
         // Delegate to repository for persistence
-        return notesRepository.createNote(titulo, contenido)
+        return notesRepository.createNote(titulo, contenido).also { result ->
+            // Assign categories if note creation was successful
+            result.onSuccess { note ->
+                if (categoryIds.isNotEmpty()) {
+                    manageNoteCategoriesUseCase.assignCategoriesToNote(note.id, categoryIds)
+                }
+            }
+        }
     }
     
     /**
@@ -51,7 +59,8 @@ class CreateNoteUseCase(
     suspend fun executeWithAttachments(
         titulo: String?, 
         contenido: String, 
-        attachments: List<MediaFile>
+        attachments: List<MediaFile>,
+        categoryIds: List<String> = emptyList()
     ): Result<Note> {
         // Business logic: Validate input
         val validationResult = validationService.validateNoteContent(contenido)
@@ -91,6 +100,13 @@ class CreateNoteUseCase(
         }
         
         // Delegate to repository for persistence
-        return notesRepository.createNoteWithAttachments(titulo, contenido, attachments)
+        return notesRepository.createNoteWithAttachments(titulo, contenido, attachments).also { result ->
+            // Assign categories if note creation was successful
+            result.onSuccess { note ->
+                if (categoryIds.isNotEmpty()) {
+                    manageNoteCategoriesUseCase.assignCategoriesToNote(note.id, categoryIds)
+                }
+            }
+        }
     }
 }

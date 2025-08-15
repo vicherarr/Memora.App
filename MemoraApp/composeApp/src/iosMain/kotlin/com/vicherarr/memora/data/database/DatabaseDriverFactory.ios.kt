@@ -6,7 +6,7 @@ import com.vicherarr.memora.database.MemoraDatabase
 
 /**
  * iOS implementation of DatabaseDriverFactory  
- * Uses NativeSqliteDriver for SQLite on iOS
+ * Uses NativeSqliteDriver for SQLite on iOS with migration support
  */
 actual class DatabaseDriverFactory {
     actual fun createDriver(): SqlDriver {

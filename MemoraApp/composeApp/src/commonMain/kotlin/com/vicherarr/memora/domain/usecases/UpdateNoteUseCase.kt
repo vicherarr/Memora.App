@@ -13,14 +13,15 @@ import com.vicherarr.memora.domain.validation.ValidationService
  */
 class UpdateNoteUseCase(
     private val notesRepository: NotesRepository,
-    private val validationService: ValidationService
+    private val validationService: ValidationService,
+    private val manageNoteCategoriesUseCase: ManageNoteCategoriesUseCase
 ) {
     
     /**
      * Update a note with text content only
      * Validates input and delegates to repository
      */
-    suspend fun execute(id: String, titulo: String?, contenido: String): Result<Note> {
+    suspend fun execute(id: String, titulo: String?, contenido: String, categoryIds: List<String> = emptyList()): Result<Note> {
         // Business logic: Validate note ID
         if (id.isBlank()) {
             return Result.failure(IllegalArgumentException("Note ID cannot be blank"))
@@ -47,7 +48,12 @@ class UpdateNoteUseCase(
         }
         
         // Delegate to repository for persistence
-        return notesRepository.updateNote(id, titulo, contenido)
+        return notesRepository.updateNote(id, titulo, contenido).also { result ->
+            // Update categories if note update was successful
+            result.onSuccess { 
+                manageNoteCategoriesUseCase.assignCategoriesToNote(id, categoryIds)
+            }
+        }
     }
     
     /**
@@ -59,7 +65,8 @@ class UpdateNoteUseCase(
         titulo: String?,
         contenido: String,
         existingAttachments: List<ArchivoAdjunto>,
-        newMediaFiles: List<MediaFile>
+        newMediaFiles: List<MediaFile>,
+        categoryIds: List<String> = emptyList()
     ): Result<Note> {
         // Business logic: Validate note ID
         if (noteId.isBlank()) {
@@ -106,6 +113,11 @@ class UpdateNoteUseCase(
         // Delegate to repository for persistence
         return notesRepository.updateNoteWithAttachments(
             noteId, titulo, contenido, existingAttachments, newMediaFiles
-        )
+        ).also { result ->
+            // Update categories if note update was successful
+            result.onSuccess {
+                manageNoteCategoriesUseCase.assignCategoriesToNote(noteId, categoryIds)
+            }
+        }
     }
 }

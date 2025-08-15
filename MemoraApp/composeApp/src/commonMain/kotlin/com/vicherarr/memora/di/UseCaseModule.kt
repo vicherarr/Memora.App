@@ -5,6 +5,9 @@ import com.vicherarr.memora.domain.usecases.CreateNoteUseCase
 import com.vicherarr.memora.domain.usecases.UpdateNoteUseCase
 import com.vicherarr.memora.domain.usecases.DeleteNoteUseCase
 import com.vicherarr.memora.domain.usecases.SearchNotesUseCase
+import com.vicherarr.memora.domain.usecases.CreateCategoryUseCase
+import com.vicherarr.memora.domain.usecases.ManageNoteCategoriesUseCase
+import com.vicherarr.memora.domain.usecases.GetCategoriesByNoteIdUseCase
 import org.koin.core.module.dsl.factoryOf
 import org.koin.dsl.module
 
@@ -20,14 +23,16 @@ val useCaseModule = module {
     single<CreateNoteUseCase> { 
         CreateNoteUseCase(
             notesRepository = get(),
-            validationService = get()
+            validationService = get(),
+            manageNoteCategoriesUseCase = get()
         ) 
     }
     
     single<UpdateNoteUseCase> { 
         UpdateNoteUseCase(
             notesRepository = get(),
-            validationService = get()
+            validationService = get(),
+            manageNoteCategoriesUseCase = get()
         ) 
     }
     
@@ -40,6 +45,29 @@ val useCaseModule = module {
     single<SearchNotesUseCase> { 
         SearchNotesUseCase(
             notesRepository = get()
+        ) 
+    }
+    
+    // Categories Use Cases
+    single<CreateCategoryUseCase> { 
+        CreateCategoryUseCase(
+            categoriesDao = get(),
+            categoryMapper = get()
+        ) 
+    }
+    
+    single<ManageNoteCategoriesUseCase> { 
+        ManageNoteCategoriesUseCase(
+            noteCategoriesDao = get(),
+            categoriesDao = get(),
+            categoryMapper = get()
+        ) 
+    }
+    
+    single<GetCategoriesByNoteIdUseCase> { 
+        GetCategoriesByNoteIdUseCase(
+            noteCategoriesDao = get(),
+            categoryMapper = get()
         ) 
     }
 }

@@ -2,8 +2,10 @@ package com.vicherarr.memora.data.mappers
 
 import com.vicherarr.memora.data.database.NotesDao
 import com.vicherarr.memora.data.database.AttachmentsDao
+import com.vicherarr.memora.data.database.NoteCategoriesDao
 import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.database.Notes
+import com.vicherarr.memora.data.database.getCurrentTimestamp
 
 /**
  * Domain Mapper for Notes following Clean Architecture principles
@@ -12,7 +14,9 @@ import com.vicherarr.memora.database.Notes
  */
 class NoteDomainMapper(
     private val attachmentsDao: AttachmentsDao,
-    private val attachmentMapper: AttachmentDomainMapper
+    private val attachmentMapper: AttachmentDomainMapper,
+    private val noteCategoriesDao: NoteCategoriesDao,
+    private val categoryMapper: CategoryDomainMapper
 ) {
     
     /**
@@ -45,7 +49,28 @@ class NoteDomainMapper(
             fechaCreacion = entity.fecha_creacion.toLongOrNull() ?: getCurrentTimestamp(),
             fechaModificacion = entity.fecha_modificacion.toLongOrNull() ?: getCurrentTimestamp(),
             usuarioId = entity.usuario_id,
-            archivosAdjuntos = attachments.map { attachmentMapper.toDomainModel(it) }
+            archivosAdjuntos = attachments.map { attachmentMapper.toDomainModel(it) },
+            categories = emptyList() // Categories not loaded in this method for performance
+        )
+    }
+    
+    /**
+     * Convert SQLDelight Notes entity to Domain model WITH attachments AND categories
+     * Use when full note data including categories is needed
+     */
+    suspend fun toDomainModelWithAttachmentsAndCategories(entity: Notes): Note {
+        val attachments = attachmentsDao.getAttachmentsByNoteId(entity.id)
+        val categories = noteCategoriesDao.getCategoriesByNoteId(entity.id)
+        
+        return Note(
+            id = entity.id,
+            titulo = entity.titulo,
+            contenido = entity.contenido,
+            fechaCreacion = entity.fecha_creacion.toLongOrNull() ?: getCurrentTimestamp(),
+            fechaModificacion = entity.fecha_modificacion.toLongOrNull() ?: getCurrentTimestamp(),
+            usuarioId = entity.usuario_id,
+            archivosAdjuntos = attachments.map { attachmentMapper.toDomainModel(it) },
+            categories = categories.map { categoryMapper.toDomain(it) }
         )
     }
     
@@ -60,6 +85,16 @@ class NoteDomainMapper(
     }
     
     /**
+     * Convert list of Notes entities to Domain models with attachments AND categories
+     * Use when displaying notes list with full information including categories
+     */
+    suspend fun toDomainModelListWithAttachmentsAndCategories(entities: List<Notes>): List<Note> {
+        return entities.map { entity ->
+            toDomainModelWithAttachmentsAndCategories(entity)
+        }
+    }
+    
+    /**
      * Convert list of Notes entities to Domain models without attachments
      * Optimized for performance when attachments are not needed
      */
@@ -69,11 +104,4 @@ class NoteDomainMapper(
         }
     }
     
-    /**
-     * Helper method to get current timestamp
-     * Centralized for consistency across mapping operations
-     */
-    private fun getCurrentTimestamp(): Long {
-        return System.currentTimeMillis()
-    }
 }

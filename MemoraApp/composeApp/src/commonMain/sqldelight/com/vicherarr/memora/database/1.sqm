@@ -1,0 +1,47 @@
+-- Migration 1: Add Categories and NoteCategories tables
+-- From version 1 to version 2
+-- This migration adds the category system without affecting existing data
+
+-- Create categories table for user-defined dynamic categories
+CREATE TABLE categories (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    color TEXT NOT NULL DEFAULT '#6750A4',
+    icon TEXT DEFAULT NULL,
+    created_at TEXT NOT NULL,
+    modified_at TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    sync_status TEXT NOT NULL DEFAULT 'PENDING',
+    needs_upload INTEGER NOT NULL DEFAULT 1,
+    local_created_at INTEGER NOT NULL,
+    last_sync_attempt INTEGER DEFAULT NULL,
+    remote_id TEXT DEFAULT NULL,
+    UNIQUE(name, user_id)
+);
+
+-- Create note_categories table for N:M relationship
+CREATE TABLE note_categories (
+    id TEXT NOT NULL PRIMARY KEY,
+    note_id TEXT NOT NULL,
+    category_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    sync_status TEXT NOT NULL DEFAULT 'PENDING',
+    needs_upload INTEGER NOT NULL DEFAULT 1,
+    local_created_at INTEGER NOT NULL,
+    last_sync_attempt INTEGER DEFAULT NULL,
+    remote_id TEXT DEFAULT NULL,
+    FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
+    UNIQUE(note_id, category_id)
+);
+
+-- Create indices for optimal performance
+CREATE INDEX idx_categories_user_id ON categories(user_id);
+CREATE INDEX idx_categories_sync_status ON categories(sync_status);
+CREATE INDEX idx_categories_name ON categories(name);
+CREATE INDEX idx_categories_needs_upload ON categories(needs_upload);
+
+CREATE INDEX idx_note_categories_note_id ON note_categories(note_id);
+CREATE INDEX idx_note_categories_category_id ON note_categories(category_id);
+CREATE INDEX idx_note_categories_sync_status ON note_categories(sync_status);
+CREATE INDEX idx_note_categories_needs_upload ON note_categories(needs_upload);

@@ -36,6 +36,7 @@ import com.vicherarr.memora.platform.camera.rememberCameraCaptureManager
 import com.vicherarr.memora.platform.camera.CameraCaptureMode
 import com.vicherarr.memora.presentation.viewmodels.CreateNoteViewModel
 import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
+import com.vicherarr.memora.presentation.components.CategorySection
 import org.koin.compose.getKoin
 import org.koin.compose.koinInject
 
@@ -156,6 +157,24 @@ class CreateNoteScreen : Screen {
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         enabled = !noteUiState.isLoading && !mediaUiState.isLoading
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Category Section
+                    CategorySection(
+                        availableCategories = noteUiState.availableCategories,
+                        selectedCategories = noteUiState.selectedCategories,
+                        isShowingCategoryDropdown = noteUiState.isShowingCategoryDropdown,
+                        isCreatingCategory = noteUiState.isCreatingCategory,
+                        newCategoryName = noteUiState.newCategoryName,
+                        onCategoryToggle = createNoteViewModel::toggleCategory,
+                        onShowCategoryDropdown = createNoteViewModel::showCategoryDropdown,
+                        onHideCategoryDropdown = createNoteViewModel::hideCategoryDropdown,
+                        onShowCreateCategory = createNoteViewModel::showCreateCategory,
+                        onHideCreateCategory = createNoteViewModel::hideCreateCategory,
+                        onNewCategoryNameChange = createNoteViewModel::updateNewCategoryName,
+                        onCreateCategory = createNoteViewModel::createNewCategory
                     )
                     
                     Spacer(modifier = Modifier.height(16.dp))

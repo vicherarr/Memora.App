@@ -1,0 +1,126 @@
+-- Categories.sq - Tabla para categorías dinámicas creadas por usuarios
+-- Diseñada para sincronización inteligente y mínimo impacto en código existente
+
+CREATE TABLE categories (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    color TEXT NOT NULL DEFAULT '#6750A4', -- Material Design 3 Primary color
+    icon TEXT DEFAULT NULL, -- Nombre del icono opcional (ej: 'work', 'personal')
+    created_at TEXT NOT NULL,
+    modified_at TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    
+    -- Campos de sincronización inteligente (siguiendo patrón de Notes y Attachments)
+    sync_status TEXT NOT NULL DEFAULT 'PENDING', -- PENDING, SYNCED, FAILED
+    needs_upload INTEGER NOT NULL DEFAULT 1, -- 0 = no, 1 = sí
+    local_created_at INTEGER NOT NULL, -- timestamp local para ordenación
+    last_sync_attempt INTEGER DEFAULT NULL, -- último intento de sincronización
+    remote_id TEXT DEFAULT NULL, -- ID en el servidor remoto
+    
+    -- Constraint: Una categoría por nombre por usuario
+    UNIQUE(name, user_id)
+);
+
+-- Índices para optimización de queries
+CREATE INDEX idx_categories_user_id ON categories(user_id);
+CREATE INDEX idx_categories_sync_status ON categories(sync_status);
+CREATE INDEX idx_categories_name ON categories(name);
+CREATE INDEX idx_categories_needs_upload ON categories(needs_upload);
+
+-- Queries para CategoriesDao
+
+-- === CRUD Operations ===
+
+insertCategory:
+INSERT INTO categories (
+    id, name, color, icon, created_at, modified_at, user_id,
+    sync_status, needs_upload, local_created_at, remote_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateCategory:
+UPDATE categories 
+SET name = ?, color = ?, icon = ?, modified_at = ?, 
+    sync_status = 'PENDING', needs_upload = 1, last_sync_attempt = NULL
+WHERE id = ?;
+
+deleteCategory:
+DELETE FROM categories WHERE id = ?;
+
+getCategoryById:
+SELECT * FROM categories WHERE id = ?;
+
+-- === User-specific Queries ===
+
+getCategoriesByUserId:
+SELECT * FROM categories 
+WHERE user_id = ? 
+ORDER BY name ASC;
+
+getCategoriesByUserIdFlow:
+SELECT * FROM categories 
+WHERE user_id = ? 
+ORDER BY name ASC;
+
+-- === Category Management ===
+
+getCategoryByNameAndUserId:
+SELECT * FROM categories 
+WHERE name = ? AND user_id = ? 
+LIMIT 1;
+
+getCategoriesByIds:
+SELECT * FROM categories 
+WHERE id IN ?
+ORDER BY name ASC;
+
+-- Query para obtener categorías con conteo de notas
+getCategoriesWithNoteCount:
+SELECT 
+    c.*,
+    COUNT(nc.note_id) AS notesCount
+FROM categories c
+LEFT JOIN note_categories nc ON c.id = nc.category_id
+WHERE c.user_id = ?
+GROUP BY c.id
+ORDER BY c.name ASC;
+
+-- Query para encontrar categorías sin notas asignadas
+getUnusedCategories:
+SELECT c.*
+FROM categories c
+LEFT JOIN note_categories nc ON c.id = nc.category_id
+WHERE c.user_id = ? AND nc.category_id IS NULL
+ORDER BY c.created_at ASC;
+
+-- === Sync Operations ===
+
+getCategoriesPendingSync:
+SELECT * FROM categories 
+WHERE user_id = ? AND (sync_status = 'PENDING' OR needs_upload = 1)
+ORDER BY local_created_at ASC;
+
+markCategoryAsSynced:
+UPDATE categories 
+SET sync_status = 'SYNCED', needs_upload = 0, last_sync_attempt = ?
+WHERE id = ?;
+
+markCategoryAsFailed:
+UPDATE categories 
+SET sync_status = 'FAILED', last_sync_attempt = ?
+WHERE id = ?;
+
+updateRemoteId:
+UPDATE categories 
+SET remote_id = ?
+WHERE id = ?;
+
+-- === Statistics for Sync Metadata ===
+
+getCategoriesCount:
+SELECT COUNT(*) FROM categories WHERE user_id = ?;
+
+getCategoriesHashData:
+SELECT id, name, color, modified_at 
+FROM categories 
+WHERE user_id = ? 
+ORDER BY id ASC;

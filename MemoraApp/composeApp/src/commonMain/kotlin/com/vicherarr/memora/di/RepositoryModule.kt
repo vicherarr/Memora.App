@@ -21,13 +21,16 @@ val repositoryModule = module {
         NotesRepositoryImpl(
             notesDao = get(),
             attachmentsDao = get(),
+            categoriesDao = get(),
+            noteCategoriesDao = get(),
             notesApi = get(),
             fileManager = get(),
             cloudAuthProvider = get(),
             syncMetadataRepository = get(),
             deletionsDao = get(),
             noteDomainMapper = get(),
-            attachmentDomainMapper = get()
+            attachmentDomainMapper = get(),
+            categoryDomainMapper = get()
         ) 
     }
     single<AttachmentsRepository> { 

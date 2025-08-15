@@ -1,9 +1,11 @@
 package com.vicherarr.memora.di
 
 import com.vicherarr.memora.data.database.AttachmentsDao
+import com.vicherarr.memora.data.database.CategoriesDao
 import com.vicherarr.memora.data.database.DatabaseDriverFactory
 import com.vicherarr.memora.data.database.DatabaseManager
 import com.vicherarr.memora.data.database.DeletionsDao
+import com.vicherarr.memora.data.database.NoteCategoriesDao
 import com.vicherarr.memora.data.database.NotesDao
 import com.vicherarr.memora.data.database.SyncMetadataDao
 import org.koin.dsl.module
@@ -40,6 +42,16 @@ val databaseModule = module {
     // DeletionsDao - for tombstones tracking
     single<DeletionsDao> {
         get<DatabaseManager>().deletionsDao
+    }
+    
+    // CategoriesDao - from DatabaseManager
+    single<CategoriesDao> {
+        get<DatabaseManager>().categoriesDao
+    }
+    
+    // NoteCategoriesDao - from DatabaseManager
+    single<NoteCategoriesDao> {
+        get<DatabaseManager>().noteCategoriesDao
     }
     
     // TombstoneService - for Clean Architecture tombstone management

@@ -3,6 +3,8 @@ package com.vicherarr.memora.presentation.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
@@ -323,6 +325,12 @@ internal fun RedesignedNoteCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Show categories if any
+            if (note.categories.isNotEmpty()) {
+                NoteCategoriesRow(categories = note.categories)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -488,5 +496,63 @@ private fun ErrorState(message: String) {
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.error
         )
+    }
+}
+
+@Composable
+private fun NoteCategoriesRow(categories: List<Category>) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        items(categories.take(3)) { category ->
+            AssistChip(
+                onClick = { /* No action needed in list view */ },
+                label = { 
+                    Text(
+                        text = category.name,
+                        style = MaterialTheme.typography.labelSmall
+                    ) 
+                },
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = Color(parseHexColor(category.color)).copy(alpha = 0.15f),
+                    labelColor = Color(parseHexColor(category.color))
+                ),
+                border = null,
+                modifier = Modifier.height(24.dp)
+            )
+        }
+        if (categories.size > 3) {
+            item {
+                AssistChip(
+                    onClick = { /* No action needed */ },
+                    label = { 
+                        Text(
+                            text = "+${categories.size - 3}",
+                            style = MaterialTheme.typography.labelSmall
+                        ) 
+                    },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    border = null,
+                    modifier = Modifier.height(24.dp)
+                )
+            }
+        }
+    }
+}
+
+// Helper function to parse hex color (copied from CategoryDomainMapper)
+private fun parseHexColor(hexColor: String): Int {
+    return try {
+        val cleanHex = hexColor.removePrefix("#")
+        when (cleanHex.length) {
+            6 -> cleanHex.toLong(16).toInt() or 0xFF000000.toInt() // Add alpha
+            8 -> cleanHex.toLong(16).toInt() // Already has alpha
+            else -> 0xFF6750A4.toInt() // Default Material Design 3 Primary
+        }
+    } catch (e: NumberFormatException) {
+        0xFF6750A4.toInt() // Default color on parse error
     }
 }

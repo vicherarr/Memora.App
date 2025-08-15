@@ -40,6 +40,20 @@ class DatabaseManager(private val driverFactory: DatabaseDriverFactory) {
     }
     
     /**
+     * Categories Data Access Object
+     */
+    val categoriesDao: CategoriesDao by lazy {
+        CategoriesDao(database)
+    }
+    
+    /**
+     * Note Categories Data Access Object (N:M relationships)
+     */
+    val noteCategoriesDao: NoteCategoriesDao by lazy {
+        NoteCategoriesDao(database)
+    }
+    
+    /**
      * Get direct access to database if needed
      */
     fun getDatabase(): MemoraDatabase = database

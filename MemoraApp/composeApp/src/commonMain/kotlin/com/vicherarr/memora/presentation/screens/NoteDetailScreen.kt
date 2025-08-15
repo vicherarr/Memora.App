@@ -39,6 +39,8 @@ import com.vicherarr.memora.platform.camera.rememberCameraCaptureManager
 import com.vicherarr.memora.platform.camera.CameraCaptureMode
 import com.vicherarr.memora.presentation.viewmodels.NoteDetailViewModel
 import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
+import com.vicherarr.memora.presentation.components.CategorySection
+import com.vicherarr.memora.presentation.components.CategoryDisplay
 import com.vicherarr.memora.presentation.components.ImageFullScreenViewer
 import com.vicherarr.memora.presentation.components.VideoPlayerDialog
 import com.vicherarr.memora.ui.components.MemoraTextField
@@ -175,6 +177,11 @@ data class NoteDetailScreen(private val noteId: String) : Screen {
                                 contenido = uiState.editContenido,
                                 editAttachments = uiState.editAttachments,
                                 newlySelectedMedia = mediaUiState.selectedMedia,
+                                availableCategories = uiState.availableCategories,
+                                selectedCategories = uiState.selectedCategories,
+                                isShowingCategoryDropdown = uiState.isShowingCategoryDropdown,
+                                isCreatingCategory = uiState.isCreatingCategory,
+                                newCategoryName = uiState.newCategoryName,
                                 onTituloChange = viewModel::updateEditTitulo,
                                 onContenidoChange = viewModel::updateEditContenido,
                                 onRemoveAttachment = viewModel::removeAttachment,
@@ -184,11 +191,20 @@ data class NoteDetailScreen(private val noteId: String) : Screen {
                                 onCameraClick = { showCameraCaptureDialog = true },
                                 onGalleryClick = { galleryManager.launch() },
                                 onVideoPickerClick = { videoPickerManager.launch() },
+                                onCategoryToggle = viewModel::toggleCategory,
+                                onShowCategoryDropdown = viewModel::showCategoryDropdown,
+                                onHideCategoryDropdown = viewModel::hideCategoryDropdown,
+                                onShowCreateCategory = viewModel::showCreateCategory,
+                                onHideCreateCategory = viewModel::hideCreateCategory,
+                                onNewCategoryNameChange = viewModel::updateNewCategoryName,
+                                onCreateCategory = viewModel::createNewCategory,
                                 validationHint = viewModel.getValidationHint(uiState.editContenido)
                             )
                         } else {
                             ViewNoteContent(
                                 note = uiState.note!!,
+                                selectedCategories = uiState.selectedCategories,
+                                availableCategories = uiState.availableCategories,
                                 onMediaClick = { attachment -> viewModel.showMediaViewer(attachment) }
                             )
                         }
@@ -337,6 +353,11 @@ private fun EditNoteContent(
     contenido: String,
     editAttachments: List<com.vicherarr.memora.domain.models.ArchivoAdjunto>,
     newlySelectedMedia: List<com.vicherarr.memora.domain.models.MediaFile>,
+    availableCategories: List<com.vicherarr.memora.domain.models.Category>,
+    selectedCategories: List<String>,
+    isShowingCategoryDropdown: Boolean,
+    isCreatingCategory: Boolean,
+    newCategoryName: String,
     onTituloChange: (String) -> Unit,
     onContenidoChange: (String) -> Unit,
     onRemoveAttachment: (String) -> Unit,
@@ -346,6 +367,13 @@ private fun EditNoteContent(
     onCameraClick: () -> Unit,
     onGalleryClick: () -> Unit,
     onVideoPickerClick: () -> Unit,
+    onCategoryToggle: (String) -> Unit,
+    onShowCategoryDropdown: () -> Unit,
+    onHideCategoryDropdown: () -> Unit,
+    onShowCreateCategory: () -> Unit,
+    onHideCreateCategory: () -> Unit,
+    onNewCategoryNameChange: (String) -> Unit,
+    onCreateCategory: () -> Unit,
     validationHint: String?
 ) {
     Column(
@@ -360,6 +388,24 @@ private fun EditNoteContent(
             onValueChange = onTituloChange,
             label = "Título (opcional)",
             modifier = Modifier.fillMaxWidth()
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Category Section
+        CategorySection(
+            availableCategories = availableCategories,
+            selectedCategories = selectedCategories,
+            isShowingCategoryDropdown = isShowingCategoryDropdown,
+            isCreatingCategory = isCreatingCategory,
+            newCategoryName = newCategoryName,
+            onCategoryToggle = onCategoryToggle,
+            onShowCategoryDropdown = onShowCategoryDropdown,
+            onHideCategoryDropdown = onHideCategoryDropdown,
+            onShowCreateCategory = onShowCreateCategory,
+            onHideCreateCategory = onHideCreateCategory,
+            onNewCategoryNameChange = onNewCategoryNameChange,
+            onCreateCategory = onCreateCategory
         )
         
         Spacer(modifier = Modifier.height(16.dp))
@@ -512,6 +558,8 @@ private fun EditNoteContent(
 @Composable
 private fun ViewNoteContent(
     note: com.vicherarr.memora.domain.models.Note,
+    selectedCategories: List<String>,
+    availableCategories: List<com.vicherarr.memora.domain.models.Category>,
     onMediaClick: (com.vicherarr.memora.domain.models.ArchivoAdjunto) -> Unit
 ) {
     LazyColumn(
@@ -530,6 +578,14 @@ private fun ViewNoteContent(
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
+        }
+        
+        // Categories Display (Read-only)
+        item {
+            CategoryDisplay(
+                selectedCategories = selectedCategories,
+                availableCategories = availableCategories
+            )
         }
         
         // Fecha de creación

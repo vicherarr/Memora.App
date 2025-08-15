@@ -4,17 +4,21 @@ import com.vicherarr.memora.data.api.NotesApi
 import com.vicherarr.memora.data.auth.CloudAuthProvider
 import com.vicherarr.memora.data.database.AttachmentsDao
 import com.vicherarr.memora.data.database.NotesDao
+import com.vicherarr.memora.data.database.CategoriesDao
+import com.vicherarr.memora.data.database.NoteCategoriesDao
 import com.vicherarr.memora.data.database.getCurrentTimestamp
 import com.vicherarr.memora.data.dto.CreateNotaDto
 import com.vicherarr.memora.data.dto.UpdateNotaDto
 import com.vicherarr.memora.data.mappers.NoteDomainMapper
 import com.vicherarr.memora.data.mappers.AttachmentDomainMapper
+import com.vicherarr.memora.data.mappers.CategoryDomainMapper
 import com.vicherarr.memora.database.Notes
 import com.vicherarr.memora.database.Attachments
 import com.vicherarr.memora.domain.model.AuthState
 import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.domain.models.ArchivoAdjunto
 import com.vicherarr.memora.domain.models.TipoDeArchivo
+import com.vicherarr.memora.domain.models.Category
 import com.vicherarr.memora.domain.models.MediaFile
 import com.vicherarr.memora.domain.models.MediaType
 import com.vicherarr.memora.domain.platform.FileManager
@@ -34,13 +38,16 @@ import kotlinx.coroutines.flow.combine
 class NotesRepositoryImpl(
     private val notesDao: NotesDao,
     private val attachmentsDao: AttachmentsDao,
+    private val categoriesDao: CategoriesDao,
+    private val noteCategoriesDao: NoteCategoriesDao,
     private val notesApi: NotesApi,
     private val fileManager: FileManager,
     private val cloudAuthProvider: CloudAuthProvider,
     private val syncMetadataRepository: com.vicherarr.memora.domain.repository.SyncMetadataRepository,
     private val deletionsDao: com.vicherarr.memora.data.database.DeletionsDao,
     private val noteDomainMapper: NoteDomainMapper,
-    private val attachmentDomainMapper: AttachmentDomainMapper
+    private val attachmentDomainMapper: AttachmentDomainMapper,
+    private val categoryDomainMapper: CategoryDomainMapper
 ) : NotesRepository {
 
     private fun getCurrentUserId(): String {
@@ -402,25 +409,42 @@ class NotesRepositoryImpl(
     }
     
     /**
-     * Private helper to get notes with attachments as Flow
-     * Uses MVVM + Clean Architecture: combines notes and attachments flows for reactive updates
+     * Private helper to get notes with attachments and categories as Flow
+     * Uses MVVM + Clean Architecture: combines flows from different data sources for reactive updates
+     * Updated to include categories for complete note information in listings
      */
     private fun getNotesWithAttachmentsFlow(userId: String): Flow<List<Note>> {
         // CLEAN ARCHITECTURE: Combine flows from different data sources
-        // This ensures UI refreshes when EITHER notes OR attachments change
+        // This ensures UI refreshes when notes, attachments, OR categories change
         return combine(
-            notesDao.getNotesByUserIdFlow(userId), // Flow for notes changes
-            attachmentsDao.getAllAttachmentsFlow()  // Flow for ANY attachment changes
-        ) { notesList, allAttachments ->
+            notesDao.getNotesByUserIdFlow(userId),        // Flow for notes changes
+            attachmentsDao.getAllAttachmentsFlow(),       // Flow for ANY attachment changes
+            noteCategoriesDao.getAllNoteCategoriesFlow()  // Flow for ANY category relationship changes
+        ) { notesList, allAttachments, allNoteCategories ->
             
-            // Create a map for efficient attachment lookup by note_id
+            // Create efficient lookup maps
             val attachmentsByNoteId = allAttachments.groupBy { it.nota_id }
+            val categoryIdsByNoteId = allNoteCategories.groupBy { it.note_id }
             
-            // Transform notes with their corresponding attachments
+            // Transform notes with their corresponding attachments and categories
             notesList.map { note ->
                 val noteAttachments = attachmentsByNoteId[note.id] ?: emptyList()
+                val noteCategoryRelations = categoryIdsByNoteId[note.id] ?: emptyList()
                 
-                // Convert to domain model with attachments using NoteDomainMapper
+                // Get categories for this note (we need to fetch the actual category data)
+                val categories = if (noteCategoryRelations.isNotEmpty()) {
+                    // Note: This is not ideal for performance, but it's the simplest approach for now
+                    // In a real production app, we'd optimize this with a more complex flow combination
+                    // or use a custom query that JOINs the tables
+                    runCatching {
+                        categoriesDao.getCategoriesByIds(noteCategoryRelations.map { it.category_id })
+                            .map { categoryDomainMapper.toDomain(it) }
+                    }.getOrElse { emptyList() }
+                } else {
+                    emptyList()
+                }
+                
+                // Convert to domain model with attachments and categories
                 Note(
                     id = note.id,
                     titulo = note.titulo,
@@ -428,12 +452,27 @@ class NotesRepositoryImpl(
                     fechaCreacion = note.fecha_creacion.toLongOrNull() ?: getCurrentTimestamp(),
                     fechaModificacion = note.fecha_modificacion.toLongOrNull() ?: getCurrentTimestamp(),
                     usuarioId = note.usuario_id,
-                    archivosAdjuntos = attachmentDomainMapper.toDomainModelList(noteAttachments)
+                    archivosAdjuntos = attachmentDomainMapper.toDomainModelList(noteAttachments),
+                    categories = categories
                 )
             }
         }
     }
     
-    // Note: All mapping functions have been extracted to NoteDomainMapper
+    // === Categories Support ===
+    
+    suspend fun getCategoriesByUserId(userId: String): List<Category> {
+        return categoriesDao.getCategoriesByUserId(userId)
+            .map { categoryDomainMapper.toDomain(it) }
+    }
+    
+    fun getCategoriesByUserIdFlow(userId: String): Flow<List<Category>> {
+        return categoriesDao.getCategoriesByUserIdFlow(userId)
+            .map { categories -> 
+                categories.map { categoryDomainMapper.toDomain(it) }
+            }
+    }
+    
+    // Note: All mapping functions have been extracted to Domain Mappers
     // following Single Responsibility Principle and Clean Architecture
 }

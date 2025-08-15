@@ -81,13 +81,6 @@ class AttachmentDomainMapper {
         }
     }
     
-    /**
-     * Helper method to get current timestamp
-     * Centralized for consistency across mapping operations
-     */
-    private fun getCurrentTimestamp(): Long {
-        return System.currentTimeMillis()
-    }
 }
 
 /**

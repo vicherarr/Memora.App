@@ -8,6 +8,13 @@ import com.vicherarr.memora.domain.models.MediaFile
 import com.vicherarr.memora.domain.usecases.SearchNotesUseCase
 import com.vicherarr.memora.domain.usecases.UpdateNoteUseCase
 import com.vicherarr.memora.domain.usecases.DeleteNoteUseCase
+import com.vicherarr.memora.domain.usecases.GetCategoriesByUserUseCase
+import com.vicherarr.memora.domain.usecases.CreateCategoryUseCase
+import com.vicherarr.memora.domain.usecases.GetCategoriesByNoteIdUseCase
+import com.vicherarr.memora.data.auth.CloudAuthProvider
+import com.vicherarr.memora.domain.model.AuthState
+import com.vicherarr.memora.domain.model.User
+import com.vicherarr.memora.domain.models.Category
 import com.vicherarr.memora.presentation.states.BaseUiState
 import com.vicherarr.memora.presentation.states.ImageViewerState
 import com.vicherarr.memora.presentation.states.VideoViewerState
@@ -25,9 +32,14 @@ data class NoteDetailUiState(
     val isEditMode: Boolean = false,
     val editTitulo: String = "",
     val editContenido: String = "",
-    val editAttachments: List<ArchivoAdjunto> = emptyList(), // Current attachments in edit mode
-    val imageViewer: ImageViewerState = ImageViewerState(), // Image viewer state following MVVM
-    val videoViewer: VideoViewerState = VideoViewerState(), // Video viewer state following MVVM
+    val editAttachments: List<ArchivoAdjunto> = emptyList(),
+    val selectedCategories: List<String> = emptyList(),
+    val availableCategories: List<com.vicherarr.memora.domain.models.Category> = emptyList(),
+    val isShowingCategoryDropdown: Boolean = false,
+    val isCreatingCategory: Boolean = false,
+    val newCategoryName: String = "",
+    val imageViewer: ImageViewerState = ImageViewerState(),
+    val videoViewer: VideoViewerState = VideoViewerState(),
     val isNoteDeleted: Boolean = false,
     val isNoteSaved: Boolean = false,
     override val isLoading: Boolean = false,
@@ -42,6 +54,10 @@ class NoteDetailViewModel(
     private val searchNotesUseCase: SearchNotesUseCase,
     private val updateNoteUseCase: UpdateNoteUseCase,
     private val deleteNoteUseCase: DeleteNoteUseCase,
+    private val getCategoriesByUserUseCase: GetCategoriesByUserUseCase,
+    private val createCategoryUseCase: CreateCategoryUseCase,
+    private val getCategoriesByNoteIdUseCase: GetCategoriesByNoteIdUseCase,
+    private val cloudAuthProvider: CloudAuthProvider,
     private val mediaViewModel: MediaViewModel
 ) : BaseViewModel<NoteDetailUiState>() {
     
@@ -71,6 +87,11 @@ class NoteDetailViewModel(
                             errorMessage = null
                         )
                     }
+                    
+                    // Load categories for this note
+                    loadNoteCategoriesForViewing(noteId)
+                    // Also load available categories for editing
+                    loadCategories()
                 }
                 .onFailure { exception ->
                     setError(exception.message ?: "Error al cargar la nota")
@@ -83,13 +104,20 @@ class NoteDetailViewModel(
      */
     fun enterEditMode() {
         val currentNote = _uiState.value.note ?: return
+        
         _uiState.value = _uiState.value.copy(
             isEditMode = true,
             editTitulo = currentNote.titulo ?: "",
             editContenido = currentNote.contenido,
-            editAttachments = currentNote.archivosAdjuntos, // Copy original attachments for editing
+            editAttachments = currentNote.archivosAdjuntos,
             errorMessage = null
         )
+        
+        // Load categories assigned to this note
+        loadNoteCategoriesForEditing(currentNote.id)
+        
+        // Load available categories
+        loadCategories()
     }
     
     /**
@@ -164,7 +192,8 @@ class NoteDetailViewModel(
                 titulo = newTitulo,
                 contenido = newContenido,
                 existingAttachments = currentState.editAttachments,
-                newMediaFiles = mediaViewModel.uiState.value.selectedMedia
+                newMediaFiles = mediaViewModel.uiState.value.selectedMedia,
+                categoryIds = currentState.selectedCategories
             )
             
             result.onSuccess {
@@ -330,6 +359,138 @@ class NoteDetailViewModel(
             contenido.length > 10000 -> "El contenido es demasiado largo (máximo 10,000 caracteres)"
             titulo.length > 200 -> "El título es demasiado largo (máximo 200 caracteres)"
             else -> null
+        }
+    }
+    
+    // === Categories Management - Following Single Responsibility Principle ===
+    
+    /**
+     * Load available categories for user - Following Clean Architecture
+     */
+    private fun loadCategories() {
+        getCurrentUserId()?.let { userId ->
+            viewModelScope.launch {
+                getCategoriesByUserUseCase.execute(userId).collect { categories ->
+                    updateState { copy(availableCategories = categories) }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Load categories assigned to specific note for viewing - Following Clean Architecture
+     */
+    private fun loadNoteCategoriesForViewing(noteId: String) {
+        viewModelScope.launch {
+            getCategoriesByNoteIdUseCase.execute(noteId).collect { categories ->
+                val categoryIds = categories.map { it.id }
+                updateState { copy(selectedCategories = categoryIds) }
+            }
+        }
+    }
+    
+    /**
+     * Load categories assigned to specific note for editing - Following Clean Architecture
+     */
+    private fun loadNoteCategoriesForEditing(noteId: String) {
+        viewModelScope.launch {
+            val categories = getCategoriesByNoteIdUseCase.executeOnce(noteId)
+            val categoryIds = categories.map { it.id }
+            updateState { copy(selectedCategories = categoryIds) }
+        }
+    }
+    
+    /**
+     * Get current user ID - Following Clean Architecture
+     */
+    private fun getCurrentUserId(): String? {
+        return when (val authState = cloudAuthProvider.authState.value) {
+            is AuthState.Authenticated -> authState.user.id
+            else -> null
+        }
+    }
+    
+    /**
+     * Toggle category selection - Following Single Responsibility Principle
+     */
+    fun toggleCategory(categoryId: String) {
+        val currentSelected = _uiState.value.selectedCategories
+        val newSelected = if (categoryId in currentSelected) {
+            currentSelected - categoryId
+        } else {
+            currentSelected + categoryId
+        }
+        updateState { copy(selectedCategories = newSelected) }
+    }
+    
+    /**
+     * Show category dropdown - Following Single Responsibility Principle
+     */
+    fun showCategoryDropdown() {
+        updateState { copy(isShowingCategoryDropdown = true) }
+    }
+    
+    /**
+     * Hide category dropdown - Following Single Responsibility Principle
+     */
+    fun hideCategoryDropdown() {
+        updateState { 
+            copy(
+                isShowingCategoryDropdown = false,
+                isCreatingCategory = false,
+                newCategoryName = ""
+            ) 
+        }
+    }
+    
+    /**
+     * Show create category field - Following Single Responsibility Principle
+     */
+    fun showCreateCategory() {
+        updateState { copy(isCreatingCategory = true, newCategoryName = "") }
+    }
+    
+    /**
+     * Hide create category field - Following Single Responsibility Principle
+     */
+    fun hideCreateCategory() {
+        updateState { copy(isCreatingCategory = false, newCategoryName = "") }
+    }
+    
+    /**
+     * Update new category name - Following Single Responsibility Principle
+     */
+    fun updateNewCategoryName(name: String) {
+        updateState { copy(newCategoryName = name) }
+    }
+    
+    /**
+     * Create new category - Following Clean Architecture
+     */
+    fun createNewCategory() {
+        val name = _uiState.value.newCategoryName.trim()
+        if (name.isEmpty()) return
+        
+        getCurrentUserId()?.let { userId ->
+            viewModelScope.launch {
+                createCategoryUseCase.execute(name, userId).fold(
+                    onSuccess = { category ->
+                        val newSelected = _uiState.value.selectedCategories + category.id
+                        updateState { 
+                            copy(
+                                selectedCategories = newSelected,
+                                isCreatingCategory = false,
+                                newCategoryName = "",
+                                isShowingCategoryDropdown = false
+                            ) 
+                        }
+                    },
+                    onFailure = { error ->
+                        setError(error.message ?: "Error creating category")
+                        updateState { copy(isCreatingCategory = false) }
+                    }
+                )
+            }
         }
     }
 }
