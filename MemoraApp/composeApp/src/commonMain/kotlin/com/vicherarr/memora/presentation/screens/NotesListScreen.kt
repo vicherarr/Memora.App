@@ -15,7 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush // Added this line
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -27,20 +27,15 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
-import com.vicherarr.memora.domain.models.ArchivoAdjunto
-import com.vicherarr.memora.domain.models.Note
-import com.vicherarr.memora.domain.models.TipoDeArchivo
+import com.vicherarr.memora.domain.models.*
+import com.vicherarr.memora.domain.utils.DateTimeUtils
+import com.vicherarr.memora.presentation.components.ActiveFiltersChips
+import com.vicherarr.memora.presentation.components.FiltersSection
+import com.vicherarr.memora.presentation.components.ImageFullScreenViewer
+import com.vicherarr.memora.presentation.components.SyncStatusIndicator
+import com.vicherarr.memora.presentation.components.VideoPlayerDialog
 import com.vicherarr.memora.presentation.viewmodels.NotesViewModel
 import com.vicherarr.memora.presentation.viewmodels.SyncViewModel
-import com.vicherarr.memora.presentation.components.SyncStatusIndicator
-import com.vicherarr.memora.presentation.components.FiltersSection
-import com.vicherarr.memora.presentation.components.ActiveFiltersChips
-import com.vicherarr.memora.presentation.components.ImageFullScreenViewer
-import com.vicherarr.memora.presentation.components.VideoPlayerDialog
-import com.vicherarr.memora.domain.models.DateFilter
-import com.vicherarr.memora.domain.models.DateRange
-import com.vicherarr.memora.domain.models.FileTypeFilter
-import com.vicherarr.memora.domain.utils.DateTimeUtils
 import org.koin.compose.getKoin
 import kotlin.math.abs
 
@@ -55,51 +50,15 @@ class NotesListScreen : Screen {
         val uiState by notesViewModel.uiState.collectAsState()
         val syncState by syncViewModel.syncState.collectAsState()
         val attachmentSyncState by syncViewModel.attachmentSyncState.collectAsState()
-        var searchQuery by rememberSaveable { mutableStateOf("") }
-        var showFilters by rememberSaveable { mutableStateOf(false) }
-        var selectedDateFilter by rememberSaveable { mutableStateOf(DateFilter.ALL) }
-        var selectedFileType by rememberSaveable { mutableStateOf(FileTypeFilter.ALL) }
-        var customDateRange by remember { mutableStateOf<DateRange?>(null) }
 
-        val filteredNotes = remember(uiState.notes, searchQuery, selectedDateFilter, selectedFileType, customDateRange) {
-            var notes = uiState.notes
-            if (searchQuery.isNotBlank()) {
-                notes = notes.filter { note ->
-                    note.titulo?.contains(searchQuery, ignoreCase = true) == true ||
-                            note.contenido.contains(searchQuery, ignoreCase = true)
-                }
-            }
-            // Apply date filtering using the new unified logic
-            notes = notes.filter { note ->
-                DateTimeUtils.matchesDateFilter(
-                    timestamp = note.fechaModificacion,
-                    dateFilter = selectedDateFilter,
-                    customRange = customDateRange
-                )
-            }
-            notes = when (selectedFileType) {
-                FileTypeFilter.WITH_IMAGES -> notes.filter { note ->
-                    note.archivosAdjuntos.any { it.tipoArchivo == TipoDeArchivo.Imagen }
-                }
-                FileTypeFilter.WITH_VIDEOS -> notes.filter { note ->
-                    note.archivosAdjuntos.any { it.tipoArchivo == TipoDeArchivo.Video }
-                }
-                FileTypeFilter.WITH_ATTACHMENTS -> notes.filter { note ->
-                    note.archivosAdjuntos.isNotEmpty()
-                }
-                FileTypeFilter.TEXT_ONLY -> notes.filter { note ->
-                    note.archivosAdjuntos.isEmpty()
-                }
-                FileTypeFilter.ALL -> notes
-            }
-            notes
-        }
+        // This state is purely for the UI (expanding/collapsing the filter section)
+        var showFilters by rememberSaveable { mutableStateOf(false) }
 
         Scaffold(
             topBar = {
                 TopAppBar(
                     title = {
-                        val gradientColors = listOf(Color(0xFF1976D2), Color(0xFF00796B)) // Darker Blue to Darker Teal
+                        val gradientColors = listOf(Color(0xFF1976D2), Color(0xFF00796B))
                         Text(
                             text = "Memora",
                             modifier = Modifier.fillMaxWidth().wrapContentWidth(Alignment.CenterHorizontally),
@@ -143,60 +102,40 @@ class NotesListScreen : Screen {
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     SearchBarAndFilters(
-                        searchQuery = searchQuery,
-                        onSearchQueryChange = { searchQuery = it },
+                        searchQuery = uiState.searchQuery,
+                        onSearchQueryChange = notesViewModel::onSearchQueryChanged,
                         showFilters = showFilters,
                         onShowFiltersChange = { showFilters = it },
-                        selectedDateFilter = selectedDateFilter,
-                        onDateFilterChanged = { 
-                            selectedDateFilter = it
-                            // Solo contraer si NO es CUSTOM_RANGE (porque necesita abrir el picker)
-                            if (it != DateFilter.CUSTOM_RANGE) {
+                        selectedDateFilter = uiState.dateFilter,
+                        onDateFilterChanged = { dateFilter ->
+                            notesViewModel.onDateFilterChanged(dateFilter)
+                            if (dateFilter != DateFilter.CUSTOM_RANGE) {
                                 showFilters = false
                             }
                         },
-                        selectedFileType = selectedFileType,
-                        onFileTypeChanged = { 
-                            selectedFileType = it
-                            showFilters = false // Contraer filtros al seleccionar
+                        selectedFileType = uiState.fileTypeFilter,
+                        onFileTypeChanged = { fileType ->
+                            notesViewModel.onFileTypeChanged(fileType)
+                            showFilters = false
                         },
-                        customDateRange = customDateRange,
+                        customDateRange = uiState.customDateRange,
                         onCustomDateRangeChanged = { range ->
-                            customDateRange = range
-                            // Contraer filtros después de seleccionar el rango
+                            notesViewModel.onCustomDateRangeChanged(range)
                             if (range != null) {
                                 showFilters = false
                             }
                         }
                     )
-                    
-                    // Active filters chips display
+
                     ActiveFiltersChips(
-                        searchQuery = searchQuery,
-                        selectedDateFilter = selectedDateFilter,
-                        customDateRange = customDateRange,
-                        selectedFileType = selectedFileType,
-                        onClearSearch = { 
-                            searchQuery = ""
-                            // Mantener filtros cerrados al limpiar búsqueda
-                            showFilters = false
-                        },
-                        onClearDateFilter = { 
-                            selectedDateFilter = DateFilter.ALL
-                            customDateRange = null
-                            showFilters = false
-                        },
-                        onClearFileTypeFilter = { 
-                            selectedFileType = FileTypeFilter.ALL 
-                            showFilters = false
-                        },
-                        onClearAll = {
-                            searchQuery = ""
-                            selectedDateFilter = DateFilter.ALL
-                            customDateRange = null
-                            selectedFileType = FileTypeFilter.ALL
-                            showFilters = false
-                        }
+                        searchQuery = uiState.searchQuery,
+                        selectedDateFilter = uiState.dateFilter,
+                        customDateRange = uiState.customDateRange,
+                        selectedFileType = uiState.fileTypeFilter,
+                        onClearSearch = { notesViewModel.onSearchQueryChanged("") },
+                        onClearDateFilter = { notesViewModel.onDateFilterChanged(DateFilter.ALL) },
+                        onClearFileTypeFilter = { notesViewModel.onFileTypeChanged(FileTypeFilter.ALL) },
+                        onClearAll = { notesViewModel.onClearAllFilters() }
                     )
 
                     when {
@@ -206,15 +145,18 @@ class NotesListScreen : Screen {
                         uiState.errorMessage != null -> {
                             ErrorState(message = uiState.errorMessage ?: "Error desconocido")
                         }
-                        filteredNotes.isEmpty() && uiState.notes.isNotEmpty() -> {
+                        // Case 1: No notes match the current filters, but there are notes in general
+                        uiState.filteredNotes.isEmpty() && uiState.allNotes.isNotEmpty() -> {
                             EmptyState(isFiltering = true)
                         }
-                        uiState.notes.isEmpty() -> {
+                        // Case 2: The user has no notes at all
+                        uiState.allNotes.isEmpty() -> {
                             EmptyState(isFiltering = false)
                         }
+                        // Case 3: Display the filtered notes
                         else -> {
                             NotesGrid(
-                                notes = filteredNotes,
+                                notes = uiState.filteredNotes,
                                 onNoteClick = {
                                     navigator.push(NoteDetailScreen(it))
                                 },
@@ -223,12 +165,10 @@ class NotesListScreen : Screen {
                         }
                     }
                 }
-
-                
             }
         }
-        
-        // Media viewers - following MVVM pattern
+
+        // Media viewers state is also driven by the ViewModel
         uiState.imageViewer.imageData?.let { imageData ->
             ImageFullScreenViewer(
                 imageData = imageData,
@@ -237,7 +177,7 @@ class NotesListScreen : Screen {
                 onDismiss = notesViewModel::hideImageViewer
             )
         }
-        
+
         uiState.videoViewer.videoData?.let { videoData ->
             VideoPlayerDialog(
                 videoData = videoData,
@@ -307,7 +247,7 @@ private fun SearchBarAndFilters(
 
 @Composable
 private fun NotesGrid(
-    notes: List<Note>, 
+    notes: List<Note>,
     onNoteClick: (String) -> Unit,
     onMediaClick: (ArchivoAdjunto) -> Unit = {}
 ) {
