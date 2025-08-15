@@ -11,6 +11,7 @@ import com.vicherarr.memora.presentation.viewmodels.NotesViewModel
 import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
 import com.vicherarr.memora.presentation.viewmodels.NoteDetailViewModel
 import com.vicherarr.memora.presentation.viewmodels.ProfileViewModel
+import com.vicherarr.memora.presentation.viewmodels.SplashViewModel
 import org.koin.dsl.module
 
 /**
@@ -27,6 +28,7 @@ val viewModelModule = module {
     factory<ExitAppUseCase> { createExitAppUseCase() } // Platform-specific implementation
     
     // ViewModel Layer - Following Single Responsibility Principle
+    factory { SplashViewModel(get()) } // CloudAuthProvider dependency
     factory { LoginViewModel(get(), get()) } // AuthRepository + ValidationService
     factory { RegisterViewModel(get(), get()) } // AuthRepository + ValidationService
     single { MediaViewModel() } // Singleton - shared across CreateNoteViewModel and CreateNoteScreen

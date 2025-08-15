@@ -41,6 +41,11 @@ actual class CloudAuthProvider(
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
     actual val authState: StateFlow<AuthState> = _authState.asStateFlow()
     
+    init {
+        // Initialize auth state based on existing credentials
+        initializeAuthState()
+    }
+    
     private val googleSignInClient: GoogleSignInClient by lazy {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(WEB_CLIENT_ID)
@@ -49,6 +54,26 @@ actual class CloudAuthProvider(
             .build()
         
         GoogleSignIn.getClient(context, gso)
+    }
+    
+    /**
+     * Initialize auth state based on existing stored credentials
+     */
+    private fun initializeAuthState() {
+        try {
+            val account = GoogleSignIn.getLastSignedInAccount(context)
+            if (account != null && GoogleSignIn.hasPermissions(account, Scope(DriveScopes.DRIVE_APPDATA))) {
+                val user = createUserFromAccount(account)
+                _authState.value = AuthState.Authenticated(user)
+                Log.d(TAG, "Auth state inicializado: Usuario autenticado - ${user.email}")
+            } else {
+                _authState.value = AuthState.Unauthenticated
+                Log.d(TAG, "Auth state inicializado: Usuario no autenticado")
+            }
+        } catch (e: Exception) {
+            _authState.value = AuthState.Unauthenticated
+            Log.e(TAG, "Error inicializando auth state: ${e.message}", e)
+        }
     }
     
     actual suspend fun signIn(): Result<User> {
