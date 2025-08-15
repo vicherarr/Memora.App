@@ -1,0 +1,229 @@
+package com.vicherarr.memora.presentation.components
+
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.vicherarr.memora.domain.models.DateFilter
+import com.vicherarr.memora.domain.models.DateRange
+import com.vicherarr.memora.domain.models.FileTypeFilter
+
+/**
+ * Component to display active search filters as elegant chips
+ * Following Material Design 3 guidelines and Clean Architecture
+ * Provides clear visual feedback of current filtering state
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ActiveFiltersChips(
+    searchQuery: String,
+    selectedDateFilter: DateFilter,
+    customDateRange: DateRange?,
+    selectedFileType: FileTypeFilter,
+    onClearSearch: () -> Unit,
+    onClearDateFilter: () -> Unit,
+    onClearFileTypeFilter: () -> Unit,
+    onClearAll: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Determine active filters
+    val activeFilters = remember(searchQuery, selectedDateFilter, selectedFileType, customDateRange) {
+        buildList {
+            // Search query filter
+            if (searchQuery.isNotBlank()) {
+                add(ActiveFilter.Search(searchQuery, onClearSearch))
+            }
+            
+            // Date filter
+            if (selectedDateFilter != DateFilter.ALL) {
+                add(ActiveFilter.Date(selectedDateFilter, customDateRange, onClearDateFilter))
+            }
+            
+            // File type filter
+            if (selectedFileType != FileTypeFilter.ALL) {
+                add(ActiveFilter.FileType(selectedFileType, onClearFileTypeFilter))
+            }
+        }
+    }
+    
+    // Show chips only if there are active filters
+    AnimatedVisibility(
+        visible = activeFilters.isNotEmpty(),
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Filtros activos",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium
+                )
+                
+                // Clear all button
+                if (activeFilters.size > 1) {
+                    TextButton(
+                        onClick = onClearAll,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "Limpiar todo",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Active filter chips
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                items(activeFilters, key = { it.id }) { filter ->
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = scaleIn(animationSpec = tween(200)) + fadeIn(animationSpec = tween(200)),
+                        exit = scaleOut(animationSpec = tween(150)) + fadeOut(animationSpec = tween(150))
+                    ) {
+                        ActiveFilterChip(
+                            filter = filter
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ActiveFilterChip(
+    filter: ActiveFilter,
+    modifier: Modifier = Modifier
+) {
+    FilterChip(
+        selected = true,
+        onClick = filter.onClear,
+        label = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = filter.icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = filter.displayText,
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+        },
+        trailingIcon = {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Quitar filtro",
+                modifier = Modifier.size(14.dp)
+            )
+        },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            selectedTrailingIconColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+        ),
+        border = FilterChipDefaults.filterChipBorder(
+            enabled = true,
+            selected = true,
+            borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+        ),
+        modifier = modifier
+    )
+}
+
+/**
+ * Sealed class representing different types of active filters
+ * Following Clean Architecture - Domain models for UI state
+ */
+private sealed class ActiveFilter(
+    val id: String,
+    val displayText: String,
+    val icon: ImageVector,
+    val onClear: () -> Unit
+) {
+    class Search(
+        query: String,
+        onClear: () -> Unit
+    ) : ActiveFilter(
+        id = "search",
+        displayText = if (query.length > 20) "\"${query.take(17)}...\"" else "\"$query\"",
+        icon = Icons.Default.Search,
+        onClear = onClear
+    )
+    
+    class Date(
+        dateFilter: DateFilter,
+        customRange: DateRange?,
+        onClear: () -> Unit
+    ) : ActiveFilter(
+        id = "date",
+        displayText = when (dateFilter) {
+            DateFilter.CUSTOM_RANGE -> customRange?.let {
+                "${formatTimestampToShortDate(it.startDate)} - ${formatTimestampToShortDate(it.endDate)}"
+            } ?: dateFilter.displayName
+            else -> dateFilter.displayName
+        },
+        icon = Icons.Default.DateRange,
+        onClear = onClear
+    )
+    
+    class FileType(
+        fileTypeFilter: FileTypeFilter,
+        onClear: () -> Unit
+    ) : ActiveFilter(
+        id = "filetype",
+        displayText = fileTypeFilter.displayName,
+        icon = fileTypeFilter.icon,
+        onClear = onClear
+    )
+}
+
+/**
+ * Format timestamp to short date for chip display
+ * Uses simple relative formatting for compact display
+ */
+private fun formatTimestampToShortDate(timestamp: Long): String {
+    val now = com.vicherarr.memora.data.database.getCurrentTimestamp()
+    val daysDiff = ((now - timestamp) / (24 * 60 * 60 * 1000L)).toInt()
+    
+    return when {
+        daysDiff == 0 -> "Hoy"
+        daysDiff == 1 -> "Ayer"
+        daysDiff < 7 -> "${daysDiff}d"
+        daysDiff < 30 -> "${daysDiff/7}s"
+        daysDiff < 365 -> "${daysDiff/30}m"
+        else -> "${daysDiff/365}a"
+    }
+}

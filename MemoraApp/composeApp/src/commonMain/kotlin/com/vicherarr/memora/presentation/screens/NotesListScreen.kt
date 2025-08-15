@@ -34,6 +34,7 @@ import com.vicherarr.memora.presentation.viewmodels.NotesViewModel
 import com.vicherarr.memora.presentation.viewmodels.SyncViewModel
 import com.vicherarr.memora.presentation.components.SyncStatusIndicator
 import com.vicherarr.memora.presentation.components.FiltersSection
+import com.vicherarr.memora.presentation.components.ActiveFiltersChips
 import com.vicherarr.memora.presentation.components.ImageFullScreenViewer
 import com.vicherarr.memora.presentation.components.VideoPlayerDialog
 import com.vicherarr.memora.domain.models.DateFilter
@@ -166,6 +167,35 @@ class NotesListScreen : Screen {
                             if (range != null) {
                                 showFilters = false
                             }
+                        }
+                    )
+                    
+                    // Active filters chips display
+                    ActiveFiltersChips(
+                        searchQuery = searchQuery,
+                        selectedDateFilter = selectedDateFilter,
+                        customDateRange = customDateRange,
+                        selectedFileType = selectedFileType,
+                        onClearSearch = { 
+                            searchQuery = ""
+                            // Mantener filtros cerrados al limpiar búsqueda
+                            showFilters = false
+                        },
+                        onClearDateFilter = { 
+                            selectedDateFilter = DateFilter.ALL
+                            customDateRange = null
+                            showFilters = false
+                        },
+                        onClearFileTypeFilter = { 
+                            selectedFileType = FileTypeFilter.ALL 
+                            showFilters = false
+                        },
+                        onClearAll = {
+                            searchQuery = ""
+                            selectedDateFilter = DateFilter.ALL
+                            customDateRange = null
+                            selectedFileType = FileTypeFilter.ALL
+                            showFilters = false
                         }
                     )
 
