@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.domain.models.ArchivoAdjunto
 import com.vicherarr.memora.domain.models.MediaFile
-import com.vicherarr.memora.domain.repository.NotesRepository
+import com.vicherarr.memora.domain.usecases.SearchNotesUseCase
+import com.vicherarr.memora.domain.usecases.UpdateNoteUseCase
+import com.vicherarr.memora.domain.usecases.DeleteNoteUseCase
 import com.vicherarr.memora.presentation.states.BaseUiState
 import com.vicherarr.memora.presentation.states.ImageViewerState
 import com.vicherarr.memora.presentation.states.VideoViewerState
@@ -37,35 +39,41 @@ data class NoteDetailUiState(
  * Single Responsibility: Only handles note detail operations (view, edit, delete)
  */
 class NoteDetailViewModel(
-    private val notesRepository: NotesRepository,
+    private val searchNotesUseCase: SearchNotesUseCase,
+    private val updateNoteUseCase: UpdateNoteUseCase,
+    private val deleteNoteUseCase: DeleteNoteUseCase,
     private val mediaViewModel: MediaViewModel
-) : ViewModel() {
+) : BaseViewModel<NoteDetailUiState>() {
     
     private val _uiState = MutableStateFlow(NoteDetailUiState())
-    val uiState: StateFlow<NoteDetailUiState> = _uiState.asStateFlow()
+    override val uiState: StateFlow<NoteDetailUiState> = _uiState.asStateFlow()
+    
+    override fun updateState(update: NoteDetailUiState.() -> NoteDetailUiState) {
+        _uiState.value = _uiState.value.update()
+    }
     
     /**
      * Load specific note by ID - Direct method call
      */
     fun loadNote(noteId: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            setLoading(true)
             
-            notesRepository.getNoteById(noteId)
+            searchNotesUseCase.executeGetById(noteId)
                 .onSuccess { note ->
-                    _uiState.value = _uiState.value.copy(
-                        note = note,
-                        editTitulo = note.titulo ?: "",
-                        editContenido = note.contenido,
-                        editAttachments = note.archivosAdjuntos,
-                        isLoading = false
-                    )
+                    updateState {
+                        copy(
+                            note = note,
+                            editTitulo = note.titulo ?: "",
+                            editContenido = note.contenido,
+                            editAttachments = note.archivosAdjuntos,
+                            isLoading = false,
+                            errorMessage = null
+                        )
+                    }
                 }
                 .onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = exception.message ?: "Error al cargar la nota"
-                    )
+                    setError(exception.message ?: "Error al cargar la nota")
                 }
         }
     }
@@ -145,18 +153,13 @@ class NoteDetailViewModel(
         val currentNote = currentState.note ?: return
         
         viewModelScope.launch {
-            _uiState.value = currentState.copy(isLoading = true, errorMessage = null)
+            setLoading(true)
             
-            val validationError = validateNoteInput(currentState.editTitulo, currentState.editContenido)
-            if (validationError != null) {
-                _uiState.value = currentState.copy(isLoading = false, errorMessage = validationError)
-                return@launch
-            }
-            
+            // Note: Validation is now handled by the Use Case
             val newTitulo = if (currentState.editTitulo.isBlank()) null else currentState.editTitulo.trim()
             val newContenido = currentState.editContenido.trim()
             
-            val result = notesRepository.updateNoteWithAttachments(
+            val result = updateNoteUseCase.executeWithAttachments(
                 noteId = currentNote.id,
                 titulo = newTitulo,
                 contenido = newContenido,
@@ -167,15 +170,16 @@ class NoteDetailViewModel(
             result.onSuccess {
                 loadNote(currentNote.id)
                 mediaViewModel.clearSelectedMedia() // Clear selected media after saving
-                _uiState.value = _uiState.value.copy(
-                    isEditMode = false,
-                    isNoteSaved = true
-                )
+                updateState {
+                    copy(
+                        isEditMode = false,
+                        isNoteSaved = true,
+                        isLoading = false,
+                        errorMessage = null
+                    )
+                }
             }.onFailure { exception ->
-                _uiState.value = currentState.copy(
-                    isLoading = false,
-                    errorMessage = exception.message ?: "Error al guardar la nota"
-                )
+                setError(exception.message ?: "Error al guardar la nota")
             }
         }
     }
@@ -187,20 +191,20 @@ class NoteDetailViewModel(
         val currentNote = _uiState.value.note ?: return
         
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            setLoading(true)
             
-            notesRepository.deleteNote(currentNote.id)
+            deleteNoteUseCase.execute(currentNote.id)
                 .onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        isNoteDeleted = true
-                    )
+                    updateState {
+                        copy(
+                            isLoading = false,
+                            isNoteDeleted = true,
+                            errorMessage = null
+                        )
+                    }
                 }
                 .onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = exception.message ?: "Error al eliminar la nota"
-                    )
+                    setError(exception.message ?: "Error al eliminar la nota")
                 }
         }
     }

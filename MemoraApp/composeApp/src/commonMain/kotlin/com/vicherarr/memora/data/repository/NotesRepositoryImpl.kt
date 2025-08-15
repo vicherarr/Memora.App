@@ -7,6 +7,8 @@ import com.vicherarr.memora.data.database.NotesDao
 import com.vicherarr.memora.data.database.getCurrentTimestamp
 import com.vicherarr.memora.data.dto.CreateNotaDto
 import com.vicherarr.memora.data.dto.UpdateNotaDto
+import com.vicherarr.memora.data.mappers.NoteDomainMapper
+import com.vicherarr.memora.data.mappers.AttachmentDomainMapper
 import com.vicherarr.memora.database.Notes
 import com.vicherarr.memora.database.Attachments
 import com.vicherarr.memora.domain.model.AuthState
@@ -36,7 +38,9 @@ class NotesRepositoryImpl(
     private val fileManager: FileManager,
     private val cloudAuthProvider: CloudAuthProvider,
     private val syncMetadataRepository: com.vicherarr.memora.domain.repository.SyncMetadataRepository,
-    private val deletionsDao: com.vicherarr.memora.data.database.DeletionsDao
+    private val deletionsDao: com.vicherarr.memora.data.database.DeletionsDao,
+    private val noteDomainMapper: NoteDomainMapper,
+    private val attachmentDomainMapper: AttachmentDomainMapper
 ) : NotesRepository {
 
     private fun getCurrentUserId(): String {
@@ -82,9 +86,7 @@ class NotesRepositoryImpl(
         return try {
             // LOCAL-FIRST: Get notes from local database immediately
             val localNotes = notesDao.getNotesByUserId(getCurrentUserId())
-            val domainNotes = localNotes.map { note ->
-                note.toDomainModelWithAttachments()
-            }
+            val domainNotes = noteDomainMapper.toDomainModelListWithAttachments(localNotes)
             
             // TODO: Background sync with API will be handled by SyncRepository
             Result.success(domainNotes)
@@ -98,7 +100,7 @@ class NotesRepositoryImpl(
             // LOCAL-FIRST: Get note from local database WITH attachments
             val localNote = notesDao.getNoteById(id)
             if (localNote != null) {
-                Result.success(localNote.toDomainModelWithAttachments())
+                Result.success(noteDomainMapper.toDomainModelWithAttachments(localNote))
             } else {
                 Result.failure(Exception("Note not found"))
             }
@@ -244,7 +246,7 @@ class NotesRepositoryImpl(
                 updateSyncMetadataAfterNoteOperation()
                 
                 // TODO: Background sync will be handled by SyncRepository
-                Result.success(updatedNote.toDomainModel())
+                Result.success(noteDomainMapper.toDomainModel(updatedNote))
             } else {
                 Result.failure(Exception("Note not found"))
             }
@@ -317,7 +319,7 @@ class NotesRepositoryImpl(
                 // ✅ NUEVO: Actualizar metadata para que sync inteligente detecte el cambio
                 updateSyncMetadataAfterNoteOperation()
                 
-                Result.success(updatedNote.toDomainModelWithAttachments())
+                Result.success(noteDomainMapper.toDomainModelWithAttachments(updatedNote))
             } else {
                 Result.failure(Exception("Note not found after update"))
             }
@@ -372,9 +374,7 @@ class NotesRepositoryImpl(
             
             // LOCAL-FIRST: Buscar en base de datos local
             val searchResults = notesDao.searchNotes(getCurrentUserId(), query)
-            val domainNotes = searchResults.map { note ->
-                note.toDomainModelWithAttachments()
-            }
+            val domainNotes = noteDomainMapper.toDomainModelListWithAttachments(searchResults)
             
             Result.success(domainNotes)
         } catch (e: Exception) {
@@ -420,7 +420,7 @@ class NotesRepositoryImpl(
             notesList.map { note ->
                 val noteAttachments = attachmentsByNoteId[note.id] ?: emptyList()
                 
-                // Convert to domain model with attachments
+                // Convert to domain model with attachments using NoteDomainMapper
                 Note(
                     id = note.id,
                     titulo = note.titulo,
@@ -428,63 +428,12 @@ class NotesRepositoryImpl(
                     fechaCreacion = note.fecha_creacion.toLongOrNull() ?: getCurrentTimestamp(),
                     fechaModificacion = note.fecha_modificacion.toLongOrNull() ?: getCurrentTimestamp(),
                     usuarioId = note.usuario_id,
-                    archivosAdjuntos = noteAttachments.map { it.toDomainModel() }
+                    archivosAdjuntos = attachmentDomainMapper.toDomainModelList(noteAttachments)
                 )
             }
         }
     }
     
-    // MAPPING FUNCTIONS
-    
-    /**
-     * Convert SQLDelight Notes entity to Domain model
-     */
-    private fun Notes.toDomainModel(): Note {
-        return Note(
-            id = this.id,
-            titulo = this.titulo,
-            contenido = this.contenido,
-            fechaCreacion = this.fecha_creacion.toLongOrNull() ?: getCurrentTimestamp(),
-            fechaModificacion = this.fecha_modificacion.toLongOrNull() ?: getCurrentTimestamp(),
-            usuarioId = this.usuario_id
-        )
-    }
-    
-    /**
-     * Convert SQLDelight Notes entity to Domain model WITH attachments
-     */
-    private suspend fun Notes.toDomainModelWithAttachments(): Note {
-        val attachments = attachmentsDao.getAttachmentsByNoteId(this.id)
-        
-        return Note(
-            id = this.id,
-            titulo = this.titulo,
-            contenido = this.contenido,
-            fechaCreacion = this.fecha_creacion.toLongOrNull() ?: getCurrentTimestamp(),
-            fechaModificacion = this.fecha_modificacion.toLongOrNull() ?: getCurrentTimestamp(),
-            usuarioId = this.usuario_id,
-            archivosAdjuntos = attachments.map { it.toDomainModel() }
-        )
-    }
-    
-    /**
-     * Convert SQLDelight Attachments entity to Domain model
-     */
-    private fun Attachments.toDomainModel(): ArchivoAdjunto {
-        return ArchivoAdjunto(
-            id = this.id,
-            filePath = this.file_path,
-            remoteUrl = this.remote_url,
-            nombreOriginal = this.nombre_original,
-            tipoArchivo = when (this.tipo_archivo.toInt()) {
-                1 -> TipoDeArchivo.Imagen
-                2 -> TipoDeArchivo.Video
-                else -> TipoDeArchivo.Imagen
-            },
-            tipoMime = this.tipo_mime,
-            tamanoBytes = this.tamano_bytes,
-            fechaSubida = this.fecha_subida.toLongOrNull() ?: getCurrentTimestamp(),
-            notaId = this.nota_id
-        )
-    }
+    // Note: All mapping functions have been extracted to NoteDomainMapper
+    // following Single Responsibility Principle and Clean Architecture
 }

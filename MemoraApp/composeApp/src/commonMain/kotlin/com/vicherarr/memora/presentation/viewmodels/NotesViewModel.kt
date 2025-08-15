@@ -4,6 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.domain.models.*
 import com.vicherarr.memora.domain.repository.NotesRepository
+import com.vicherarr.memora.domain.usecases.CreateNoteUseCase
+import com.vicherarr.memora.domain.usecases.UpdateNoteUseCase
+import com.vicherarr.memora.domain.usecases.DeleteNoteUseCase
+import com.vicherarr.memora.domain.usecases.SearchNotesUseCase
 import com.vicherarr.memora.domain.utils.DateTimeUtils
 import com.vicherarr.memora.presentation.states.BaseUiState
 import com.vicherarr.memora.presentation.states.ImageViewerState
@@ -40,12 +44,20 @@ data class NotesUiState(
  * Single Responsibility: Handles notes list and filtering logic
  */
 class NotesViewModel(
-    private val notesRepository: NotesRepository, // Still needed for CUD operations
-    private val getNotesUseCase: GetNotesUseCase // Injected Use Case for reading
-) : ViewModel() {
+    private val notesRepository: NotesRepository, // Still needed for some operations
+    private val getNotesUseCase: GetNotesUseCase, // Injected Use Case for reading
+    private val createNoteUseCase: CreateNoteUseCase,
+    private val updateNoteUseCase: UpdateNoteUseCase,
+    private val deleteNoteUseCase: DeleteNoteUseCase,
+    private val searchNotesUseCase: SearchNotesUseCase
+) : BaseViewModel<NotesUiState>() {
 
     private val _uiState = MutableStateFlow(NotesUiState())
-    val uiState: StateFlow<NotesUiState> = _uiState.asStateFlow()
+    override val uiState: StateFlow<NotesUiState> = _uiState.asStateFlow()
+    
+    override fun updateState(update: NotesUiState.() -> NotesUiState) {
+        _uiState.value = _uiState.value.update()
+    }
 
     // Private state flows for each filter criterion
     private val _searchQuery = MutableStateFlow("")
@@ -63,13 +75,10 @@ class NotesViewModel(
                 customDateRange = _customDateRange
             )
             .onStart {
-                _uiState.value = _uiState.value.copy(isLoading = true)
+                setLoading(true)
             }
             .catch { exception ->
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = exception.message ?: "Error loading notes"
-                )
+                setError(exception.message ?: "Error loading notes")
             }
             .collect { (allNotes, filteredNotes) ->
                 _uiState.value = _uiState.value.copy(
@@ -123,53 +132,43 @@ class NotesViewModel(
 
     fun selectNote(noteId: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            setLoading(true)
 
-            notesRepository.getNoteById(noteId)
+            searchNotesUseCase.executeGetById(noteId)
                 .onSuccess { note ->
-                    _uiState.value = _uiState.value.copy(
-                        selectedNote = note,
-                        isLoading = false
-                    )
+                    updateState { 
+                        copy(selectedNote = note, isLoading = false, errorMessage = null)
+                    }
                 }
                 .onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = exception.message ?: "Error loading note"
-                    )
+                    setError(exception.message ?: "Error loading note")
                 }
         }
     }
 
     fun createNote(titulo: String?, contenido: String) {
         viewModelScope.launch {
-            notesRepository.createNote(titulo, contenido)
+            createNoteUseCase.execute(titulo, contenido)
                 .onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        errorMessage = exception.message ?: "Error creating note"
-                    )
+                    setError(exception.message ?: "Error creating note")
                 }
         }
     }
 
     fun updateNote(id: String, titulo: String?, contenido: String) {
         viewModelScope.launch {
-            notesRepository.updateNote(id, titulo, contenido)
+            updateNoteUseCase.execute(id, titulo, contenido)
                 .onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        errorMessage = exception.message ?: "Error updating note"
-                    )
+                    setError(exception.message ?: "Error updating note")
                 }
         }
     }
 
     fun deleteNote(id: String) {
         viewModelScope.launch {
-            notesRepository.deleteNote(id)
+            deleteNoteUseCase.execute(id)
                 .onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        errorMessage = exception.message ?: "Error deleting note"
-                    )
+                    setError(exception.message ?: "Error deleting note")
                 }
         }
     }

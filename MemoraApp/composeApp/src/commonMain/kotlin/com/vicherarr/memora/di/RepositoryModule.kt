@@ -25,7 +25,9 @@ val repositoryModule = module {
             fileManager = get(),
             cloudAuthProvider = get(),
             syncMetadataRepository = get(),
-            deletionsDao = get()
+            deletionsDao = get(),
+            noteDomainMapper = get(),
+            attachmentDomainMapper = get()
         ) 
     }
     single<AttachmentsRepository> { 

@@ -11,6 +11,8 @@ fun initKoin(appDeclaration: KoinAppDeclaration = {}) = startKoin {
     modules(
         platformModule(),
         appModule,
-        databaseModule
+        databaseModule,
+        mapperModule,
+        useCaseModule
     )
 }

@@ -32,8 +32,8 @@ val viewModelModule = module {
     factory { LoginViewModel(get(), get()) } // AuthRepository + ValidationService
     factory { RegisterViewModel(get(), get()) } // AuthRepository + ValidationService
     single { MediaViewModel() } // Singleton - shared across CreateNoteViewModel and CreateNoteScreen
-    factory { CreateNoteViewModel(get(), get()) } // NotesRepository + MediaViewModel
-    factory { NotesViewModel(get(), get()) }
-    factory { NoteDetailViewModel(get(), get()) } // NotesRepository + MediaViewModel
+    factory { CreateNoteViewModel(get(), get()) } // CreateNoteUseCase + MediaViewModel
+    factory { NotesViewModel(get(), get(), get(), get(), get(), get()) } // NotesRepository, GetNotesUseCase, CreateNoteUseCase, UpdateNoteUseCase, DeleteNoteUseCase, SearchNotesUseCase
+    factory { NoteDetailViewModel(get(), get(), get(), get()) } // SearchNotesUseCase + UpdateNoteUseCase + DeleteNoteUseCase + MediaViewModel
     factory { ProfileViewModel(get(), get()) } // UserRepository + ExitAppUseCase dependencies
 }

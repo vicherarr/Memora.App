@@ -2,7 +2,8 @@ package com.vicherarr.memora.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vicherarr.memora.domain.repository.NotesRepository
+import com.vicherarr.memora.domain.usecases.CreateNoteUseCase
+import com.vicherarr.memora.presentation.states.BaseUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,10 +16,10 @@ import kotlinx.coroutines.launch
 data class CreateNoteUiState(
     val titulo: String = "",
     val contenido: String = "",
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null,
-    val isNoteSaved: Boolean = false
-)
+    val isNoteSaved: Boolean = false,
+    override val isLoading: Boolean = false,
+    override val errorMessage: String? = null
+) : BaseUiState
 
 /**
  * ViewModel dedicated to Create Note screen following JetBrains KMP patterns
@@ -26,12 +27,16 @@ data class CreateNoteUiState(
  * Single Responsibility: Only handles note creation operations
  */
 class CreateNoteViewModel(
-    private val notesRepository: NotesRepository,
+    private val createNoteUseCase: CreateNoteUseCase,
     private val mediaViewModel: MediaViewModel
-) : ViewModel() {
+) : BaseViewModel<CreateNoteUiState>() {
     
     private val _uiState = MutableStateFlow(CreateNoteUiState())
-    val uiState: StateFlow<CreateNoteUiState> = _uiState.asStateFlow()
+    override val uiState: StateFlow<CreateNoteUiState> = _uiState.asStateFlow()
+    
+    override fun updateState(update: CreateNoteUiState.() -> CreateNoteUiState) {
+        _uiState.value = _uiState.value.update()
+    }
     
     /**
      * Update titulo field - Direct method call
@@ -55,29 +60,22 @@ class CreateNoteViewModel(
         val selectedMedia = mediaViewModel.uiState.value.selectedMedia
         
         viewModelScope.launch {
-            _uiState.value = currentState.copy(isLoading = true, errorMessage = null)
+            setLoading(true)
             
-            // Validate input
-            val validationError = validateNoteInput(currentState.titulo, currentState.contenido)
-            if (validationError != null) {
-                _uiState.value = currentState.copy(
-                    isLoading = false,
-                    errorMessage = validationError
-                )
-                return@launch
-            }
+            // Note: Validation is now handled by the Use Case
+            // This follows Clean Architecture - business logic in Use Case layer
             
-            // Create note through repository with attachments
+            // Create note through Use Case with business logic validation
             val result = if (selectedMedia.isNotEmpty()) {
                 // Create note with attachments
-                notesRepository.createNoteWithAttachments(
+                createNoteUseCase.executeWithAttachments(
                     titulo = if (currentState.titulo.isBlank()) null else currentState.titulo.trim(),
                     contenido = currentState.contenido.trim(),
                     attachments = selectedMedia
                 )
             } else {
                 // Create note without attachments
-                notesRepository.createNote(
+                createNoteUseCase.execute(
                     titulo = if (currentState.titulo.isBlank()) null else currentState.titulo.trim(),
                     contenido = currentState.contenido.trim()
                 )
@@ -88,16 +86,11 @@ class CreateNoteViewModel(
                     // Clear media from MediaViewModel after successful save
                     mediaViewModel.clearSelectedMedia()
                     
-                    _uiState.value = currentState.copy(
-                        isLoading = false,
-                        isNoteSaved = true
-                    )
+                    // Update specific state and clear loading/error
+                    updateState { copy(isNoteSaved = true, isLoading = false, errorMessage = null) }
                 }
                 .onFailure { exception ->
-                    _uiState.value = currentState.copy(
-                        isLoading = false,
-                        errorMessage = exception.message ?: "Error al crear la nota"
-                    )
+                    setError(exception.message ?: "Error al crear la nota")
                 }
         }
     }
