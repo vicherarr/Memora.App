@@ -58,9 +58,9 @@ data class UserStatistics(
         val gb = mb * 1024
         
         return when {
-            bytes >= gb -> String.format("%.1f GB", bytes.toDouble() / gb)
-            bytes >= mb -> String.format("%.1f MB", bytes.toDouble() / mb)
-            bytes >= kb -> String.format("%.1f KB", bytes.toDouble() / kb)
+            bytes >= gb -> "${(bytes.toDouble() / gb * 10).toInt() / 10.0} GB"
+            bytes >= mb -> "${(bytes.toDouble() / mb * 10).toInt() / 10.0} MB"
+            bytes >= kb -> "${(bytes.toDouble() / kb * 10).toInt() / 10.0} KB"
             else -> "$bytes B"
         }
     }
