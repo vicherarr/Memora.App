@@ -10,13 +10,45 @@ import androidx.compose.ui.graphics.vector.ImageVector
  */
 
 /**
+ * Represents a custom date range for filtering notes
+ * Immutable value object following DDD principles
+ */
+data class DateRange(
+    val startDate: Long,
+    val endDate: Long
+) {
+    init {
+        require(startDate <= endDate) { "Start date must be before or equal to end date" }
+        require(startDate > 0) { "Start date must be a valid timestamp" }
+        require(endDate > 0) { "End date must be a valid timestamp" }
+    }
+    
+    /**
+     * Check if a timestamp falls within this date range (inclusive)
+     */
+    fun contains(timestamp: Long): Boolean {
+        return timestamp >= startDate && timestamp <= endDate
+    }
+    
+    /**
+     * Get duration of this range in milliseconds
+     */
+    val durationMillis: Long
+        get() = endDate - startDate
+}
+
+/**
  * Date-based filtering options for notes
+ * Includes presets for common use cases and custom range option
  */
 enum class DateFilter(val displayName: String) {
     ALL("Todas las fechas"),
     TODAY("Hoy"),
     WEEK("Esta semana"),
-    MONTH("Este mes")
+    MONTH("Este mes"),
+    LAST_30_DAYS("Últimos 30 días"),
+    LAST_90_DAYS("Últimos 90 días"),
+    CUSTOM_RANGE("Rango personalizado")
 }
 
 /**
@@ -40,16 +72,27 @@ enum class FileTypeFilter(
 data class SearchFilters(
     val query: String = "",
     val dateFilter: DateFilter = DateFilter.ALL,
+    val customDateRange: DateRange? = null,
     val fileTypeFilter: FileTypeFilter = FileTypeFilter.ALL
 ) {
     /**
      * Check if any filters are active (non-default)
      */
     val hasActiveFilters: Boolean
-        get() = query.isNotBlank() || dateFilter != DateFilter.ALL || fileTypeFilter != FileTypeFilter.ALL
+        get() = query.isNotBlank() || 
+                dateFilter != DateFilter.ALL || 
+                customDateRange != null ||
+                fileTypeFilter != FileTypeFilter.ALL
         
     /**
      * Reset all filters to default state
      */
     fun reset(): SearchFilters = SearchFilters()
+    
+    /**
+     * Get the effective date range based on filter selection
+     * Returns the custom range if CUSTOM_RANGE is selected, null otherwise
+     */
+    val effectiveDateRange: DateRange?
+        get() = if (dateFilter == DateFilter.CUSTOM_RANGE) customDateRange else null
 }

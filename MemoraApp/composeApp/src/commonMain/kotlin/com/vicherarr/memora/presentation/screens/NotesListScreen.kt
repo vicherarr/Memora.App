@@ -37,6 +37,7 @@ import com.vicherarr.memora.presentation.components.FiltersSection
 import com.vicherarr.memora.presentation.components.ImageFullScreenViewer
 import com.vicherarr.memora.presentation.components.VideoPlayerDialog
 import com.vicherarr.memora.domain.models.DateFilter
+import com.vicherarr.memora.domain.models.DateRange
 import com.vicherarr.memora.domain.models.FileTypeFilter
 import com.vicherarr.memora.domain.utils.DateTimeUtils
 import org.koin.compose.getKoin
@@ -57,8 +58,9 @@ class NotesListScreen : Screen {
         var showFilters by rememberSaveable { mutableStateOf(false) }
         var selectedDateFilter by rememberSaveable { mutableStateOf(DateFilter.ALL) }
         var selectedFileType by rememberSaveable { mutableStateOf(FileTypeFilter.ALL) }
+        var customDateRange by remember { mutableStateOf<DateRange?>(null) }
 
-        val filteredNotes = remember(uiState.notes, searchQuery, selectedDateFilter, selectedFileType) {
+        val filteredNotes = remember(uiState.notes, searchQuery, selectedDateFilter, selectedFileType, customDateRange) {
             var notes = uiState.notes
             if (searchQuery.isNotBlank()) {
                 notes = notes.filter { note ->
@@ -66,17 +68,13 @@ class NotesListScreen : Screen {
                             note.contenido.contains(searchQuery, ignoreCase = true)
                 }
             }
-            notes = when (selectedDateFilter) {
-                DateFilter.TODAY -> notes.filter {
-                    DateTimeUtils.isWithinTimeRange(it.fechaModificacion, DateTimeUtils.TimeRanges.ONE_DAY)
-                }
-                DateFilter.WEEK -> notes.filter {
-                    DateTimeUtils.isWithinTimeRange(it.fechaModificacion, DateTimeUtils.TimeRanges.ONE_WEEK)
-                }
-                DateFilter.MONTH -> notes.filter {
-                    DateTimeUtils.isWithinTimeRange(it.fechaModificacion, DateTimeUtils.TimeRanges.ONE_MONTH)
-                }
-                DateFilter.ALL -> notes
+            // Apply date filtering using the new unified logic
+            notes = notes.filter { note ->
+                DateTimeUtils.matchesDateFilter(
+                    timestamp = note.fechaModificacion,
+                    dateFilter = selectedDateFilter,
+                    customRange = customDateRange
+                )
             }
             notes = when (selectedFileType) {
                 FileTypeFilter.WITH_IMAGES -> notes.filter { note ->
@@ -149,9 +147,26 @@ class NotesListScreen : Screen {
                         showFilters = showFilters,
                         onShowFiltersChange = { showFilters = it },
                         selectedDateFilter = selectedDateFilter,
-                        onDateFilterChanged = { selectedDateFilter = it },
+                        onDateFilterChanged = { 
+                            selectedDateFilter = it
+                            // Solo contraer si NO es CUSTOM_RANGE (porque necesita abrir el picker)
+                            if (it != DateFilter.CUSTOM_RANGE) {
+                                showFilters = false
+                            }
+                        },
                         selectedFileType = selectedFileType,
-                        onFileTypeChanged = { selectedFileType = it }
+                        onFileTypeChanged = { 
+                            selectedFileType = it
+                            showFilters = false // Contraer filtros al seleccionar
+                        },
+                        customDateRange = customDateRange,
+                        onCustomDateRangeChanged = { range ->
+                            customDateRange = range
+                            // Contraer filtros después de seleccionar el rango
+                            if (range != null) {
+                                showFilters = false
+                            }
+                        }
                     )
 
                     when {
@@ -213,7 +228,9 @@ private fun SearchBarAndFilters(
     selectedDateFilter: DateFilter,
     onDateFilterChanged: (DateFilter) -> Unit,
     selectedFileType: FileTypeFilter,
-    onFileTypeChanged: (FileTypeFilter) -> Unit
+    onFileTypeChanged: (FileTypeFilter) -> Unit,
+    customDateRange: DateRange? = null,
+    onCustomDateRangeChanged: (DateRange?) -> Unit = {}
 ) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         OutlinedTextField(
@@ -233,9 +250,9 @@ private fun SearchBarAndFilters(
                     }
                     IconButton(onClick = { onShowFiltersChange(!showFilters) }) {
                         Icon(
-                            if (showFilters) Icons.Default.FilterListOff else Icons.Default.FilterList,
+                            Icons.Default.FilterList,
                             contentDescription = "Filtros",
-                            tint = if (selectedDateFilter != DateFilter.ALL || selectedFileType != FileTypeFilter.ALL)
+                            tint = if (selectedDateFilter != DateFilter.ALL || selectedFileType != FileTypeFilter.ALL || customDateRange != null)
                                 MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -250,6 +267,8 @@ private fun SearchBarAndFilters(
                 onDateFilterChanged = onDateFilterChanged,
                 selectedFileType = selectedFileType,
                 onFileTypeChanged = onFileTypeChanged,
+                customDateRange = customDateRange,
+                onCustomDateRangeChanged = onCustomDateRangeChanged,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
         }
