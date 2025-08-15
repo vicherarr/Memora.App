@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 /**
  * Splash Screen Navigation State
@@ -53,6 +54,7 @@ class SplashViewModel(
                 
                 if (!hasStoredAuth) {
                     println("SplashViewModel: ❌ No hay auth local → Navegando a Welcome")
+                    delay(2000)
                     _navigationState.value = SplashNavigationState.NavigateToWelcome
                     return@launch
                 }
@@ -61,6 +63,9 @@ class SplashViewModel(
                 println("SplashViewModel: 🌐 Verificando usuario actual...")
                 val currentUser = cloudAuthProvider.getCurrentUser()
                 println("SplashViewModel: 👤 Usuario obtenido: ${currentUser?.email ?: "null"}")
+                
+                // Wait 2 seconds for better UX before navigating
+                delay(2000)
                 
                 _navigationState.value = if (currentUser != null) {
                     // Valid user found
@@ -74,6 +79,7 @@ class SplashViewModel(
             } catch (e: Exception) {
                 // If there's an error checking authentication, go to welcome
                 println("SplashViewModel: 💥 Error verificando auth: ${e.message} → Navegando a Welcome")
+                delay(2000)
                 _navigationState.value = SplashNavigationState.NavigateToWelcome
             }
         }
