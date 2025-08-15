@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.sp
 import com.vicherarr.memora.domain.models.AppInfo
 import com.vicherarr.memora.domain.models.UserProfile
 import com.vicherarr.memora.domain.models.UserStatistics
-import kotlinx.datetime.LocalDate
 
 /**
  * User Profile Header Component
@@ -34,6 +33,8 @@ import kotlinx.datetime.LocalDate
 @Composable
 fun UserProfileHeader(
     userProfile: UserProfile,
+    onLogout: () -> Unit,
+    isLoading: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -94,19 +95,53 @@ fun UserProfileHeader(
                     overflow = TextOverflow.Ellipsis
                 )
                 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 
-                // Member since
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                // Minimalist logout button
+                OutlinedButton(
+                    onClick = onLogout,
+                    enabled = !isLoading,
+                    modifier = Modifier
+                        .fillMaxWidth(0.7f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        containerColor = Color.Transparent
+                    ),
+                    border = ButtonDefaults.outlinedButtonBorder.copy(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.3f),
+                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f)
+                            )
+                        )
+                    ),
+                    shape = RoundedCornerShape(20.dp)
                 ) {
-                    Text(
-                        text = "Miembro desde ${formatMemberSince(userProfile.memberSince)}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Cerrando sesión...",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Logout,
+                            contentDescription = "Cerrar sesión",
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Cerrar Sesión",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
         }
@@ -234,13 +269,9 @@ fun StatisticsSection(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
                 
-                StatisticCard(
-                    icon = Icons.Default.Cloud,
-                    title = "Google Drive",
-                    value = statistics.getFormattedRemoteStorage(),
-                    subtitle = "Sincronizado",
-                    modifier = Modifier.weight(1f),
-                    containerColor = Color(0xFF4285F4).copy(alpha = 0.1f) // Google Blue
+                SyncStatusCard(
+                    isSynced = statistics.isSynced,
+                    modifier = Modifier.weight(1f)
                 )
             }
             
@@ -253,6 +284,75 @@ fun StatisticsSection(
                 modifier = Modifier.fillMaxWidth(),
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
+        }
+    }
+}
+
+/**
+ * Sync Status Card Component
+ * 
+ * Shows synchronization status with Google Drive.
+ * Following Single Responsibility Principle.
+ */
+@Composable
+fun SyncStatusCard(
+    isSynced: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Default.Cloud,
+                contentDescription = "Sync Status",
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = if (isSynced) "Conectado" else "Desconectado",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+            
+            Text(
+                text = "Sincronización",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+            
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // TODO: Platform-specific icon (Google/Apple)
+                Text(
+                    text = "🔄", // Google icon placeholder - will be platform specific
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = if (isSynced) "Activa" else "Inactiva",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
         }
     }
 }
@@ -454,94 +554,9 @@ fun SettingsItem(
     }
 }
 
-/**
- * Account Management Section Component
- * 
- * Handles logout and account-related actions.
- * Following Single Responsibility Principle.
- */
-@Composable
-fun AccountManagementSection(
-    onLogout: () -> Unit,
-    isLoading: Boolean = false,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(20.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "🚪 Gestión de Cuenta",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onErrorContainer
-            )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            Text(
-                text = "Cerrar sesión de Google y salir de la aplicación",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
-                textAlign = TextAlign.Center
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Button(
-                onClick = onLogout,
-                enabled = !isLoading,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError
-                ),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onError
-                    )
-                } else {
-                    Icon(
-                        Icons.Default.Logout,
-                        contentDescription = "Cerrar sesión",
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = if (isLoading) "Cerrando sesión..." else "Cerrar Sesión",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-    }
-}
 
 // Utility functions following Single Responsibility Principle
 
-/**
- * Format member since date for display
- */
-private fun formatMemberSince(date: LocalDate): String {
-    val months = listOf(
-        "enero", "febrero", "marzo", "abril", "mayo", "junio",
-        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
-    )
-    return "${months[date.monthNumber - 1]} ${date.year}"
-}
 
 /**
  * Get user initials from display name

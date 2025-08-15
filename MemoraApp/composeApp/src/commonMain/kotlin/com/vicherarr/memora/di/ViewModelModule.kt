@@ -2,6 +2,8 @@ package com.vicherarr.memora.di
 
 import com.vicherarr.memora.data.repository.UserRepositoryImpl
 import com.vicherarr.memora.domain.repository.UserRepository
+import com.vicherarr.memora.domain.usecase.ExitAppUseCase
+import com.vicherarr.memora.domain.usecase.createExitAppUseCase
 import com.vicherarr.memora.presentation.viewmodels.LoginViewModel
 import com.vicherarr.memora.presentation.viewmodels.RegisterViewModel
 import com.vicherarr.memora.presentation.viewmodels.CreateNoteViewModel
@@ -19,7 +21,10 @@ import org.koin.dsl.module
 val viewModelModule = module {
     
     // Repository Layer - Following Dependency Inversion Principle
-    single<UserRepository> { UserRepositoryImpl(get()) } // NotesRepository dependency
+    single<UserRepository> { UserRepositoryImpl(get(), get()) } // NotesRepository + CloudAuthProvider dependencies
+    
+    // Use Cases Layer - Following Single Responsibility Principle
+    factory<ExitAppUseCase> { createExitAppUseCase() } // Platform-specific implementation
     
     // ViewModel Layer - Following Single Responsibility Principle
     factory { LoginViewModel(get(), get()) } // AuthRepository + ValidationService
@@ -28,5 +33,5 @@ val viewModelModule = module {
     factory { CreateNoteViewModel(get(), get()) } // NotesRepository + MediaViewModel
     factory { NotesViewModel(get()) }
     factory { NoteDetailViewModel(get(), get()) } // NotesRepository + MediaViewModel
-    factory { ProfileViewModel(get()) } // UserRepository dependency
+    factory { ProfileViewModel(get(), get()) } // UserRepository + ExitAppUseCase dependencies
 }

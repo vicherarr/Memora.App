@@ -1,13 +1,14 @@
 package com.vicherarr.memora.data.repository
 
 import com.vicherarr.memora.config.BuildConfiguration
+import com.vicherarr.memora.data.auth.CloudAuthProvider
 import com.vicherarr.memora.data.database.getCurrentTimestamp
+import com.vicherarr.memora.domain.model.AuthState
 import com.vicherarr.memora.domain.models.AppInfo
 import com.vicherarr.memora.domain.models.UserProfile
 import com.vicherarr.memora.domain.models.UserStatistics
 import com.vicherarr.memora.domain.repository.NotesRepository
 import com.vicherarr.memora.domain.repository.UserRepository
-import kotlinx.datetime.LocalDate
 import kotlin.random.Random
 
 /**
@@ -18,21 +19,27 @@ import kotlin.random.Random
  * Following Dependency Inversion - depends on NotesRepository abstraction.
  */
 class UserRepositoryImpl(
-    private val notesRepository: NotesRepository
+    private val notesRepository: NotesRepository,
+    private val cloudAuthProvider: CloudAuthProvider
 ) : UserRepository {
     
     override suspend fun getCurrentUserProfile(): Result<UserProfile> {
         return try {
-            // TODO: Replace with real Google Auth integration
-            // For now, using mock data that simulates Google user
-            val mockUser = UserProfile(
-                id = "google_user_123",
-                displayName = "Usuario Memora",
-                email = "usuario@gmail.com",
-                avatarUrl = null, // TODO: Integrate with Google Avatar API
-                memberSince = LocalDate(2024, 1, 15)
-            )
-            Result.success(mockUser)
+            // Get real user from Google Auth
+            val googleUser = cloudAuthProvider.getCurrentUser()
+            
+            if (googleUser != null) {
+                val userProfile = UserProfile(
+                    id = googleUser.id,
+                    displayName = googleUser.displayName ?: "Usuario",
+                    email = googleUser.email,
+                    avatarUrl = googleUser.profilePictureUrl // Real Google avatar
+                )
+                Result.success(userProfile)
+            } else {
+                // Fallback if no Google user authenticated
+                Result.failure(Exception("Usuario no autenticado"))
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -51,18 +58,15 @@ class UserRepositoryImpl(
     
     override suspend fun logout(): Result<Unit> {
         return try {
-            // TODO: Implement real Google Auth logout
-            // For now, just simulate successful logout
-            Result.success(Unit)
+            // Use real Google Auth logout
+            cloudAuthProvider.signOut()
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
     
     override suspend fun isUserAuthenticated(): Boolean {
-        // TODO: Check real authentication state with Google Auth
-        // For now, always return true (user is logged in)
-        return true
+        return cloudAuthProvider.isAuthenticated()
     }
     
     /**
@@ -89,9 +93,9 @@ class UserRepositoryImpl(
             // Calculate total attachments
             val totalAttachments = notes.sumOf { it.archivosAdjuntos.size }
             
-            // Calculate storage usage (simplified calculation)
+            // Calculate storage usage 
             val localStorageBytes = calculateLocalStorage(notes)
-            val remoteStorageBytes = calculateRemoteStorage(notes)
+            val isSynced = cloudAuthProvider.isAuthenticated() // Simple sync status
             
             // Calculate notes this month using timestamp comparison
             val currentTimestamp = getCurrentTimestamp()
@@ -107,7 +111,7 @@ class UserRepositoryImpl(
                 totalNotes = totalNotes,
                 totalAttachments = totalAttachments,
                 localStorageBytes = localStorageBytes,
-                remoteStorageBytes = remoteStorageBytes,
+                isSynced = isSynced,
                 notesThisMonth = notesThisMonth,
                 lastSyncDate = lastSyncDate
             )
@@ -137,16 +141,6 @@ class UserRepositoryImpl(
         return textStorage.toLong() + attachmentStorage
     }
     
-    /**
-     * Calculate remote storage usage (Google Drive)
-     * 
-     * Business logic for remote storage calculation.
-     */
-    private fun calculateRemoteStorage(notes: List<com.vicherarr.memora.domain.models.Note>): Long {
-        // For now, simulate that remote storage is similar to local
-        // TODO: Integrate with Google Drive API to get real usage
-        return (calculateLocalStorage(notes) * 0.95).toLong() // Assume 95% sync rate
-    }
     
     /**
      * Get default statistics when calculation fails
@@ -158,7 +152,7 @@ class UserRepositoryImpl(
             totalNotes = 0,
             totalAttachments = 0,
             localStorageBytes = 0L,
-            remoteStorageBytes = 0L,
+            isSynced = false,
             notesThisMonth = 0,
             lastSyncDate = null
         )

@@ -7,10 +7,13 @@ import com.vicherarr.memora.domain.models.AppInfo
 import com.vicherarr.memora.domain.models.UserProfile
 import com.vicherarr.memora.domain.models.UserStatistics
 import com.vicherarr.memora.domain.repository.UserRepository
+import com.vicherarr.memora.domain.usecase.ExitAppUseCase
 import com.vicherarr.memora.presentation.states.BaseUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -49,7 +52,8 @@ data class ProfileUiState(
  * Single Responsibility: Only manages profile-related UI state.
  */
 class ProfileViewModel(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val exitAppUseCase: ExitAppUseCase
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -133,8 +137,14 @@ class ProfileViewModel(
             
             userRepository.logout()
                 .onSuccess {
-                    // Logout successful - UI will navigate away
-                    _uiState.value = _uiState.value.copy(isLoading = false)
+                    // Logout successful - exit app completely
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        userProfile = null,
+                        userStatistics = null
+                    )
+                    // Exit app using use case (Clean Architecture)
+                    exitAppUseCase.execute()
                 }
                 .onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
@@ -154,6 +164,8 @@ class ProfileViewModel(
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }
+    
+    
     
     /**
      * Load user profile from repository

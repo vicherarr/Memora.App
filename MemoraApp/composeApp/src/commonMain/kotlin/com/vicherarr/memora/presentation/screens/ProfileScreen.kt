@@ -76,6 +76,8 @@ class ProfileScreen : Screen {
             }
         }
         
+        // Logout handled in ViewModel - App will exit automatically
+        
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             containerColor = MaterialTheme.colorScheme.background
@@ -97,10 +99,12 @@ class ProfileScreen : Screen {
                         return@Column
                     }
                     
-                    // User Profile Header
+                    // User Profile Header with integrated logout
                     profileUiState.userProfile?.let { userProfile ->
                         UserProfileHeader(
                             userProfile = userProfile,
+                            onLogout = { profileViewModel.logout() },
+                            isLoading = profileUiState.isLoading,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -113,11 +117,31 @@ class ProfileScreen : Screen {
                         )
                     }
                     
-                    // Cloud Sync Section (existing functionality)
-                    CloudSyncSection(
-                        syncState = syncState,
-                        onSyncClick = { syncViewModel.iniciarSincronizacionManual() }
-                    )
+                    // Smart Sync Button
+                    Button(
+                        onClick = { syncViewModel.iniciarSmartSync() },
+                        enabled = syncState !is SyncState.Syncing,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        if (syncState is SyncState.Syncing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Sincronizando...")
+                        } else {
+                            Icon(
+                                Icons.Default.CloudSync,
+                                contentDescription = "Sincronizar",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Sincronizar")
+                        }
+                    }
                     
                     // App Settings and Information
                     SettingsSection(
@@ -137,12 +161,6 @@ class ProfileScreen : Screen {
                                 uriHandler.openUri("mailto:$it") 
                             }
                         }
-                    )
-                    
-                    // Account Management
-                    AccountManagementSection(
-                        onLogout = { profileViewModel.logout() },
-                        isLoading = profileUiState.isLoading
                     )
                     
                     // Developer Testing Section (conditional)
@@ -297,7 +315,7 @@ private fun CloudSyncSection(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Sincronizar todo")
+                Text("Sincronizar")
             }
         }
     }
