@@ -10,6 +10,7 @@ val appModule = module {
         databaseModule,
         networkModule,
         repositoryModule,
+        useCaseModule,
         smartSyncModule,
         viewModelModule,
         cloudAuthViewModelModule

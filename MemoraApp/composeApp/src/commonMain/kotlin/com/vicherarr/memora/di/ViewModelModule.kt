@@ -33,7 +33,7 @@ val viewModelModule = module {
     factory { RegisterViewModel(get(), get()) } // AuthRepository + ValidationService
     single { MediaViewModel() } // Singleton - shared across CreateNoteViewModel and CreateNoteScreen
     factory { CreateNoteViewModel(get(), get()) } // NotesRepository + MediaViewModel
-    factory { NotesViewModel(get()) }
+    factory { NotesViewModel(get(), get()) }
     factory { NoteDetailViewModel(get(), get()) } // NotesRepository + MediaViewModel
     factory { ProfileViewModel(get(), get()) } // UserRepository + ExitAppUseCase dependencies
 }

@@ -10,6 +10,7 @@ import com.vicherarr.memora.presentation.states.ImageViewerState
 import com.vicherarr.memora.presentation.states.VideoViewerState
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.vicherarr.memora.domain.usecase.GetNotesUseCase
 
 /**
  * Notes UI State - Single Source of Truth
@@ -39,7 +40,8 @@ data class NotesUiState(
  * Single Responsibility: Handles notes list and filtering logic
  */
 class NotesViewModel(
-    private val notesRepository: NotesRepository
+    private val notesRepository: NotesRepository, // Still needed for CUD operations
+    private val getNotesUseCase: GetNotesUseCase // Injected Use Case for reading
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NotesUiState())
@@ -52,46 +54,15 @@ class NotesViewModel(
     private val _customDateRange = MutableStateFlow<DateRange?>(null)
 
     init {
-        // Reactive pipeline that combines notes from the repo with all filter flows
+        // The ViewModel now delegates the complex flow combination to the Use Case
         viewModelScope.launch {
-            combine(
-                notesRepository.getNotesFlow(),
-                _searchQuery,
-                _dateFilter,
-                _fileTypeFilter,
-                _customDateRange
-            ) { notes, query, dateFilter, fileTypeFilter, customRange ->
-                // This block is now the single source of truth for filtering logic
-                val filtered = notes.filter { note ->
-                    val matchesSearch = if (query.isNotBlank()) {
-                        note.titulo?.contains(query, ignoreCase = true) == true ||
-                                note.contenido.contains(query, ignoreCase = true)
-                    } else {
-                        true
-                    }
-
-                    val matchesDate = DateTimeUtils.matchesDateFilter(
-                        timestamp = note.fechaModificacion,
-                        dateFilter = dateFilter,
-                        customRange = customRange
-                    )
-
-                    val matchesFileType = when (fileTypeFilter) {
-                        FileTypeFilter.WITH_IMAGES -> note.archivosAdjuntos.any { it.tipoArchivo == TipoDeArchivo.Imagen }
-                        FileTypeFilter.WITH_VIDEOS -> note.archivosAdjuntos.any { it.tipoArchivo == TipoDeArchivo.Video }
-                        FileTypeFilter.WITH_ATTACHMENTS -> note.archivosAdjuntos.isNotEmpty()
-                        FileTypeFilter.TEXT_ONLY -> note.archivosAdjuntos.isEmpty()
-                        FileTypeFilter.ALL -> true
-                    }
-
-                    matchesSearch && matchesDate && matchesFileType
-                }
-
-                // Return a pair of the original list and the filtered list
-                Pair(notes, filtered)
-            }
+            getNotesUseCase.execute(
+                searchQuery = _searchQuery,
+                dateFilter = _dateFilter,
+                fileTypeFilter = _fileTypeFilter,
+                customDateRange = _customDateRange
+            )
             .onStart {
-                // Set loading state only once at the beginning of the flow collection
                 _uiState.value = _uiState.value.copy(isLoading = true)
             }
             .catch { exception ->
@@ -101,12 +72,10 @@ class NotesViewModel(
                 )
             }
             .collect { (allNotes, filteredNotes) ->
-                // Update the single UI state with all the new information
                 _uiState.value = _uiState.value.copy(
                     allNotes = allNotes,
                     filteredNotes = filteredNotes,
                     isLoading = false,
-                    // Also reflect the current filter values in the state
                     searchQuery = _searchQuery.value,
                     dateFilter = _dateFilter.value,
                     fileTypeFilter = _fileTypeFilter.value,
