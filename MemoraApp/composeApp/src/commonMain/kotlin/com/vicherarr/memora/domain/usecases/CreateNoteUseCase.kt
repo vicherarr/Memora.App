@@ -42,14 +42,19 @@ class CreateNoteUseCase(
         }
         
         // Delegate to repository for persistence
-        return notesRepository.createNote(titulo, contenido).also { result ->
-            // Assign categories if note creation was successful
-            result.onSuccess { note ->
-                if (categoryIds.isNotEmpty()) {
-                    manageNoteCategoriesUseCase.assignCategoriesToNote(note.id, categoryIds)
+        val noteResult = notesRepository.createNote(titulo, contenido)
+        
+        // Assign categories if note creation was successful and await completion
+        noteResult.onSuccess { note ->
+            if (categoryIds.isNotEmpty()) {
+                val categoryResult = manageNoteCategoriesUseCase.assignCategoriesToNote(note.id, categoryIds)
+                categoryResult.onFailure { error ->
+                    println("CreateNoteUseCase: ❌ Error asignando categorías: ${error.message}")
                 }
             }
         }
+        
+        return noteResult
     }
     
     /**
@@ -100,13 +105,18 @@ class CreateNoteUseCase(
         }
         
         // Delegate to repository for persistence
-        return notesRepository.createNoteWithAttachments(titulo, contenido, attachments).also { result ->
-            // Assign categories if note creation was successful
-            result.onSuccess { note ->
-                if (categoryIds.isNotEmpty()) {
-                    manageNoteCategoriesUseCase.assignCategoriesToNote(note.id, categoryIds)
+        val noteResult = notesRepository.createNoteWithAttachments(titulo, contenido, attachments)
+        
+        // Assign categories if note creation was successful and await completion
+        noteResult.onSuccess { note ->
+            if (categoryIds.isNotEmpty()) {
+                val categoryResult = manageNoteCategoriesUseCase.assignCategoriesToNote(note.id, categoryIds)
+                categoryResult.onFailure { error ->
+                    println("CreateNoteUseCase: ❌ Error asignando categorías con attachments: ${error.message}")
                 }
             }
         }
+        
+        return noteResult
     }
 }

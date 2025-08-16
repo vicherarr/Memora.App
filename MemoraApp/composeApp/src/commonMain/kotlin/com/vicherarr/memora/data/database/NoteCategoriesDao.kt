@@ -15,7 +15,10 @@ import kotlinx.coroutines.flow.Flow
  * Handles N:M relationship between Notes and Categories
  * Following Clean Architecture and SOLID principles
  */
-class NoteCategoriesDao(private val database: MemoraDatabase) {
+class NoteCategoriesDao(
+    private val database: MemoraDatabase,
+    private val categoriesDao: CategoriesDao // ✅ FIX: Dependencia para validar categorías
+) {
     
     private val queries = database.noteCategoriesQueries
     
@@ -125,6 +128,14 @@ class NoteCategoriesDao(private val database: MemoraDatabase) {
     }
     
     /**
+     * Get all note-category relationships for a user
+     * Alternative method name for fingerprint generation
+     */
+    suspend fun getNotesCategoriesByUserId(userId: String): List<Note_categories> {
+        return getNoteCategoriesByUserId(userId)
+    }
+    
+    /**
      * Check if a specific note-category relationship exists
      */
     suspend fun existsNoteCategory(noteId: String, categoryId: String): Boolean {
@@ -222,17 +233,29 @@ class NoteCategoriesDao(private val database: MemoraDatabase) {
         // First, remove existing categories for the note
         deleteNoteCategoriesByNoteId(noteId)
         
-        // Then add the new categories
-        categoryIds.forEach { categoryId ->
-            val relationshipId = "nc_${getCurrentTimestamp()}_${noteId.take(8)}_${categoryId.take(8)}"
-            insertNoteCategory(
-                id = relationshipId,
-                noteId = noteId,
-                categoryId = categoryId,
-                createdAt = timestamp,
-                localCreatedAt = getCurrentTimestamp()
-            )
+        // ✅ FIX: Verificar que las categorías existen antes de crear relaciones
+        println("NoteCategoriesDao: 🔍 VALIDANDO ${categoryIds.size} categorías para nota $noteId")
+        categoryIds.forEachIndexed { index, categoryId ->
+            println("NoteCategoriesDao: Validando categoría ${index + 1}/${ categoryIds.size}: $categoryId")
+            
+            // Verificar que la categoría existe
+            val existingCategory = categoriesDao.getCategoryById(categoryId)
+            if (existingCategory != null) {
+                println("NoteCategoriesDao: ✅ CATEGORÍA ENCONTRADA: ${existingCategory.name} (${existingCategory.id})")
+                val relationshipId = "nc_${getCurrentTimestamp()}_${noteId.take(8)}_${categoryId.take(8)}"
+                insertNoteCategory(
+                    id = relationshipId,
+                    noteId = noteId,
+                    categoryId = categoryId,
+                    createdAt = timestamp,
+                    localCreatedAt = getCurrentTimestamp()
+                )
+                println("NoteCategoriesDao: ✅ RELACIÓN CREADA: $relationshipId")
+            } else {
+                println("NoteCategoriesDao: ❌ CATEGORÍA NO ENCONTRADA: $categoryId - SALTANDO RELACIÓN")
+            }
         }
+        println("NoteCategoriesDao: 🏁 Validación completada para nota $noteId")
     }
     
     /**

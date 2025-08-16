@@ -69,7 +69,7 @@ class CreateNoteViewModel(
     
     private fun getCurrentUserId(): String? {
         return when (val authState = cloudAuthProvider.authState.value) {
-            is AuthState.Authenticated -> authState.user.id
+            is AuthState.Authenticated -> authState.user.email // ✅ FIX: Usar email para consistencia con NotesRepository
             else -> null
         }
     }
@@ -153,10 +153,14 @@ class CreateNoteViewModel(
             viewModelScope.launch {
                 createCategoryUseCase.execute(name, userId).fold(
                     onSuccess = { category ->
+                        // ✅ FIX: Agregar nueva categoría al listado disponible
+                        val updatedCategories = _uiState.value.availableCategories + category
+                        
                         // Auto-select the new category
                         val newSelected = _uiState.value.selectedCategories + category.id
                         updateState { 
                             copy(
+                                availableCategories = updatedCategories, // ✅ FIX: Actualizar categorías disponibles
                                 selectedCategories = newSelected,
                                 isCreatingCategory = false,
                                 newCategoryName = "",

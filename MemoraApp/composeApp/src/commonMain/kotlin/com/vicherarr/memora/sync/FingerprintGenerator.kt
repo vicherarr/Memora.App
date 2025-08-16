@@ -2,6 +2,8 @@ package com.vicherarr.memora.sync
 
 import com.vicherarr.memora.data.database.NotesDao
 import com.vicherarr.memora.data.database.AttachmentsDao
+import com.vicherarr.memora.data.database.CategoriesDao
+import com.vicherarr.memora.data.database.NoteCategoriesDao
 import com.vicherarr.memora.data.database.getCurrentTimestamp
 import kotlin.experimental.and
 
@@ -16,7 +18,9 @@ import kotlin.experimental.and
  */
 class FingerprintGenerator(
     private val notesDao: NotesDao,
-    private val attachmentsDao: AttachmentsDao
+    private val attachmentsDao: AttachmentsDao,
+    private val categoriesDao: CategoriesDao,
+    private val noteCategoriesDao: NoteCategoriesDao
 ) {
     
     /**
@@ -25,9 +29,13 @@ class FingerprintGenerator(
      * El fingerprint incluye:
      * - Cantidad total de notas
      * - Cantidad total de attachments  
+     * - Cantidad total de categorías (Fase 6)
+     * - Cantidad total de relaciones nota-categoría (Fase 6)
      * - Timestamp de última modificación de notas
      * - Hash de todos los IDs y fechas de modificación de notas
      * - Hash de todos los IDs y estados de sync de attachments
+     * - Hash de todas las categorías (Fase 6)
+     * - Hash de todas las relaciones nota-categoría (Fase 6)
      * 
      * @return FingerprintResult con fingerprint y conteos reales de BD
      */
@@ -37,9 +45,15 @@ class FingerprintGenerator(
             val notes = notesDao.getNotesByUserId(userId)
             val attachments = attachmentsDao.getAttachmentsForUser(userId)
             
+            // Fase 6: Obtener datos de categorías
+            val categories = categoriesDao.getCategoriesByUserId(userId)
+            val noteCategories = noteCategoriesDao.getNotesCategoriesByUserId(userId)
+            
             // Componentes del fingerprint
             val notesCount = notes.size
             val attachmentsCount = attachments.size
+            val categoriesCount = categories.size
+            val noteCategoriesCount = noteCategories.size
             val lastNoteModified = notes.maxOfOrNull { 
                 it.fecha_modificacion.toLongOrNull() ?: 0L 
             } ?: 0L
@@ -56,18 +70,54 @@ class FingerprintGenerator(
                 .joinToString("|") { "${it.id}:${it.sync_status}:${it.content_hash ?: "no-hash"}" }
                 .let { if (it.isEmpty()) "no-attachments" else it }
             
+            // Fase 6: Hash detallado de categorías (ID + nombre + color)
+            val categoriesHash = categories
+                .sortedBy { it.id } // Orden determinístico
+                .joinToString("|") { "${it.id}:${it.name}:${it.color}" }
+                .let { if (it.isEmpty()) "no-categories" else it }
+            
+            // Fase 6: Hash detallado de relaciones nota-categoría (note_id + category_id)
+            val noteCategoriesHash = noteCategories
+                .sortedWith(compareBy({ it.note_id }, { it.category_id })) // Orden determinístico
+                .joinToString("|") { "${it.note_id}:${it.category_id}" }
+                .let { if (it.isEmpty()) "no-note-categories" else it }
+            
             // Construir string completo para hash
             val fingerprintData = buildString {
-                append("v1|") // Versión del algoritmo
+                append("v2|") // Versión del algoritmo (v2 incluye categorías - Fase 6)
                 append("notes:$notesCount|")
                 append("attachments:$attachmentsCount|")
+                append("categories:$categoriesCount|") // Fase 6
+                append("notecategories:$noteCategoriesCount|") // Fase 6
                 append("lastmod:$lastNoteModified|")
                 append("nhash:${notesHash.simpleHash()}|")
-                append("ahash:${attachmentsHash.simpleHash()}")
+                append("ahash:${attachmentsHash.simpleHash()}|")
+                append("chash:${categoriesHash.simpleHash()}|") // Fase 6
+                append("nchash:${noteCategoriesHash.simpleHash()}") // Fase 6
             }
             
             println("FingerprintGenerator: Generando fingerprint para user $userId")
-            println("FingerprintGenerator: Notes: $notesCount, Attachments: $attachmentsCount")
+            println("FingerprintGenerator: Notes: $notesCount, Attachments: $attachmentsCount, Categories: $categoriesCount, NoteCategories: $noteCategoriesCount")
+            
+            // ✅ LOG DETALLADO: Categorías encontradas
+            if (categories.isNotEmpty()) {
+                println("FingerprintGenerator: 📂 CATEGORÍAS ENCONTRADAS:")
+                categories.forEach { category ->
+                    println("  - ${category.name} (${category.id}) - user: ${category.user_id}")
+                }
+            } else {
+                println("FingerprintGenerator: ❌ NO se encontraron categorías para user: $userId")
+            }
+            
+            // ✅ LOG DETALLADO: Relaciones nota-categoría encontradas
+            if (noteCategories.isNotEmpty()) {
+                println("FingerprintGenerator: 🔗 RELACIONES NOTA-CATEGORÍA ENCONTRADAS:")
+                noteCategories.forEach { relation ->
+                    println("  - Nota: ${relation.note_id} -> Categoría: ${relation.category_id}")
+                }
+            } else {
+                println("FingerprintGenerator: ❌ NO se encontraron relaciones nota-categoría para user: $userId")
+            }
             println("FingerprintGenerator: Data: $fingerprintData")
             
             val finalFingerprint = fingerprintData.sha256Hash()
@@ -77,6 +127,8 @@ class FingerprintGenerator(
                 fingerprint = finalFingerprint,
                 notesCount = notesCount,
                 attachmentsCount = attachmentsCount,
+                categoriesCount = categoriesCount, // Fase 6
+                noteCategoriesCount = noteCategoriesCount, // Fase 6
                 lastModifiedTimestamp = lastNoteModified
             )
             
@@ -88,6 +140,8 @@ class FingerprintGenerator(
                 fingerprint = "error_${errorTimestamp}",
                 notesCount = 0,
                 attachmentsCount = 0,
+                categoriesCount = 0, // Fase 6
+                noteCategoriesCount = 0, // Fase 6
                 lastModifiedTimestamp = errorTimestamp
             )
         }
@@ -100,9 +154,11 @@ class FingerprintGenerator(
     fun generateQuickFingerprint(
         notesCount: Int,
         attachmentsCount: Int,
+        categoriesCount: Int,
+        noteCategoriesCount: Int,
         lastModifiedTimestamp: Long
     ): String {
-        val fingerprintData = "quick|notes:$notesCount|attachments:$attachmentsCount|lastmod:$lastModifiedTimestamp"
+        val fingerprintData = "quick|notes:$notesCount|attachments:$attachmentsCount|categories:$categoriesCount|notecategories:$noteCategoriesCount|lastmod:$lastModifiedTimestamp"
         return fingerprintData.sha256Hash()
     }
     
@@ -156,6 +212,8 @@ data class FingerprintResult(
     val fingerprint: String,
     val notesCount: Int,
     val attachmentsCount: Int,
+    val categoriesCount: Int, // Fase 6
+    val noteCategoriesCount: Int, // Fase 6
     val lastModifiedTimestamp: Long,
     val generatedAt: Long = getCurrentTimestamp()
 )

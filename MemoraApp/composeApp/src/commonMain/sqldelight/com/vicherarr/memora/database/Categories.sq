@@ -124,3 +124,9 @@ SELECT id, name, color, modified_at
 FROM categories 
 WHERE user_id = ? 
 ORDER BY id ASC;
+
+-- === Debug Operations ===
+
+selectAll:
+SELECT * FROM categories 
+ORDER BY created_at DESC;

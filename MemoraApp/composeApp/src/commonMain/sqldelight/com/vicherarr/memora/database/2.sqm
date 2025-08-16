@@ -1,0 +1,6 @@
+-- Migration 2: Add categories support to sync_metadata table
+-- Fase 6: Integración con Sincronización Inteligente
+
+-- Add new columns to sync_metadata table for categories support
+ALTER TABLE sync_metadata ADD COLUMN categories_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE sync_metadata ADD COLUMN note_categories_count INTEGER NOT NULL DEFAULT 0;

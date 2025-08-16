@@ -29,7 +29,7 @@ class SyncMetadataRepositoryImpl(
             println("SyncMetadataRepository: 📖 Obteniendo metadata local para usuario: $userId")
             val metadata = syncMetadataDao.getSyncMetadataByUserId(userId)
             if (metadata != null) {
-                println("SyncMetadataRepository: ✅ Metadata local encontrado: ${metadata.notesCount} notas, ${metadata.attachmentsCount} attachments")
+                println("SyncMetadataRepository: ✅ Metadata local encontrado: ${metadata.notesCount} notas, ${metadata.attachmentsCount} attachments, ${metadata.categoriesCount} categorías, ${metadata.noteCategoriesCount} relaciones")
             } else {
                 println("SyncMetadataRepository: 📄 No hay metadata local para usuario $userId")
             }
@@ -64,7 +64,7 @@ class SyncMetadataRepositoryImpl(
             
             val metadata = metadataResult.getOrNull()
             if (metadata != null) {
-                println("SyncMetadataRepository: ✅ Metadata remoto encontrado: ${metadata.notesCount} notas, ${metadata.attachmentsCount} attachments")
+                println("SyncMetadataRepository: ✅ Metadata remoto encontrado: ${metadata.notesCount} notas, ${metadata.attachmentsCount} attachments, ${metadata.categoriesCount} categorías, ${metadata.noteCategoriesCount} relaciones")
             }
             
             Result.success(metadata)
@@ -206,10 +206,12 @@ class SyncMetadataRepositoryImpl(
             val fingerprintResult = fingerprintGenerator.generateContentFingerprint(userId)
             val now = getCurrentTimestamp()
             
-            // ✅ CORREGIDO: Usar conteos reales de la base de datos
+            // ✅ CORREGIDO: Usar conteos reales de la base de datos (Fase 6: Incluye categorías)
             val contentFingerprint = fingerprintResult.fingerprint
             val notesCount = fingerprintResult.notesCount
             val attachmentsCount = fingerprintResult.attachmentsCount
+            val categoriesCount = fingerprintResult.categoriesCount
+            val noteCategoriesCount = fingerprintResult.noteCategoriesCount
             
             // Obtener metadata existente para preservar otros campos
             val existingMetadata = getLocalSyncMetadata(userId)
@@ -218,6 +220,8 @@ class SyncMetadataRepositoryImpl(
                 existingMetadata.withLocalUpdate(
                     notesCount = notesCount,
                     attachmentsCount = attachmentsCount,
+                    categoriesCount = categoriesCount,
+                    noteCategoriesCount = noteCategoriesCount,
                     contentFingerprint = contentFingerprint,
                     timestamp = now
                 )
@@ -226,6 +230,8 @@ class SyncMetadataRepositoryImpl(
                     userId = userId,
                     notesCount = notesCount,
                     attachmentsCount = attachmentsCount,
+                    categoriesCount = categoriesCount,
+                    noteCategoriesCount = noteCategoriesCount,
                     contentFingerprint = contentFingerprint,
                     timestamp = now
                 )
@@ -233,7 +239,7 @@ class SyncMetadataRepositoryImpl(
             
             println("SyncMetadataRepository: ✅ Metadata actual generado:")
             println("SyncMetadataRepository:   - Fingerprint: ${contentFingerprint.take(16)}...")
-            println("SyncMetadataRepository:   - Notas: $notesCount, Attachments: $attachmentsCount")
+            println("SyncMetadataRepository:   - Notas: $notesCount, Attachments: $attachmentsCount, Categories: $categoriesCount, NoteCategories: $noteCategoriesCount")
             Result.success(newMetadata)
             
         } catch (e: Exception) {

@@ -28,7 +28,7 @@ class CategoryDomainMapper {
     fun toDomain(entity: Categories): Category {
         return Category(
             id = entity.id,
-            name = entity.name.uppercase(),
+            name = entity.name, // ✅ FIX: No cambiar case - usar nombre original
             color = entity.color,
             icon = entity.icon,
             createdAt = entity.created_at,
@@ -42,7 +42,7 @@ class CategoryDomainMapper {
     fun toEntity(domain: Category): Categories {
         return Categories(
             id = domain.id,
-            name = normalizeCategoryName(domain.name),
+            name = domain.name, // ✅ FIX: No normalizar aquí - usar nombre original
             color = domain.color,
             icon = domain.icon,
             created_at = domain.createdAt,

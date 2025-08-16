@@ -2,6 +2,8 @@ package com.vicherarr.memora.di
 
 import com.vicherarr.memora.data.database.NotesDao
 import com.vicherarr.memora.data.database.AttachmentsDao
+import com.vicherarr.memora.data.database.CategoriesDao
+import com.vicherarr.memora.data.database.NoteCategoriesDao
 import com.vicherarr.memora.data.database.SyncMetadataDao
 import com.vicherarr.memora.data.repository.SyncMetadataRepositoryImpl
 import com.vicherarr.memora.domain.repository.SyncMetadataRepository
@@ -24,11 +26,13 @@ val smartSyncModule = module {
     
     // ========== SMART SYNC DEPENDENCIES ==========
     
-    // Fingerprint generator
+    // Fingerprint generator (Fase 6: Updated with categories support)
     single { 
         FingerprintGenerator(
             notesDao = get<NotesDao>(),
-            attachmentsDao = get<AttachmentsDao>()
+            attachmentsDao = get<AttachmentsDao>(),
+            categoriesDao = get<CategoriesDao>(),
+            noteCategoriesDao = get<NoteCategoriesDao>()
         )
     }
     

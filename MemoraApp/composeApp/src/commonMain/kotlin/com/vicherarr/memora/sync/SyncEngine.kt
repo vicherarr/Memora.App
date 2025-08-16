@@ -62,9 +62,16 @@ class SyncEngine(
                 println("SyncEngine: DB remota encontrada (${dbRemota.size} bytes)")
                 println("SyncEngine: Iniciando fusión con datos REALES...")
                 
-                // ✅ NUEVO: Deserializar datos remotos CON tombstones
-                val (remoteNotes, remoteDeletions) = databaseSyncService.deserializeRemoteDatabaseWithDeletions(dbRemota)
+                // ✅ NUEVO: Deserializar datos remotos CON tombstones y categorías (Fase 6)
+                val remoteDatabaseData = databaseSyncService.deserializeRemoteDatabaseWithDeletions(dbRemota)
+                val remoteNotes = remoteDatabaseData.notes
+                val remoteCategories = remoteDatabaseData.categories
+                val remoteNoteCategories = remoteDatabaseData.noteCategories
+                val remoteDeletions = remoteDatabaseData.deletions
+                
                 println("SyncEngine: ${remoteNotes.size} notas deserializadas de la DB remota")
+                println("SyncEngine: ${remoteCategories.size} categorías deserializadas de la DB remota") // Fase 6
+                println("SyncEngine: ${remoteNoteCategories.size} relaciones nota-categoría deserializadas de la DB remota") // Fase 6
                 println("SyncEngine: ${remoteDeletions.size} tombstones remotos encontrados")
                 
                 // Obtener notas locales REALES
@@ -86,6 +93,12 @@ class SyncEngine(
                 // Aplicar notas fusionadas a la DB local
                 databaseSyncService.applyMergedNotes(mergeResult.mergedNotes, currentUserId)
                 println("SyncEngine: Notas fusionadas aplicadas a la base de datos local")
+                
+                // ✅ FASE 6: Aplicar categorías remotas
+                if (remoteCategories.isNotEmpty() || remoteNoteCategories.isNotEmpty()) {
+                    databaseSyncService.applyRemoteCategories(remoteCategories, remoteNoteCategories, currentUserId)
+                    println("SyncEngine: Categorías remotas aplicadas - ${remoteCategories.size} categorías, ${remoteNoteCategories.size} relaciones")
+                }
                 
                 // ✅ NUEVO: Aplicar tombstones remotos (eliminar notas borradas en otros dispositivos)
                 if (remoteDeletions.isNotEmpty()) {

@@ -26,6 +26,7 @@ class SyncMetadataDao(private val database: MemoraDatabase) {
     
     /**
      * Inserta nuevos metadatos de sync
+     * Updated for Fase 6: Categories support
      */
     suspend fun insertSyncMetadata(syncMetadata: SyncMetadata) {
         queries.insertSyncMetadata(
@@ -33,6 +34,8 @@ class SyncMetadataDao(private val database: MemoraDatabase) {
             last_sync_timestamp = syncMetadata.lastSyncTimestamp,
             notes_count = syncMetadata.notesCount.toLong(),
             attachments_count = syncMetadata.attachmentsCount.toLong(),
+            categories_count = syncMetadata.categoriesCount.toLong(),
+            note_categories_count = syncMetadata.noteCategoriesCount.toLong(),
             content_fingerprint = syncMetadata.contentFingerprint,
             remote_fingerprint = syncMetadata.remoteFingerprint,
             sync_version = syncMetadata.syncVersion.toLong(),
@@ -43,12 +46,15 @@ class SyncMetadataDao(private val database: MemoraDatabase) {
     
     /**
      * Actualiza metadatos de sync existentes
+     * Updated for Fase 6: Categories support
      */
     suspend fun updateSyncMetadata(syncMetadata: SyncMetadata) {
         queries.updateSyncMetadata(
             last_sync_timestamp = syncMetadata.lastSyncTimestamp,
             notes_count = syncMetadata.notesCount.toLong(),
             attachments_count = syncMetadata.attachmentsCount.toLong(),
+            categories_count = syncMetadata.categoriesCount.toLong(),
+            note_categories_count = syncMetadata.noteCategoriesCount.toLong(),
             content_fingerprint = syncMetadata.contentFingerprint,
             remote_fingerprint = syncMetadata.remoteFingerprint,
             updated_at = syncMetadata.updatedAt,
@@ -69,12 +75,15 @@ class SyncMetadataDao(private val database: MemoraDatabase) {
     
     /**
      * Actualiza solo los datos locales (tras cambios locales)
+     * Updated for Fase 6: Categories support
      */
     suspend fun updateLocalData(
         userId: String,
         lastSyncTimestamp: Long,
         notesCount: Int,
         attachmentsCount: Int,
+        categoriesCount: Int,
+        noteCategoriesCount: Int,
         contentFingerprint: String,
         updatedAt: Long
     ) {
@@ -82,6 +91,8 @@ class SyncMetadataDao(private val database: MemoraDatabase) {
             last_sync_timestamp = lastSyncTimestamp,
             notes_count = notesCount.toLong(),
             attachments_count = attachmentsCount.toLong(),
+            categories_count = categoriesCount.toLong(),
+            note_categories_count = noteCategoriesCount.toLong(),
             content_fingerprint = contentFingerprint,
             updated_at = updatedAt,
             user_id = userId
@@ -130,6 +141,7 @@ class SyncMetadataDao(private val database: MemoraDatabase) {
 
 /**
  * Extension function para mapear SQLDelight model a Domain model
+ * Updated for Fase 6: Categories support
  */
 private fun Sync_metadata.toDomainModel(): SyncMetadata {
     return SyncMetadata(
@@ -137,6 +149,8 @@ private fun Sync_metadata.toDomainModel(): SyncMetadata {
         lastSyncTimestamp = last_sync_timestamp,
         notesCount = notes_count.toInt(),
         attachmentsCount = attachments_count.toInt(),
+        categoriesCount = categories_count?.toInt() ?: 0, // Default 0 for backward compatibility
+        noteCategoriesCount = note_categories_count?.toInt() ?: 0, // Default 0 for backward compatibility
         contentFingerprint = content_fingerprint,
         remoteFingerprint = remote_fingerprint,
         syncVersion = sync_version.toInt(),

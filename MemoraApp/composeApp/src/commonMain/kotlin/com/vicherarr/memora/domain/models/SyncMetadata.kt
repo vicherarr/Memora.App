@@ -8,6 +8,8 @@ package com.vicherarr.memora.domain.models
  * @property lastSyncTimestamp Timestamp de última sincronización exitosa
  * @property notesCount Cantidad total de notas del usuario
  * @property attachmentsCount Cantidad total de attachments del usuario
+ * @property categoriesCount Cantidad total de categorías del usuario (Fase 6)
+ * @property noteCategoriesCount Cantidad total de relaciones nota-categoría (Fase 6)
  * @property contentFingerprint Hash SHA256 de metadatos críticos (local)
  * @property remoteFingerprint Hash SHA256 de metadatos remotos (Google Drive)
  * @property syncVersion Versión del esquema de sync para compatibilidad futura
@@ -17,6 +19,8 @@ data class SyncMetadata(
     val lastSyncTimestamp: Long,
     val notesCount: Int,
     val attachmentsCount: Int,
+    val categoriesCount: Int, // Fase 6: Soporte para categorías
+    val noteCategoriesCount: Int, // Fase 6: Soporte para relaciones N:M
     val contentFingerprint: String,
     val remoteFingerprint: String? = null,
     val syncVersion: Int = CURRENT_SYNC_VERSION,
@@ -28,11 +32,14 @@ data class SyncMetadata(
         
         /**
          * Factory method para crear metadata inicial
+         * Updated for Fase 6: Categories support
          */
         fun createInitial(
             userId: String, 
             notesCount: Int, 
             attachmentsCount: Int, 
+            categoriesCount: Int,
+            noteCategoriesCount: Int,
             contentFingerprint: String,
             timestamp: Long
         ): SyncMetadata {
@@ -41,6 +48,8 @@ data class SyncMetadata(
                 lastSyncTimestamp = timestamp,
                 notesCount = notesCount,
                 attachmentsCount = attachmentsCount,
+                categoriesCount = categoriesCount,
+                noteCategoriesCount = noteCategoriesCount,
                 contentFingerprint = contentFingerprint,
                 remoteFingerprint = null,
                 syncVersion = CURRENT_SYNC_VERSION,
@@ -69,10 +78,13 @@ data class SyncMetadata(
     
     /**
      * Crea una copia con datos locales actualizados
+     * Updated for Fase 6: Categories support
      */
     fun withLocalUpdate(
         notesCount: Int,
-        attachmentsCount: Int, 
+        attachmentsCount: Int,
+        categoriesCount: Int,
+        noteCategoriesCount: Int,
         contentFingerprint: String,
         timestamp: Long
     ): SyncMetadata {
@@ -80,6 +92,8 @@ data class SyncMetadata(
             lastSyncTimestamp = timestamp,
             notesCount = notesCount,
             attachmentsCount = attachmentsCount,
+            categoriesCount = categoriesCount,
+            noteCategoriesCount = noteCategoriesCount,
             contentFingerprint = contentFingerprint,
             updatedAt = timestamp
         )

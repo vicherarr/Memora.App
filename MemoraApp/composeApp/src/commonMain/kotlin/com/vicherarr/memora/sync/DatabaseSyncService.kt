@@ -25,6 +25,31 @@ data class SerializableNote(
 )
 
 /**
+ * Formato serializable para sincronización de categorías (Fase 6)
+ */
+@Serializable
+data class SerializableCategory(
+    val id: String,
+    val name: String,
+    val color: String,
+    val usuarioId: String,
+    val createdAt: String,
+    val eliminado: Boolean = false
+)
+
+/**
+ * Formato serializable para relaciones nota-categoría (Fase 6)
+ */
+@Serializable
+data class SerializableNoteCategory(
+    val id: String,
+    val noteId: String,
+    val categoryId: String,
+    val createdAt: String,
+    val eliminado: Boolean = false
+)
+
+/**
  * Formato serializable para tombstones (registros de eliminación)
  */
 @Serializable
@@ -38,14 +63,16 @@ data class SerializableDeletion(
 )
 
 /**
- * Formato serializable para la base de datos completa
+ * Formato serializable para la base de datos completa (Fase 6: Updated with categories)
  */
 @Serializable
 data class SerializableDatabase(
-    val version: String = "1.0",
+    val version: String = "2.0", // Fase 6: Versión 2.0 incluye categorías
     val timestamp: Long,
     val notas: List<SerializableNote>,
-    val deletions: List<SerializableDeletion> = emptyList() // ✅ NUEVO: Compatible con versiones anteriores
+    val categories: List<SerializableCategory> = emptyList(), // Fase 6
+    val noteCategories: List<SerializableNoteCategory> = emptyList(), // Fase 6
+    val deletions: List<SerializableDeletion> = emptyList() // Compatible con versiones anteriores
 )
 
 /**
@@ -104,6 +131,80 @@ class DatabaseSyncService(
                 )
             }
             
+            // Fase 6: Obtener categorías del usuario
+            println("DatabaseSyncService: 🔍 DEBUGGING - Buscando categorías para usuario: '$userId'")
+            val localCategories = databaseManager.categoriesDao.getCategoriesByUserId(userId)
+            println("DatabaseSyncService: Encontradas ${localCategories.size} categorías locales")
+            
+            // ✅ LOG DETALLADO: Mostrar categorías encontradas
+            if (localCategories.isNotEmpty()) {
+                println("DatabaseSyncService: 📂 ✅ CATEGORÍAS ENCONTRADAS PARA SYNC:")
+                localCategories.forEach { category ->
+                    println("  - '${category.name}' (${category.id}) - user: '${category.user_id}' - sync: ${category.sync_status}")
+                }
+            }
+            
+            if (localCategories.isEmpty()) {
+                println("DatabaseSyncService: ❌ NO SE ENCONTRARON CATEGORÍAS - Investigando USER ID MISMATCH...")
+                // Mostrar TODAS las categorías en la DB para debug
+                val allCategories = databaseManager.getDatabase().categoriesQueries.selectAll().executeAsList()
+                println("DatabaseSyncService: Total categorías en DB: ${allCategories.size}")
+                allCategories.forEach { cat ->
+                    println("  -> Categoría en DB: ID='${cat.id}', Nombre='${cat.name}', UsuarioID='${cat.user_id}' (Tipo: ${cat.user_id::class.simpleName})")
+                }
+                
+                // DEBUGGING CRÍTICO: Verificar el tipo y formato del userId
+                println("DatabaseSyncService: 🚨 DEBUGGING USER ID:")
+                println("  - userId buscado: '$userId' (Tipo: ${userId::class.simpleName})")
+                println("  - Longitud: ${userId.length}")
+                
+                // Intentar buscar con diferentes formatos para encontrar el patrón
+                if (allCategories.isNotEmpty()) {
+                    val firstCategoryUserId = allCategories.first().user_id
+                    println("  - Ejemplo user_id en DB: '$firstCategoryUserId' (Tipo: ${firstCategoryUserId::class.simpleName})")
+                    println("  - ¿Son iguales? ${userId == firstCategoryUserId}")
+                    println("  - ¿Es email el userId? ${userId.contains("@")}")
+                    println("  - ¿Es numérico el user_id en DB? ${firstCategoryUserId.all { it.isDigit() }}")
+                }
+            } else {
+                localCategories.forEach { cat ->
+                    println("  -> Categoría encontrada: ID='${cat.id}', Nombre='${cat.name}', UsuarioID='${cat.user_id}'")
+                }
+            }
+            
+            val serializableCategories = localCategories.map { category ->
+                SerializableCategory(
+                    id = category.id,
+                    name = category.name,
+                    color = category.color,
+                    usuarioId = category.user_id,
+                    createdAt = category.created_at,
+                    eliminado = false
+                )
+            }
+            
+            // Fase 6: Obtener relaciones nota-categoría del usuario
+            val localNoteCategories = databaseManager.noteCategoriesDao.getNoteCategoriesByUserId(userId)
+            println("DatabaseSyncService: Encontradas ${localNoteCategories.size} relaciones nota-categoría locales")
+            
+            // ✅ LOG DETALLADO: Mostrar relaciones encontradas
+            if (localNoteCategories.isNotEmpty()) {
+                println("DatabaseSyncService: 🔗 ✅ RELACIONES ENCONTRADAS PARA SYNC:")
+                localNoteCategories.forEach { relation ->
+                    println("  - Nota: ${relation.note_id} -> Categoría: ${relation.category_id}")
+                }
+            }
+            
+            val serializableNoteCategories = localNoteCategories.map { noteCategory ->
+                SerializableNoteCategory(
+                    id = noteCategory.id,
+                    noteId = noteCategory.note_id,
+                    categoryId = noteCategory.category_id,
+                    createdAt = noteCategory.created_at,
+                    eliminado = false
+                )
+            }
+            
             // ✅ NUEVO: Obtener tombstones pendientes de sincronización
             val localDeletions = deletionsDao.getDeletionsNeedingSync()
             println("DatabaseSyncService: Encontrados ${localDeletions.size} tombstones pendientes de sync")
@@ -119,10 +220,12 @@ class DatabaseSyncService(
                 )
             }
             
-            // Crear estructura de base de datos serializable
+            // Crear estructura de base de datos serializable (Fase 6: Con categorías)
             val serializableDb = SerializableDatabase(
                 timestamp = getCurrentTimestamp(),
                 notas = serializableNotes,
+                categories = serializableCategories, // Fase 6
+                noteCategories = serializableNoteCategories, // Fase 6
                 deletions = serializableDeletions // ✅ NUEVO: Incluir tombstones
             )
             
@@ -163,6 +266,8 @@ class DatabaseSyncService(
             println("  - Versión: ${serializableDb.version}")
             println("  - Timestamp: ${serializableDb.timestamp}")
             println("  - Número de notas: ${serializableDb.notas.size}")
+            println("  - Número de categorías: ${serializableDb.categories.size}") // Fase 6
+            println("  - Número de relaciones nota-categoría: ${serializableDb.noteCategories.size}") // Fase 6
             
             // LOGS DETALLADOS DE CADA NOTA REMOTA
             serializableDb.notas.forEachIndexed { index, note ->
@@ -199,16 +304,45 @@ class DatabaseSyncService(
     }
     
     /**
-     * ✅ NUEVO: Deserializa la base de datos remota Y retorna tombstones
+     * ✅ NUEVO: Deserializa la base de datos remota Y retorna tombstones (Fase 6: Con categorías)
      */
-    suspend fun deserializeRemoteDatabaseWithDeletions(remoteDbBytes: ByteArray): Pair<List<DatabaseNote>, List<SerializableDeletion>> = withContext(Dispatchers.Default) {
+    data class RemoteDatabaseData(
+        val notes: List<DatabaseNote>,
+        val categories: List<SerializableCategory>,
+        val noteCategories: List<SerializableNoteCategory>,
+        val deletions: List<SerializableDeletion>
+    )
+    
+    suspend fun deserializeRemoteDatabaseWithDeletions(remoteDbBytes: ByteArray): RemoteDatabaseData = withContext(Dispatchers.Default) {
         try {
             val jsonString = remoteDbBytes.decodeToString()
             val serializableDb = json.decodeFromString<SerializableDatabase>(jsonString)
             
             println("DatabaseSyncService: ✅ NUEVO - DB remota con tombstones:")
             println("  - Notas: ${serializableDb.notas.size}")
+            println("  - Categorías: ${serializableDb.categories.size}") // Fase 6
+            println("  - Relaciones nota-categoría: ${serializableDb.noteCategories.size}") // Fase 6
             println("  - Tombstones: ${serializableDb.deletions.size}")
+            
+            // DEBUGGING CRÍTICO: Mostrar contenido de categorías remotas
+            if (serializableDb.categories.isNotEmpty()) {
+                println("DatabaseSyncService: 🔍 CATEGORÍAS REMOTAS DESERIALIZADAS:")
+                serializableDb.categories.forEach { cat ->
+                    println("  -> Categoría remota: ID='${cat.id}', Nombre='${cat.name}', UsuarioID='${cat.usuarioId}'")
+                }
+            } else {
+                println("DatabaseSyncService: ❌ NO HAY CATEGORÍAS EN LA DB REMOTA")
+            }
+            
+            // DEBUGGING: Mostrar relaciones nota-categoría remotas
+            if (serializableDb.noteCategories.isNotEmpty()) {
+                println("DatabaseSyncService: 🔍 RELACIONES NOTA-CATEGORÍA REMOTAS:")
+                serializableDb.noteCategories.forEach { nc ->
+                    println("  -> Relación remota: ID='${nc.id}', NoteID='${nc.noteId}', CategoryID='${nc.categoryId}'")
+                }
+            } else {
+                println("DatabaseSyncService: ❌ NO HAY RELACIONES NOTA-CATEGORÍA EN LA DB REMOTA")
+            }
             
             // Convertir notas
             val databaseNotes = serializableDb.notas.map { note ->
@@ -221,11 +355,21 @@ class DatabaseSyncService(
                 )
             }
             
-            return@withContext Pair(databaseNotes, serializableDb.deletions)
+            return@withContext RemoteDatabaseData(
+                notes = databaseNotes,
+                categories = serializableDb.categories,
+                noteCategories = serializableDb.noteCategories,
+                deletions = serializableDb.deletions
+            )
             
         } catch (e: Exception) {
             println("DatabaseSyncService: Error deserializando con tombstones: ${e.message}")
-            return@withContext Pair(emptyList(), emptyList())
+            return@withContext RemoteDatabaseData(
+                notes = emptyList(),
+                categories = emptyList(),
+                noteCategories = emptyList(),
+                deletions = emptyList()
+            )
         }
     }
     
@@ -326,6 +470,129 @@ class DatabaseSyncService(
     }
     
     /**
+     * Fase 6: Aplica categorías y relaciones nota-categoría remotas a la base de datos local
+     */
+    suspend fun applyRemoteCategories(
+        remoteCategories: List<SerializableCategory>,
+        remoteNoteCategories: List<SerializableNoteCategory>,
+        userId: String
+    ) = withContext(Dispatchers.Default) {
+        try {
+            println("DatabaseSyncService: 🔥 FASE 6 - APLICANDO CATEGORÍAS REMOTAS")
+            println("DatabaseSyncService: Usuario actual para sync: '$userId'")
+            println("DatabaseSyncService: Recibidas ${remoteCategories.size} categorías y ${remoteNoteCategories.size} relaciones remotas")
+            
+            // DEBUGGING CRÍTICO: Analizar cada categoría remota
+            remoteCategories.forEachIndexed { index, category ->
+                println("DatabaseSyncService: 📝 CATEGORÍA REMOTA ${index + 1}:")
+                println("  - ID: '${category.id}'")
+                println("  - Nombre: '${category.name}'")
+                println("  - Color: '${category.color}'")
+                println("  - Usuario ID: '${category.usuarioId}'")
+                println("  - Eliminado: ${category.eliminado}")
+                println("  - ¿Coincide userId? ${category.usuarioId == userId}")
+                println("  - ¿No eliminado? ${!category.eliminado}")
+                println("  - ¿Debería procesar? ${category.usuarioId == userId && !category.eliminado}")
+            }
+            
+            // Aplicar categorías remotas
+            var categoriasInsertadas = 0
+            var categoriasActualizadas = 0
+            var categoriasOmitidas = 0
+            
+            remoteCategories.forEach { category ->
+                if (category.usuarioId == userId && !category.eliminado) {
+                    val existingCategory = databaseManager.categoriesDao.getCategoryById(category.id)
+                    
+                    if (existingCategory != null) {
+                        // Actualizar categoría existente
+                        println("DatabaseSyncService: ✏️ ACTUALIZANDO categoría: ${category.id} (${category.name})")
+                        databaseManager.categoriesDao.updateCategory(
+                            id = category.id,
+                            name = category.name,
+                            color = category.color,
+                            icon = null, // No incluimos iconos en la sincronización por ahora
+                            modifiedAt = category.createdAt
+                        )
+                        categoriasActualizadas++
+                    } else {
+                        // Insertar categoría nueva
+                        println("DatabaseSyncService: ➕ INSERTANDO categoría nueva: ${category.id} (${category.name})")
+                        println("  - userId para inserción: '$userId'")
+                        databaseManager.categoriesDao.insertCategory(
+                            id = category.id,
+                            name = category.name,
+                            color = category.color,
+                            icon = null,
+                            createdAt = category.createdAt,
+                            modifiedAt = category.createdAt,
+                            userId = userId,
+                            syncStatus = "SYNCED",
+                            needsUpload = 0,
+                            localCreatedAt = getCurrentTimestamp()
+                        )
+                        categoriasInsertadas++
+                        
+                        // VERIFICACIÓN INMEDIATA: ¿Se insertó correctamente?
+                        val verificacion = databaseManager.categoriesDao.getCategoryById(category.id)
+                        if (verificacion != null) {
+                            println("DatabaseSyncService: ✅ VERIFICACIÓN EXITOSA - Categoría insertada: ${verificacion.name}")
+                        } else {
+                            println("DatabaseSyncService: ❌ ERROR CRÍTICO - Categoría NO se encuentra después de insertar!")
+                        }
+                    }
+                } else {
+                    println("DatabaseSyncService: ⏭️ OMITIENDO categoría: ${category.id} (userId: ${category.usuarioId}, eliminado: ${category.eliminado})")
+                    categoriasOmitidas++
+                }
+            }
+            
+            println("DatabaseSyncService: 📊 RESUMEN APLICACIÓN CATEGORÍAS:")
+            println("  - Insertadas: $categoriasInsertadas")
+            println("  - Actualizadas: $categoriasActualizadas")
+            println("  - Omitidas: $categoriasOmitidas")
+            
+            // Limpiar relaciones existentes que serán reemplazadas
+            println("DatabaseSyncService: Limpiando relaciones nota-categoría existentes")
+            // Note: Solo limpiamos si hay relaciones remotas para evitar perder datos
+            if (remoteNoteCategories.isNotEmpty()) {
+                // TODO: Implementar limpieza selectiva o merge inteligente
+            }
+            
+            // Aplicar relaciones nota-categoría remotas
+            remoteNoteCategories.forEach { noteCategory ->
+                if (!noteCategory.eliminado) {
+                    val existingRelation = databaseManager.noteCategoriesDao.existsNoteCategory(
+                        noteCategory.noteId, 
+                        noteCategory.categoryId
+                    )
+                    
+                    if (!existingRelation) {
+                        println("  - Insertando relación nota-categoría: ${noteCategory.noteId} -> ${noteCategory.categoryId}")
+                        databaseManager.noteCategoriesDao.insertNoteCategory(
+                            id = noteCategory.id,
+                            noteId = noteCategory.noteId,
+                            categoryId = noteCategory.categoryId,
+                            createdAt = noteCategory.createdAt,
+                            syncStatus = "SYNCED",
+                            needsUpload = 0,
+                            localCreatedAt = getCurrentTimestamp()
+                        )
+                    } else {
+                        println("  - Relación ya existe: ${noteCategory.noteId} -> ${noteCategory.categoryId}")
+                    }
+                }
+            }
+            
+            println("DatabaseSyncService: Fase 6 - Categorías remotas aplicadas exitosamente")
+            
+        } catch (e: Exception) {
+            println("DatabaseSyncService: Error aplicando categorías remotas: ${e.message}")
+            throw e
+        }
+    }
+    
+    /**
      * ✅ NUEVO: Aplica tombstones locales de attachments (elimina attachments borrados localmente)
      * Esta función se ejecuta después de aplicar notas sincronizadas para limpiar attachments
      * que fueron eliminados localmente pero que pueden haber reaparecido durante la sync.
@@ -408,6 +675,14 @@ class DatabaseSyncService(
                         "attachments" -> {
                             println("  🪦 Eliminando attachment remoto: ${deletion.recordId}")
                             // TODO: Implementar eliminación de attachments
+                        }
+                        "categories" -> { // Fase 6
+                            println("  🪦 Eliminando categoría remota: ${deletion.recordId}")
+                            databaseManager.categoriesDao.deleteCategory(deletion.recordId)
+                        }
+                        "note_categories" -> { // Fase 6
+                            println("  🪦 Eliminando relación nota-categoría remota: ${deletion.recordId}")
+                            databaseManager.noteCategoriesDao.deleteNoteCategory(deletion.recordId)
                         }
                     }
                 }

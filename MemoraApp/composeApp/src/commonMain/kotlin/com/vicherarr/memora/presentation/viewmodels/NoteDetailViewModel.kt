@@ -405,7 +405,7 @@ class NoteDetailViewModel(
      */
     private fun getCurrentUserId(): String? {
         return when (val authState = cloudAuthProvider.authState.value) {
-            is AuthState.Authenticated -> authState.user.id
+            is AuthState.Authenticated -> authState.user.email // ✅ FIX: Usar email para consistencia con NotesRepository
             else -> null
         }
     }

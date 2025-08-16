@@ -50,7 +50,7 @@ class DatabaseManager(private val driverFactory: DatabaseDriverFactory) {
      * Note Categories Data Access Object (N:M relationships)
      */
     val noteCategoriesDao: NoteCategoriesDao by lazy {
-        NoteCategoriesDao(database)
+        NoteCategoriesDao(database, categoriesDao) // ✅ FIX: Inyectar CategoriesDao
     }
     
     /**

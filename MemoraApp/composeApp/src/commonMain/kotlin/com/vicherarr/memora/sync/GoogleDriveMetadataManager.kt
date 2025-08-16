@@ -63,15 +63,17 @@ class GoogleDriveMetadataManager {
             false
         }
     }
-    
+
     /**
-     * Genera contenido de metadata de ejemplo para testing
+     * Genera contenido de metadata de ejemplo para testing (Fase 6: Con categorías)
      */
     fun generateSampleMetadata(userId: String): String {
         val sampleMetadata = SyncMetadata.createInitial(
             userId = userId,
             notesCount = 0,
             attachmentsCount = 0,
+            categoriesCount = 0, // Fase 6
+            noteCategoriesCount = 0, // Fase 6
             contentFingerprint = "sample_fingerprint",
             timestamp = getCurrentTimestamp()
         )
@@ -80,7 +82,7 @@ class GoogleDriveMetadataManager {
 }
 
 /**
- * DTO para serialización JSON de metadatos
+ * DTO para serialización JSON de metadatos (Fase 6: Con categorías)
  * Separado del domain model para evitar acoplamiento con serialización
  */
 @Serializable
@@ -89,12 +91,14 @@ private data class SyncMetadataDto(
     val lastSyncTimestamp: Long,
     val notesCount: Int,
     val attachmentsCount: Int,
+    val categoriesCount: Int = 0, // Fase 6: Con default para backward compatibility
+    val noteCategoriesCount: Int = 0, // Fase 6: Con default para backward compatibility
     val contentFingerprint: String,
     val remoteFingerprint: String? = null,
     val syncVersion: Int = 1,
     val createdAt: Long,
     val updatedAt: Long,
-    val schemaVersion: String = "1.0", // Para compatibilidad futura
+    val schemaVersion: String = "2.0", // Fase 6: Actualizada a 2.0 para incluir categorías
     val generatedBy: String = "Memora_Android_KMP"
 ) {
     companion object {
@@ -104,6 +108,8 @@ private data class SyncMetadataDto(
                 lastSyncTimestamp = syncMetadata.lastSyncTimestamp,
                 notesCount = syncMetadata.notesCount,
                 attachmentsCount = syncMetadata.attachmentsCount,
+                categoriesCount = syncMetadata.categoriesCount,
+                noteCategoriesCount = syncMetadata.noteCategoriesCount,
                 contentFingerprint = syncMetadata.contentFingerprint,
                 remoteFingerprint = syncMetadata.remoteFingerprint,
                 syncVersion = syncMetadata.syncVersion,
@@ -112,13 +118,15 @@ private data class SyncMetadataDto(
             )
         }
     }
-    
+
     fun toDomain(): SyncMetadata {
         return SyncMetadata(
             userId = userId,
             lastSyncTimestamp = lastSyncTimestamp,
             notesCount = notesCount,
             attachmentsCount = attachmentsCount,
+            categoriesCount = categoriesCount,
+            noteCategoriesCount = noteCategoriesCount,
             contentFingerprint = contentFingerprint,
             remoteFingerprint = remoteFingerprint,
             syncVersion = syncVersion,
