@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -60,6 +61,37 @@ class SplashScreen : Screen {
         
         // Animated splash screen UI
         val infiniteTransition = rememberInfiniteTransition(label = "splash_animation")
+        
+        // Logo animation - combination of scale, rotation and alpha for elegant effect
+        val logoScale by infiniteTransition.animateFloat(
+            initialValue = 0.8f,
+            targetValue = 1.3f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2000, easing = EaseInOutSine),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "logo_scale"
+        )
+        
+        val logoRotation by infiniteTransition.animateFloat(
+            initialValue = -5f,
+            targetValue = 5f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(3000, easing = EaseInOutQuad),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "logo_rotation"
+        )
+        
+        val logoAlpha by infiniteTransition.animateFloat(
+            initialValue = 0.8f,
+            targetValue = 1.0f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2500, easing = EaseInOutCubic),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "logo_alpha"
+        )
         
         // Multiple animations for all memory orbs - each with unique rhythm
         val centralOrbScale by infiniteTransition.animateFloat(
@@ -216,14 +248,28 @@ class SplashScreen : Screen {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // Logo animado
-                Image(
-                    painter = painterResource(Res.drawable.ic_logo),
-                    contentDescription = "Memora Logo",
+                // Logo container with circular background
+                Box(
                     modifier = Modifier
-                        .size(120.dp)
-                        .alpha(titleAlpha) // Misma animación que el texto
-                )
+                        .size(180.dp)
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f),
+                            CircleShape
+                        )
+                        .padding(10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Logo animado
+                    Image(
+                        painter = painterResource(Res.drawable.ic_logo),
+                        contentDescription = "Memora Logo",
+                        modifier = Modifier
+                            .size(120.dp)
+                            .scale(logoScale)
+                            .rotate(logoRotation)
+                            .alpha(logoAlpha)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
