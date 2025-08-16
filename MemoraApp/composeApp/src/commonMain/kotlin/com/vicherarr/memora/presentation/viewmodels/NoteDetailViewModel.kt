@@ -1,19 +1,16 @@
 package com.vicherarr.memora.presentation.viewmodels
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.domain.models.ArchivoAdjunto
 import com.vicherarr.memora.domain.models.MediaFile
-import com.vicherarr.memora.domain.usecases.SearchNotesUseCase
-import com.vicherarr.memora.domain.usecases.UpdateNoteUseCase
-import com.vicherarr.memora.domain.usecases.DeleteNoteUseCase
-import com.vicherarr.memora.domain.usecases.GetCategoriesByUserUseCase
-import com.vicherarr.memora.domain.usecases.CreateCategoryUseCase
-import com.vicherarr.memora.domain.usecases.GetCategoriesByNoteIdUseCase
-import com.vicherarr.memora.domain.usecases.GetCurrentUserIdUseCase
-import com.vicherarr.memora.domain.model.User
-import com.vicherarr.memora.domain.models.Category
+import com.vicherarr.memora.domain.usecase.SearchNotesUseCase
+import com.vicherarr.memora.domain.usecase.UpdateNoteUseCase
+import com.vicherarr.memora.domain.usecase.DeleteNoteUseCase
+import com.vicherarr.memora.domain.usecase.GetCategoriesByUserUseCase
+import com.vicherarr.memora.domain.usecase.CreateCategoryUseCase
+import com.vicherarr.memora.domain.usecase.GetCategoriesByNoteIdUseCase
+import com.vicherarr.memora.domain.usecase.GetCurrentUserIdUseCase
 import com.vicherarr.memora.presentation.states.BaseUiState
 import com.vicherarr.memora.presentation.states.ImageViewerState
 import com.vicherarr.memora.presentation.states.VideoViewerState

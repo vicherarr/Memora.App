@@ -1,4 +1,4 @@
-package com.vicherarr.memora.domain.usecases
+package com.vicherarr.memora.domain.usecase
 
 /**
  * Use Case: Get Current User ID

@@ -1,33 +1,27 @@
-package com.vicherarr.memora.domain.usecases
+package com.vicherarr.memora.domain.usecase
 
 import com.vicherarr.memora.domain.models.Note
 import com.vicherarr.memora.domain.models.MediaFile
-import com.vicherarr.memora.domain.models.ArchivoAdjunto
 import com.vicherarr.memora.domain.repository.NotesRepository
 import com.vicherarr.memora.domain.validation.ValidationService
 
 /**
- * Use Case for updating notes following Clean Architecture principles
- * Single Responsibility: Only handles note update business logic
+ * Use Case for creating notes following Clean Architecture principles
+ * Single Responsibility: Only handles note creation business logic
  * Dependency Inversion: Depends on repository abstraction, not implementation
  */
-class UpdateNoteUseCase(
+class CreateNoteUseCase(
     private val notesRepository: NotesRepository,
     private val validationService: ValidationService,
     private val manageNoteCategoriesUseCase: ManageNoteCategoriesUseCase
 ) {
     
     /**
-     * Update a note with text content only
+     * Create a note with text content only
      * Validates input and delegates to repository
      */
-    suspend fun execute(id: String, titulo: String?, contenido: String, categoryIds: List<String> = emptyList()): Result<Note> {
-        // Business logic: Validate note ID
-        if (id.isBlank()) {
-            return Result.failure(IllegalArgumentException("Note ID cannot be blank"))
-        }
-        
-        // Business logic: Validate content
+    suspend fun execute(titulo: String?, contenido: String, categoryIds: List<String> = emptyList()): Result<Note> {
+        // Business logic: Validate input
         val validationResult = validationService.validateNoteContent(contenido)
         if (!validationResult.isValid) {
             return Result.failure(
@@ -48,32 +42,32 @@ class UpdateNoteUseCase(
         }
         
         // Delegate to repository for persistence
-        return notesRepository.updateNote(id, titulo, contenido).also { result ->
-            // Update categories if note update was successful
-            result.onSuccess { 
-                manageNoteCategoriesUseCase.assignCategoriesToNote(id, categoryIds)
+        val noteResult = notesRepository.createNote(titulo, contenido)
+        
+        // Assign categories if note creation was successful and await completion
+        noteResult.onSuccess { note ->
+            if (categoryIds.isNotEmpty()) {
+                val categoryResult = manageNoteCategoriesUseCase.assignCategoriesToNote(note.id, categoryIds)
+                categoryResult.onFailure { error ->
+                    println("CreateNoteUseCase: ❌ Error asignando categorías: ${error.message}")
+                }
             }
         }
+        
+        return noteResult
     }
     
     /**
-     * Update a note with text content and manage attachments
-     * Validates input, manages attachment changes and delegates to repository
+     * Create a note with text content and media attachments
+     * Validates input, attachments and delegates to repository
      */
     suspend fun executeWithAttachments(
-        noteId: String,
-        titulo: String?,
-        contenido: String,
-        existingAttachments: List<ArchivoAdjunto>,
-        newMediaFiles: List<MediaFile>,
+        titulo: String?, 
+        contenido: String, 
+        attachments: List<MediaFile>,
         categoryIds: List<String> = emptyList()
     ): Result<Note> {
-        // Business logic: Validate note ID
-        if (noteId.isBlank()) {
-            return Result.failure(IllegalArgumentException("Note ID cannot be blank"))
-        }
-        
-        // Business logic: Validate content
+        // Business logic: Validate input
         val validationResult = validationService.validateNoteContent(contenido)
         if (!validationResult.isValid) {
             return Result.failure(
@@ -93,9 +87,9 @@ class UpdateNoteUseCase(
             }
         }
         
-        // Business logic: Basic validation for new attachments
-        if (newMediaFiles.isNotEmpty()) {
-            for (attachment in newMediaFiles) {
+        // Business logic: Basic attachment validation
+        if (attachments.isNotEmpty()) {
+            for (attachment in attachments) {
                 // Basic validation: check file name and data
                 if (attachment.fileName.isBlank()) {
                     return Result.failure(
@@ -111,13 +105,18 @@ class UpdateNoteUseCase(
         }
         
         // Delegate to repository for persistence
-        return notesRepository.updateNoteWithAttachments(
-            noteId, titulo, contenido, existingAttachments, newMediaFiles
-        ).also { result ->
-            // Update categories if note update was successful
-            result.onSuccess {
-                manageNoteCategoriesUseCase.assignCategoriesToNote(noteId, categoryIds)
+        val noteResult = notesRepository.createNoteWithAttachments(titulo, contenido, attachments)
+        
+        // Assign categories if note creation was successful and await completion
+        noteResult.onSuccess { note ->
+            if (categoryIds.isNotEmpty()) {
+                val categoryResult = manageNoteCategoriesUseCase.assignCategoriesToNote(note.id, categoryIds)
+                categoryResult.onFailure { error ->
+                    println("CreateNoteUseCase: ❌ Error asignando categorías con attachments: ${error.message}")
+                }
             }
         }
+        
+        return noteResult
     }
 }

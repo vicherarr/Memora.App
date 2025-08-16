@@ -1,13 +1,13 @@
 package com.vicherarr.memora.di
 
 import com.vicherarr.memora.domain.usecase.GetNotesUseCase
-import com.vicherarr.memora.domain.usecases.CreateNoteUseCase
-import com.vicherarr.memora.domain.usecases.UpdateNoteUseCase
-import com.vicherarr.memora.domain.usecases.DeleteNoteUseCase
-import com.vicherarr.memora.domain.usecases.SearchNotesUseCase
-import com.vicherarr.memora.domain.usecases.CreateCategoryUseCase
-import com.vicherarr.memora.domain.usecases.ManageNoteCategoriesUseCase
-import com.vicherarr.memora.domain.usecases.GetCategoriesByNoteIdUseCase
+import com.vicherarr.memora.domain.usecase.CreateNoteUseCase
+import com.vicherarr.memora.domain.usecase.UpdateNoteUseCase
+import com.vicherarr.memora.domain.usecase.DeleteNoteUseCase
+import com.vicherarr.memora.domain.usecase.SearchNotesUseCase
+import com.vicherarr.memora.domain.usecase.CreateCategoryUseCase
+import com.vicherarr.memora.domain.usecase.ManageNoteCategoriesUseCase
+import com.vicherarr.memora.domain.usecase.GetCategoriesByNoteIdUseCase
 import org.koin.core.module.dsl.factoryOf
 import org.koin.dsl.module
 

@@ -1,4 +1,4 @@
-package com.vicherarr.memora.domain.usecases
+package com.vicherarr.memora.domain.usecase
 
 import com.vicherarr.memora.domain.repository.NotesRepository
 

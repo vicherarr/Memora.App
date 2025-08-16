@@ -12,9 +12,9 @@ import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
 import com.vicherarr.memora.presentation.viewmodels.NoteDetailViewModel
 import com.vicherarr.memora.presentation.viewmodels.ProfileViewModel
 import com.vicherarr.memora.presentation.viewmodels.SplashViewModel
-import com.vicherarr.memora.domain.usecases.GetCategoriesByUserUseCase
-import com.vicherarr.memora.domain.usecases.CreateCategoryUseCase
-import com.vicherarr.memora.domain.usecases.GetCurrentUserIdUseCase
+import com.vicherarr.memora.domain.usecase.GetCategoriesByUserUseCase
+import com.vicherarr.memora.domain.usecase.CreateCategoryUseCase
+import com.vicherarr.memora.domain.usecase.GetCurrentUserIdUseCase
 import com.vicherarr.memora.data.usecases.GetCurrentUserIdUseCaseImpl
 import org.koin.dsl.module
 

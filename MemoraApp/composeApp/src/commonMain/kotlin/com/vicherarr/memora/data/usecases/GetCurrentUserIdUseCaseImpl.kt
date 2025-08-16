@@ -1,6 +1,6 @@
 package com.vicherarr.memora.data.usecases
 
-import com.vicherarr.memora.domain.usecases.GetCurrentUserIdUseCase
+import com.vicherarr.memora.domain.usecase.GetCurrentUserIdUseCase
 import com.vicherarr.memora.data.auth.CloudAuthProvider
 import com.vicherarr.memora.domain.model.AuthState
 

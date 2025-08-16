@@ -1,14 +1,10 @@
 package com.vicherarr.memora.presentation.viewmodels
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vicherarr.memora.domain.usecases.CreateNoteUseCase
-import com.vicherarr.memora.domain.usecases.GetCategoriesByUserUseCase
-import com.vicherarr.memora.domain.usecases.CreateCategoryUseCase
-import com.vicherarr.memora.domain.usecases.GetCurrentUserIdUseCase
-import com.vicherarr.memora.domain.models.Category
-import com.vicherarr.memora.domain.model.User
-import kotlinx.coroutines.flow.combine
+import com.vicherarr.memora.domain.usecase.CreateNoteUseCase
+import com.vicherarr.memora.domain.usecase.GetCategoriesByUserUseCase
+import com.vicherarr.memora.domain.usecase.CreateCategoryUseCase
+import com.vicherarr.memora.domain.usecase.GetCurrentUserIdUseCase
 import com.vicherarr.memora.presentation.states.BaseUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

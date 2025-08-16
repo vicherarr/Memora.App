@@ -1,16 +1,14 @@
 package com.vicherarr.memora.presentation.viewmodels
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.domain.models.*
 import com.vicherarr.memora.domain.repository.NotesRepository
-import com.vicherarr.memora.domain.usecases.GetCurrentUserIdUseCase
-import com.vicherarr.memora.domain.usecases.CreateNoteUseCase
-import com.vicherarr.memora.domain.usecases.UpdateNoteUseCase
-import com.vicherarr.memora.domain.usecases.DeleteNoteUseCase
-import com.vicherarr.memora.domain.usecases.SearchNotesUseCase
-import com.vicherarr.memora.domain.usecases.GetCategoriesByUserUseCase
-import com.vicherarr.memora.domain.utils.DateTimeUtils
+import com.vicherarr.memora.domain.usecase.GetCurrentUserIdUseCase
+import com.vicherarr.memora.domain.usecase.CreateNoteUseCase
+import com.vicherarr.memora.domain.usecase.UpdateNoteUseCase
+import com.vicherarr.memora.domain.usecase.DeleteNoteUseCase
+import com.vicherarr.memora.domain.usecase.SearchNotesUseCase
+import com.vicherarr.memora.domain.usecase.GetCategoriesByUserUseCase
 import com.vicherarr.memora.presentation.states.BaseUiState
 import com.vicherarr.memora.presentation.states.ImageViewerState
 import com.vicherarr.memora.presentation.states.VideoViewerState
