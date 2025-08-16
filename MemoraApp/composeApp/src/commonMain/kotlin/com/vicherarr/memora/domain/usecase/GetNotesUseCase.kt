@@ -22,21 +22,34 @@ class GetNotesUseCase(
      * @param dateFilter Flow of the selected date filter.
      * @param fileTypeFilter Flow of the selected file type filter.
      * @param customDateRange Flow of the selected custom date range.
+     * @param categoryFilter Flow of the selected category filter.
+     * @param selectedCategoryId Flow of the selected category ID.
      * @return A flow that emits a Pair containing the complete list of notes and the filtered list.
      */
     fun execute(
         searchQuery: Flow<String>,
         dateFilter: Flow<DateFilter>,
         fileTypeFilter: Flow<FileTypeFilter>,
-        customDateRange: Flow<DateRange?>
+        customDateRange: Flow<DateRange?>,
+        categoryFilter: Flow<CategoryFilter>,
+        selectedCategoryId: Flow<String?>
     ): Flow<Pair<List<Note>, List<Note>>> {
         return combine(
             notesRepository.getNotesFlow(),
             searchQuery,
             dateFilter,
             fileTypeFilter,
-            customDateRange
-        ) { notes, query, dateF, fileTypeF, customRange ->
+            customDateRange,
+            categoryFilter,
+            selectedCategoryId
+        ) { flows ->
+            val notes = flows[0] as List<Note>
+            val query = flows[1] as String
+            val dateF = flows[2] as DateFilter
+            val fileTypeF = flows[3] as FileTypeFilter
+            val customRange = flows[4] as DateRange?
+            val categoryF = flows[5] as CategoryFilter
+            val selectedCatId = flows[6] as String?
             val filteredNotes = notes.filter { note ->
                 val matchesSearch = if (query.isNotBlank()) {
                     note.titulo?.contains(query, ignoreCase = true) == true ||
@@ -59,7 +72,15 @@ class GetNotesUseCase(
                     FileTypeFilter.ALL -> true
                 }
 
-                matchesSearch && matchesDate && matchesFileType
+                val matchesCategory = when (categoryF) {
+                    CategoryFilter.ALL -> true
+                    CategoryFilter.UNCATEGORIZED -> note.categories.isEmpty()
+                    CategoryFilter.SPECIFIC_CATEGORY -> {
+                        selectedCatId != null && note.categories.any { it.id == selectedCatId }
+                    }
+                }
+
+                matchesSearch && matchesDate && matchesFileType && matchesCategory
             }
             // Return a pair of the original list and the filtered list
             Pair(notes, filteredNotes)

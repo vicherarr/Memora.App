@@ -52,6 +52,7 @@ class NotesListScreen : Screen {
         val uiState by notesViewModel.uiState.collectAsState()
         val syncState by syncViewModel.syncState.collectAsState()
         val attachmentSyncState by syncViewModel.attachmentSyncState.collectAsState()
+        
 
         // This state is purely for the UI (expanding/collapsing the filter section)
         var showFilters by rememberSaveable { mutableStateOf(false) }
@@ -126,7 +127,22 @@ class NotesListScreen : Screen {
                             if (range != null) {
                                 showFilters = false
                             }
-                        }
+                        },
+                        selectedCategoryFilter = uiState.categoryFilter,
+                        onCategoryFilterChanged = { categoryFilter ->
+                            notesViewModel.onCategoryFilterChanged(categoryFilter)
+                            if (categoryFilter != CategoryFilter.SPECIFIC_CATEGORY) {
+                                showFilters = false
+                            }
+                        },
+                        selectedCategoryId = uiState.selectedCategoryId,
+                        onSelectedCategoryChanged = { categoryId ->
+                            notesViewModel.onSelectedCategoryChanged(categoryId)
+                            if (categoryId != null) {
+                                showFilters = false
+                            }
+                        },
+                        availableCategories = uiState.availableCategories
                     )
 
                     ActiveFiltersChips(
@@ -134,9 +150,13 @@ class NotesListScreen : Screen {
                         selectedDateFilter = uiState.dateFilter,
                         customDateRange = uiState.customDateRange,
                         selectedFileType = uiState.fileTypeFilter,
+                        selectedCategoryFilter = uiState.categoryFilter,
+                        selectedCategoryId = uiState.selectedCategoryId,
+                        availableCategories = uiState.availableCategories,
                         onClearSearch = { notesViewModel.onSearchQueryChanged("") },
                         onClearDateFilter = { notesViewModel.onDateFilterChanged(DateFilter.ALL) },
                         onClearFileTypeFilter = { notesViewModel.onFileTypeChanged(FileTypeFilter.ALL) },
+                        onClearCategoryFilter = { notesViewModel.onCategoryFilterChanged(CategoryFilter.ALL) },
                         onClearAll = { notesViewModel.onClearAllFilters() }
                     )
 
@@ -202,7 +222,12 @@ private fun SearchBarAndFilters(
     selectedFileType: FileTypeFilter,
     onFileTypeChanged: (FileTypeFilter) -> Unit,
     customDateRange: DateRange? = null,
-    onCustomDateRangeChanged: (DateRange?) -> Unit = {}
+    onCustomDateRangeChanged: (DateRange?) -> Unit = {},
+    selectedCategoryFilter: CategoryFilter,
+    onCategoryFilterChanged: (CategoryFilter) -> Unit,
+    selectedCategoryId: String?,
+    onSelectedCategoryChanged: (String?) -> Unit,
+    availableCategories: List<Category>
 ) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         OutlinedTextField(
@@ -224,7 +249,7 @@ private fun SearchBarAndFilters(
                         Icon(
                             Icons.Default.FilterList,
                             contentDescription = "Filtros",
-                            tint = if (selectedDateFilter != DateFilter.ALL || selectedFileType != FileTypeFilter.ALL || customDateRange != null)
+                            tint = if (selectedDateFilter != DateFilter.ALL || selectedFileType != FileTypeFilter.ALL || customDateRange != null || selectedCategoryFilter != CategoryFilter.ALL)
                                 MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -241,6 +266,11 @@ private fun SearchBarAndFilters(
                 onFileTypeChanged = onFileTypeChanged,
                 customDateRange = customDateRange,
                 onCustomDateRangeChanged = onCustomDateRangeChanged,
+                selectedCategoryFilter = selectedCategoryFilter,
+                onCategoryFilterChanged = onCategoryFilterChanged,
+                selectedCategoryId = selectedCategoryId,
+                onSelectedCategoryChanged = onSelectedCategoryChanged,
+                availableCategories = availableCategories,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
         }

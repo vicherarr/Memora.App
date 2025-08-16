@@ -66,6 +66,19 @@ enum class FileTypeFilter(
 }
 
 /**
+ * Category filtering options for notes
+ * Supports filtering by specific category or showing uncategorized notes
+ */
+enum class CategoryFilter(
+    val displayName: String,
+    val icon: ImageVector
+) {
+    ALL("Todas las categorías", Icons.Default.Category),
+    UNCATEGORIZED("Sin categoría", Icons.Default.FilterList),
+    SPECIFIC_CATEGORY("Categoría específica", Icons.Default.Label)
+}
+
+/**
  * Complete search filters configuration
  * Immutable data class for UI state
  */
@@ -73,7 +86,9 @@ data class SearchFilters(
     val query: String = "",
     val dateFilter: DateFilter = DateFilter.ALL,
     val customDateRange: DateRange? = null,
-    val fileTypeFilter: FileTypeFilter = FileTypeFilter.ALL
+    val fileTypeFilter: FileTypeFilter = FileTypeFilter.ALL,
+    val categoryFilter: CategoryFilter = CategoryFilter.ALL,
+    val selectedCategoryId: String? = null
 ) {
     /**
      * Check if any filters are active (non-default)
@@ -82,7 +97,8 @@ data class SearchFilters(
         get() = query.isNotBlank() || 
                 dateFilter != DateFilter.ALL || 
                 customDateRange != null ||
-                fileTypeFilter != FileTypeFilter.ALL
+                fileTypeFilter != FileTypeFilter.ALL ||
+                categoryFilter != CategoryFilter.ALL
         
     /**
      * Reset all filters to default state
@@ -95,4 +111,11 @@ data class SearchFilters(
      */
     val effectiveDateRange: DateRange?
         get() = if (dateFilter == DateFilter.CUSTOM_RANGE) customDateRange else null
+        
+    /**
+     * Get the effective category ID for filtering
+     * Returns the selected category ID if SPECIFIC_CATEGORY is selected, null otherwise
+     */
+    val effectiveCategoryId: String?
+        get() = if (categoryFilter == CategoryFilter.SPECIFIC_CATEGORY) selectedCategoryId else null
 }

@@ -4,10 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.domain.models.*
 import com.vicherarr.memora.domain.repository.NotesRepository
+import com.vicherarr.memora.data.auth.CloudAuthProvider
+import com.vicherarr.memora.domain.model.AuthState
 import com.vicherarr.memora.domain.usecases.CreateNoteUseCase
 import com.vicherarr.memora.domain.usecases.UpdateNoteUseCase
 import com.vicherarr.memora.domain.usecases.DeleteNoteUseCase
 import com.vicherarr.memora.domain.usecases.SearchNotesUseCase
+import com.vicherarr.memora.domain.usecases.GetCategoriesByUserUseCase
 import com.vicherarr.memora.domain.utils.DateTimeUtils
 import com.vicherarr.memora.presentation.states.BaseUiState
 import com.vicherarr.memora.presentation.states.ImageViewerState
@@ -32,6 +35,9 @@ data class NotesUiState(
     val dateFilter: DateFilter = DateFilter.ALL,
     val fileTypeFilter: FileTypeFilter = FileTypeFilter.ALL,
     val customDateRange: DateRange? = null,
+    val categoryFilter: CategoryFilter = CategoryFilter.ALL,
+    val selectedCategoryId: String? = null,
+    val availableCategories: List<Category> = emptyList(),
 
     val imageViewer: ImageViewerState = ImageViewerState(),
     val videoViewer: VideoViewerState = VideoViewerState(),
@@ -49,7 +55,9 @@ class NotesViewModel(
     private val createNoteUseCase: CreateNoteUseCase,
     private val updateNoteUseCase: UpdateNoteUseCase,
     private val deleteNoteUseCase: DeleteNoteUseCase,
-    private val searchNotesUseCase: SearchNotesUseCase
+    private val searchNotesUseCase: SearchNotesUseCase,
+    private val getCategoriesByUserUseCase: GetCategoriesByUserUseCase,
+    private val cloudAuthProvider: CloudAuthProvider
 ) : BaseViewModel<NotesUiState>() {
 
     private val _uiState = MutableStateFlow(NotesUiState())
@@ -64,15 +72,21 @@ class NotesViewModel(
     private val _dateFilter = MutableStateFlow(DateFilter.ALL)
     private val _fileTypeFilter = MutableStateFlow(FileTypeFilter.ALL)
     private val _customDateRange = MutableStateFlow<DateRange?>(null)
+    private val _categoryFilter = MutableStateFlow(CategoryFilter.ALL)
+    private val _selectedCategoryId = MutableStateFlow<String?>(null)
 
     init {
+        loadCategories()
+        
         // The ViewModel now delegates the complex flow combination to the Use Case
         viewModelScope.launch {
             getNotesUseCase.execute(
                 searchQuery = _searchQuery,
                 dateFilter = _dateFilter,
                 fileTypeFilter = _fileTypeFilter,
-                customDateRange = _customDateRange
+                customDateRange = _customDateRange,
+                categoryFilter = _categoryFilter,
+                selectedCategoryId = _selectedCategoryId
             )
             .onStart {
                 setLoading(true)
@@ -88,9 +102,48 @@ class NotesViewModel(
                     searchQuery = _searchQuery.value,
                     dateFilter = _dateFilter.value,
                     fileTypeFilter = _fileTypeFilter.value,
-                    customDateRange = _customDateRange.value
+                    customDateRange = _customDateRange.value,
+                    categoryFilter = _categoryFilter.value,
+                    selectedCategoryId = _selectedCategoryId.value,
+                    availableCategories = _uiState.value.availableCategories
                 )
             }
+        }
+    }
+
+    // --- Private Methods ---
+    
+    private fun loadCategories() {
+        viewModelScope.launch {
+            try {
+                val userId = getCurrentUserId()
+                println("NotesViewModel: Current user ID: '$userId'")
+                if (userId != null) {
+                    getCategoriesByUserUseCase.execute(userId)
+                        .collect { categories ->
+                            println("NotesViewModel: Loaded ${categories.size} categories: ${categories.map { it.name }}")
+                            _uiState.value = _uiState.value.copy(
+                                availableCategories = categories
+                            )
+                        }
+                } else {
+                    println("NotesViewModel: No current user found")
+                }
+            } catch (e: Exception) {
+                // Handle error silently for now, categories will remain empty
+                println("NotesViewModel: Error loading categories: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Get current user ID using the same pattern as other ViewModels and Repositories
+     * Uses email as userId for consistency across the system
+     */
+    private fun getCurrentUserId(): String? {
+        return when (val authState = cloudAuthProvider.authState.value) {
+            is AuthState.Authenticated -> authState.user.email
+            else -> null
         }
     }
 
@@ -120,11 +173,29 @@ class NotesViewModel(
         }
     }
     
+    fun onCategoryFilterChanged(filter: CategoryFilter) {
+        _categoryFilter.value = filter
+        // Clear selected category if switching away from SPECIFIC_CATEGORY
+        if (filter != CategoryFilter.SPECIFIC_CATEGORY) {
+            _selectedCategoryId.value = null
+        }
+    }
+
+    fun onSelectedCategoryChanged(categoryId: String?) {
+        _selectedCategoryId.value = categoryId
+        // If a category is selected, ensure the filter is set to SPECIFIC_CATEGORY
+        if (categoryId != null) {
+            _categoryFilter.value = CategoryFilter.SPECIFIC_CATEGORY
+        }
+    }
+    
     fun onClearAllFilters() {
         _searchQuery.value = ""
         _dateFilter.value = DateFilter.ALL
         _fileTypeFilter.value = FileTypeFilter.ALL
         _customDateRange.value = null
+        _categoryFilter.value = CategoryFilter.ALL
+        _selectedCategoryId.value = null
     }
 
 

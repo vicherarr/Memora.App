@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import com.vicherarr.memora.domain.models.DateFilter
 import com.vicherarr.memora.domain.models.DateRange
 import com.vicherarr.memora.domain.models.FileTypeFilter
+import com.vicherarr.memora.domain.models.CategoryFilter
+import com.vicherarr.memora.domain.models.Category
 
 /**
  * Component to display active search filters as elegant chips
@@ -30,14 +32,18 @@ fun ActiveFiltersChips(
     selectedDateFilter: DateFilter,
     customDateRange: DateRange?,
     selectedFileType: FileTypeFilter,
+    selectedCategoryFilter: CategoryFilter,
+    selectedCategoryId: String?,
+    availableCategories: List<Category>,
     onClearSearch: () -> Unit,
     onClearDateFilter: () -> Unit,
     onClearFileTypeFilter: () -> Unit,
+    onClearCategoryFilter: () -> Unit,
     onClearAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Determine active filters
-    val activeFilters = remember(searchQuery, selectedDateFilter, selectedFileType, customDateRange) {
+    val activeFilters = remember(searchQuery, selectedDateFilter, selectedFileType, customDateRange, selectedCategoryFilter, selectedCategoryId) {
         buildList {
             // Search query filter
             if (searchQuery.isNotBlank()) {
@@ -52,6 +58,14 @@ fun ActiveFiltersChips(
             // File type filter
             if (selectedFileType != FileTypeFilter.ALL) {
                 add(ActiveFilter.FileType(selectedFileType, onClearFileTypeFilter))
+            }
+            
+            // Category filter
+            if (selectedCategoryFilter != CategoryFilter.ALL) {
+                val selectedCategory = if (selectedCategoryFilter == CategoryFilter.SPECIFIC_CATEGORY && selectedCategoryId != null) {
+                    availableCategories.find { it.id == selectedCategoryId }
+                } else null
+                add(ActiveFilter.Category(selectedCategoryFilter, selectedCategory, onClearCategoryFilter))
             }
         }
     }
@@ -238,6 +252,21 @@ private sealed class ActiveFilter(
         id = "filetype",
         displayText = fileTypeFilter.displayName,
         icon = fileTypeFilter.icon,
+        onClear = onClear
+    )
+    
+    class Category(
+        categoryFilter: CategoryFilter,
+        selectedCategory: com.vicherarr.memora.domain.models.Category?,
+        onClear: () -> Unit
+    ) : ActiveFilter(
+        id = "category",
+        displayText = when (categoryFilter) {
+            CategoryFilter.ALL -> categoryFilter.displayName
+            CategoryFilter.UNCATEGORIZED -> categoryFilter.displayName
+            CategoryFilter.SPECIFIC_CATEGORY -> selectedCategory?.name ?: categoryFilter.displayName
+        },
+        icon = categoryFilter.icon,
         onClear = onClear
     )
 }
