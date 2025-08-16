@@ -431,7 +431,7 @@ class NoteDetailViewModel(
         } else {
             currentSelected + categoryId
         }
-        updateState { copy(selectedCategories = newSelected) }
+        updateState { copy(selectedCategories = newSelected, isShowingCategoryDropdown = false) }
     }
     
     /**
