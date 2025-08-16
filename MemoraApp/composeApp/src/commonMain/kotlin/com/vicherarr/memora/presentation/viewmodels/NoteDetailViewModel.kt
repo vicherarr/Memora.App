@@ -34,6 +34,7 @@ data class NoteDetailUiState(
     val editContenido: String = "",
     val editAttachments: List<ArchivoAdjunto> = emptyList(),
     val selectedCategories: List<String> = emptyList(),
+    val noteCategories: List<com.vicherarr.memora.domain.models.Category> = emptyList(), // ✅ Categorías completas de esta nota
     val availableCategories: List<com.vicherarr.memora.domain.models.Category> = emptyList(),
     val isShowingCategoryDropdown: Boolean = false,
     val isCreatingCategory: Boolean = false,
@@ -384,7 +385,12 @@ class NoteDetailViewModel(
         viewModelScope.launch {
             getCategoriesByNoteIdUseCase.execute(noteId).collect { categories ->
                 val categoryIds = categories.map { it.id }
-                updateState { copy(selectedCategories = categoryIds) }
+                updateState { 
+                    copy(
+                        selectedCategories = categoryIds,
+                        noteCategories = categories // ✅ Guardar categorías completas para mostrar
+                    ) 
+                }
             }
         }
     }
@@ -396,7 +402,12 @@ class NoteDetailViewModel(
         viewModelScope.launch {
             val categories = getCategoriesByNoteIdUseCase.executeOnce(noteId)
             val categoryIds = categories.map { it.id }
-            updateState { copy(selectedCategories = categoryIds) }
+            updateState { 
+                copy(
+                    selectedCategories = categoryIds,
+                    noteCategories = categories // ✅ Guardar categorías completas para mostrar
+                ) 
+            }
         }
     }
     

@@ -40,7 +40,7 @@ import com.vicherarr.memora.platform.camera.CameraCaptureMode
 import com.vicherarr.memora.presentation.viewmodels.NoteDetailViewModel
 import com.vicherarr.memora.presentation.viewmodels.MediaViewModel
 import com.vicherarr.memora.presentation.components.CategorySection
-import com.vicherarr.memora.presentation.components.CategoryDisplay
+import com.vicherarr.memora.presentation.components.NoteCategoryDisplay
 import com.vicherarr.memora.presentation.components.ImageFullScreenViewer
 import com.vicherarr.memora.presentation.components.VideoPlayerDialog
 import com.vicherarr.memora.ui.components.MemoraTextField
@@ -203,8 +203,7 @@ data class NoteDetailScreen(private val noteId: String) : Screen {
                         } else {
                             ViewNoteContent(
                                 note = uiState.note!!,
-                                selectedCategories = uiState.selectedCategories,
-                                availableCategories = uiState.availableCategories,
+                                noteCategories = uiState.noteCategories, // ✅ Pasar categorías completas
                                 onMediaClick = { attachment -> viewModel.showMediaViewer(attachment) }
                             )
                         }
@@ -558,8 +557,7 @@ private fun EditNoteContent(
 @Composable
 private fun ViewNoteContent(
     note: com.vicherarr.memora.domain.models.Note,
-    selectedCategories: List<String>,
-    availableCategories: List<com.vicherarr.memora.domain.models.Category>,
+    noteCategories: List<com.vicherarr.memora.domain.models.Category>, // ✅ Categorías completas de la nota
     onMediaClick: (com.vicherarr.memora.domain.models.ArchivoAdjunto) -> Unit
 ) {
     LazyColumn(
@@ -582,9 +580,8 @@ private fun ViewNoteContent(
         
         // Categories Display (Read-only)
         item {
-            CategoryDisplay(
-                selectedCategories = selectedCategories,
-                availableCategories = availableCategories
+            NoteCategoryDisplay(
+                noteCategories = noteCategories
             )
         }
         
