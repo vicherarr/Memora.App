@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vicherarr.memora.domain.models.Category
+import com.vicherarr.memora.domain.models.displayName
 
 /**
  * Category Section Component - Material Design 3
@@ -83,7 +84,7 @@ fun CategorySection(
                 // Available categories to select
                 availableCategories.filter { it.id !in selectedCategories }.forEach { category ->
                     DropdownMenuItem(
-                        text = { Text(category.name) },
+                        text = { Text(category.displayName) },
                         onClick = {
                             println("📎 CategorySection: Selecting category '${category.id}' from dropdown")
                             onCategoryToggle(category.id)
@@ -204,12 +205,12 @@ private fun SelectedCategoryChip(
 ) {
     FilterChip(
         onClick = onRemove,
-        label = { Text(category.name) },
+        label = { Text(category.displayName) },
         selected = true,
         trailingIcon = {
             Icon(
                 Icons.Default.Close,
-                contentDescription = "Remove ${category.name}",
+                contentDescription = "Remove ${category.displayName}",
                 modifier = Modifier.size(16.dp)
             )
         },

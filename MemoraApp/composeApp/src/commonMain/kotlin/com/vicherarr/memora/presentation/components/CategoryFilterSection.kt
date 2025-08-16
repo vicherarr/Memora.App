@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vicherarr.memora.domain.models.Category
 import com.vicherarr.memora.domain.models.CategoryFilter
+import com.vicherarr.memora.domain.models.displayName
 
 /**
  * Category filter section component
@@ -159,16 +160,10 @@ private fun SpecificCategoryOption(
                 modifier = Modifier
                     .size(12.dp)
                     .wrapContentSize()
-            ) {
-                Surface(
-                    shape = androidx.compose.foundation.shape.CircleShape,
-                    color = parseHexColor(category.color),
-                    modifier = Modifier.size(12.dp)
-                ) {}
-            }
+            )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = category.name,
+                text = category.displayName,
                 style = MaterialTheme.typography.bodyMedium
             )
         }

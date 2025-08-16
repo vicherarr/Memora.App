@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vicherarr.memora.domain.models.Category
+import com.vicherarr.memora.domain.models.displayName
 
 /**
  * Display categories in read-only mode
@@ -102,7 +103,7 @@ private fun ReadOnlyCategoryChip(
 ) {
     AssistChip(
         onClick = { /* No action in read-only mode */ },
-        label = { Text(category.name) },
+        label = { Text(category.displayName) },
         modifier = modifier,
         colors = AssistChipDefaults.assistChipColors(
             containerColor = parseHexColor(category.color).copy(alpha = 0.15f),

@@ -19,6 +19,7 @@ import com.vicherarr.memora.domain.models.DateRange
 import com.vicherarr.memora.domain.models.FileTypeFilter
 import com.vicherarr.memora.domain.models.CategoryFilter
 import com.vicherarr.memora.domain.models.Category
+import com.vicherarr.memora.domain.models.displayName
 
 /**
  * Component to display active search filters as elegant chips
@@ -264,7 +265,7 @@ private sealed class ActiveFilter(
         displayText = when (categoryFilter) {
             CategoryFilter.ALL -> categoryFilter.displayName
             CategoryFilter.UNCATEGORIZED -> categoryFilter.displayName
-            CategoryFilter.SPECIFIC_CATEGORY -> selectedCategory?.name ?: categoryFilter.displayName
+            CategoryFilter.SPECIFIC_CATEGORY -> selectedCategory?.displayName ?: categoryFilter.displayName
         },
         icon = categoryFilter.icon,
         onClear = onClear

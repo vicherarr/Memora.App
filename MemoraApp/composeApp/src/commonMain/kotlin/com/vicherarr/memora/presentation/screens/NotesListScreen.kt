@@ -30,6 +30,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.vicherarr.memora.domain.models.*
+import com.vicherarr.memora.domain.models.displayName
 import com.vicherarr.memora.domain.utils.DateTimeUtils
 import com.vicherarr.memora.presentation.components.ActiveFiltersChips
 import com.vicherarr.memora.presentation.components.FiltersSection
@@ -539,7 +540,7 @@ private fun NoteCategoriesRow(categories: List<Category>) {
                 onClick = { /* No action needed in list view */ },
                 label = { 
                     Text(
-                        text = category.name,
+                        text = category.displayName,
                         style = MaterialTheme.typography.labelSmall
                     ) 
                 },

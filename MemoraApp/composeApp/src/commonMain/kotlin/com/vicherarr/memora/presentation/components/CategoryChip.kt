@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vicherarr.memora.domain.models.Category
+import com.vicherarr.memora.domain.models.displayName
 
 /**
  * Category Chip Component
@@ -34,13 +35,13 @@ fun CategoryChip(
                 onClick()
             }, // Clicking anywhere removes it
             label = { 
-                Text(text = category.name)
+                Text(text = category.displayName)
             },
             selected = true,
             trailingIcon = {
                 Icon(
                     Icons.Default.Close,
-                    contentDescription = "Remove ${category.name}",
+                    contentDescription = "Remove ${category.displayName}",
                     modifier = Modifier.size(16.dp)
                 )
             },
@@ -58,7 +59,7 @@ fun CategoryChip(
                 println("👆 CLICK on UNSELECTED chip: id='${category.id}' name='${category.name}'")
                 onClick()
             },
-            label = { Text(category.name) },
+            label = { Text(category.displayName) },
             selected = false,
             modifier = modifier
         )
