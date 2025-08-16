@@ -14,6 +14,8 @@ import com.vicherarr.memora.presentation.viewmodels.ProfileViewModel
 import com.vicherarr.memora.presentation.viewmodels.SplashViewModel
 import com.vicherarr.memora.domain.usecases.GetCategoriesByUserUseCase
 import com.vicherarr.memora.domain.usecases.CreateCategoryUseCase
+import com.vicherarr.memora.domain.usecases.GetCurrentUserIdUseCase
+import com.vicherarr.memora.data.usecases.GetCurrentUserIdUseCaseImpl
 import org.koin.dsl.module
 
 /**
@@ -30,14 +32,15 @@ val viewModelModule = module {
     factory<ExitAppUseCase> { createExitAppUseCase() } // Platform-specific implementation
     factory { GetCategoriesByUserUseCase(get(), get()) } // CategoriesDao + CategoryDomainMapper
     factory { CreateCategoryUseCase(get(), get()) } // CategoriesDao + CategoryDomainMapper
+    single<GetCurrentUserIdUseCase> { GetCurrentUserIdUseCaseImpl(get()) } // CloudAuthProvider - Singleton for consistency
     
     // ViewModel Layer - Following Single Responsibility Principle
     factory { SplashViewModel(get()) } // CloudAuthProvider dependency
     factory { LoginViewModel(get(), get()) } // AuthRepository + ValidationService
     factory { RegisterViewModel(get(), get()) } // AuthRepository + ValidationService
     single { MediaViewModel() } // Singleton - shared across CreateNoteViewModel and CreateNoteScreen
-    factory { CreateNoteViewModel(get(), get(), get(), get(), get()) } // CreateNoteUseCase + GetCategoriesByUserUseCase + CreateCategoryUseCase + CloudAuthProvider + MediaViewModel
-    factory { NotesViewModel(get(), get(), get(), get(), get(), get(), get(), get()) } // NotesRepository, GetNotesUseCase, CreateNoteUseCase, UpdateNoteUseCase, DeleteNoteUseCase, SearchNotesUseCase, GetCategoriesByUserUseCase, CloudAuthProvider
-    factory { NoteDetailViewModel(get(), get(), get(), get(), get(), get(), get(), get()) } // SearchNotesUseCase + UpdateNoteUseCase + DeleteNoteUseCase + GetCategoriesByUserUseCase + CreateCategoryUseCase + GetCategoriesByNoteIdUseCase + CloudAuthProvider + MediaViewModel
+    factory { CreateNoteViewModel(get(), get(), get(), get(), get()) } // CreateNoteUseCase + GetCategoriesByUserUseCase + CreateCategoryUseCase + GetCurrentUserIdUseCase + MediaViewModel
+    factory { NotesViewModel(get(), get(), get(), get(), get(), get(), get(), get()) } // NotesRepository, GetNotesUseCase, CreateNoteUseCase, UpdateNoteUseCase, DeleteNoteUseCase, SearchNotesUseCase, GetCategoriesByUserUseCase, GetCurrentUserIdUseCase
+    factory { NoteDetailViewModel(get(), get(), get(), get(), get(), get(), get(), get()) } // SearchNotesUseCase + UpdateNoteUseCase + DeleteNoteUseCase + GetCategoriesByUserUseCase + CreateCategoryUseCase + GetCategoriesByNoteIdUseCase + GetCurrentUserIdUseCase + MediaViewModel
     factory { ProfileViewModel(get(), get()) } // UserRepository + ExitAppUseCase dependencies
 }

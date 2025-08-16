@@ -11,8 +11,7 @@ import com.vicherarr.memora.domain.usecases.DeleteNoteUseCase
 import com.vicherarr.memora.domain.usecases.GetCategoriesByUserUseCase
 import com.vicherarr.memora.domain.usecases.CreateCategoryUseCase
 import com.vicherarr.memora.domain.usecases.GetCategoriesByNoteIdUseCase
-import com.vicherarr.memora.data.auth.CloudAuthProvider
-import com.vicherarr.memora.domain.model.AuthState
+import com.vicherarr.memora.domain.usecases.GetCurrentUserIdUseCase
 import com.vicherarr.memora.domain.model.User
 import com.vicherarr.memora.domain.models.Category
 import com.vicherarr.memora.presentation.states.BaseUiState
@@ -58,7 +57,7 @@ class NoteDetailViewModel(
     private val getCategoriesByUserUseCase: GetCategoriesByUserUseCase,
     private val createCategoryUseCase: CreateCategoryUseCase,
     private val getCategoriesByNoteIdUseCase: GetCategoriesByNoteIdUseCase,
-    private val cloudAuthProvider: CloudAuthProvider,
+    private val getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
     private val mediaViewModel: MediaViewModel
 ) : BaseViewModel<NoteDetailUiState>() {
     
@@ -369,8 +368,8 @@ class NoteDetailViewModel(
      * Load available categories for user - Following Clean Architecture
      */
     private fun loadCategories() {
-        getCurrentUserId()?.let { userId ->
-            viewModelScope.launch {
+        viewModelScope.launch {
+            getCurrentUserIdUseCase.execute()?.let { userId ->
                 getCategoriesByUserUseCase.execute(userId).collect { categories ->
                     updateState { copy(availableCategories = categories) }
                 }
@@ -411,15 +410,6 @@ class NoteDetailViewModel(
         }
     }
     
-    /**
-     * Get current user ID - Following Clean Architecture
-     */
-    private fun getCurrentUserId(): String? {
-        return when (val authState = cloudAuthProvider.authState.value) {
-            is AuthState.Authenticated -> authState.user.email // ✅ FIX: Usar email para consistencia con NotesRepository
-            else -> null
-        }
-    }
     
     /**
      * Toggle category selection - Following Single Responsibility Principle
@@ -482,8 +472,8 @@ class NoteDetailViewModel(
         val name = _uiState.value.newCategoryName.trim()
         if (name.isEmpty()) return
         
-        getCurrentUserId()?.let { userId ->
-            viewModelScope.launch {
+        viewModelScope.launch {
+            getCurrentUserIdUseCase.execute()?.let { userId ->
                 createCategoryUseCase.execute(name, userId).fold(
                     onSuccess = { category ->
                         val newSelected = _uiState.value.selectedCategories + category.id

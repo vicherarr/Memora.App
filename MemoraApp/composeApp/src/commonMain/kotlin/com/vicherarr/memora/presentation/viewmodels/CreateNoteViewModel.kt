@@ -5,9 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.domain.usecases.CreateNoteUseCase
 import com.vicherarr.memora.domain.usecases.GetCategoriesByUserUseCase
 import com.vicherarr.memora.domain.usecases.CreateCategoryUseCase
+import com.vicherarr.memora.domain.usecases.GetCurrentUserIdUseCase
 import com.vicherarr.memora.domain.models.Category
-import com.vicherarr.memora.data.auth.CloudAuthProvider
-import com.vicherarr.memora.domain.model.AuthState
 import com.vicherarr.memora.domain.model.User
 import kotlinx.coroutines.flow.combine
 import com.vicherarr.memora.presentation.states.BaseUiState
@@ -42,7 +41,7 @@ class CreateNoteViewModel(
     private val createNoteUseCase: CreateNoteUseCase,
     private val getCategoriesByUserUseCase: GetCategoriesByUserUseCase,
     private val createCategoryUseCase: CreateCategoryUseCase,
-    private val cloudAuthProvider: CloudAuthProvider,
+    private val getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
     private val mediaViewModel: MediaViewModel
 ) : BaseViewModel<CreateNoteUiState>() {
     
@@ -58,19 +57,12 @@ class CreateNoteViewModel(
     }
     
     private fun loadCategories() {
-        getCurrentUserId()?.let { userId ->
-            viewModelScope.launch {
+        viewModelScope.launch {
+            getCurrentUserIdUseCase.execute()?.let { userId ->
                 getCategoriesByUserUseCase.execute(userId).collect { categories ->
                     updateState { copy(availableCategories = categories) }
                 }
             }
-        }
-    }
-    
-    private fun getCurrentUserId(): String? {
-        return when (val authState = cloudAuthProvider.authState.value) {
-            is AuthState.Authenticated -> authState.user.email // ✅ FIX: Usar email para consistencia con NotesRepository
-            else -> null
         }
     }
     
@@ -149,8 +141,8 @@ class CreateNoteViewModel(
         val name = _uiState.value.newCategoryName.trim()
         if (name.isEmpty()) return
         
-        getCurrentUserId()?.let { userId ->
-            viewModelScope.launch {
+        viewModelScope.launch {
+            getCurrentUserIdUseCase.execute()?.let { userId ->
                 createCategoryUseCase.execute(name, userId).fold(
                     onSuccess = { category ->
                         // ✅ FIX: Agregar nueva categoría al listado disponible

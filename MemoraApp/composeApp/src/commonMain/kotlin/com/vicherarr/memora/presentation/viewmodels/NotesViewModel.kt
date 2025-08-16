@@ -4,8 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vicherarr.memora.domain.models.*
 import com.vicherarr.memora.domain.repository.NotesRepository
-import com.vicherarr.memora.data.auth.CloudAuthProvider
-import com.vicherarr.memora.domain.model.AuthState
+import com.vicherarr.memora.domain.usecases.GetCurrentUserIdUseCase
 import com.vicherarr.memora.domain.usecases.CreateNoteUseCase
 import com.vicherarr.memora.domain.usecases.UpdateNoteUseCase
 import com.vicherarr.memora.domain.usecases.DeleteNoteUseCase
@@ -57,7 +56,7 @@ class NotesViewModel(
     private val deleteNoteUseCase: DeleteNoteUseCase,
     private val searchNotesUseCase: SearchNotesUseCase,
     private val getCategoriesByUserUseCase: GetCategoriesByUserUseCase,
-    private val cloudAuthProvider: CloudAuthProvider
+    private val getCurrentUserIdUseCase: GetCurrentUserIdUseCase
 ) : BaseViewModel<NotesUiState>() {
 
     private val _uiState = MutableStateFlow(NotesUiState())
@@ -116,7 +115,7 @@ class NotesViewModel(
     private fun loadCategories() {
         viewModelScope.launch {
             try {
-                val userId = getCurrentUserId()
+                val userId = getCurrentUserIdUseCase.execute()
                 println("NotesViewModel: Current user ID: '$userId'")
                 if (userId != null) {
                     getCategoriesByUserUseCase.execute(userId)
@@ -133,17 +132,6 @@ class NotesViewModel(
                 // Handle error silently for now, categories will remain empty
                 println("NotesViewModel: Error loading categories: ${e.message}")
             }
-        }
-    }
-
-    /**
-     * Get current user ID using the same pattern as other ViewModels and Repositories
-     * Uses email as userId for consistency across the system
-     */
-    private fun getCurrentUserId(): String? {
-        return when (val authState = cloudAuthProvider.authState.value) {
-            is AuthState.Authenticated -> authState.user.email
-            else -> null
         }
     }
 
