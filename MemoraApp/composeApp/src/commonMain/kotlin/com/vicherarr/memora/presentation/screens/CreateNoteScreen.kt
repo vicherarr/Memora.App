@@ -466,7 +466,7 @@ private fun MediaThumbnail(
                             .fillMaxSize()
                             .clip(RoundedCornerShape(8.dp))
                             .background(
-                                androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.8f),
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
                                 RoundedCornerShape(8.dp)
                             ),
                         contentAlignment = Alignment.Center
@@ -475,14 +475,14 @@ private fun MediaThumbnail(
                             Icons.Default.PlayArrow,
                             contentDescription = "Video",
                             modifier = Modifier.size(32.dp),
-                            tint = androidx.compose.ui.graphics.Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                         // Mostrar nombre del archivo en la parte inferior
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
                                 .background(
-                                    androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
                                     RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)
                                 )
                                 .padding(4.dp)
@@ -491,7 +491,7 @@ private fun MediaThumbnail(
                             Text(
                                 text = mediaFile.fileName ?: "Video",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = androidx.compose.ui.graphics.Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center

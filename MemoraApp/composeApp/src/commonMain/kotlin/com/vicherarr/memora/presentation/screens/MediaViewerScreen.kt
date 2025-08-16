@@ -35,7 +35,7 @@ data class MediaViewerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing)
-                .background(Color.Black)
+                .background(MaterialTheme.colorScheme.surface)
         ) {
             // Media Content Area
             Box(
@@ -83,7 +83,7 @@ data class MediaViewerScreen(
                                 .fillMaxWidth(0.9f)
                                 .aspectRatio(16f / 9f),
                             colors = CardDefaults.cardColors(
-                                containerColor = Color.Black
+                                containerColor = MaterialTheme.colorScheme.surface
                             )
                         ) {
                             Box(
@@ -96,13 +96,13 @@ data class MediaViewerScreen(
                                     Text(
                                         text = "Video Player",
                                         style = MaterialTheme.typography.titleMedium,
-                                        color = Color.White
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
                                         text = mediaFile.fileName,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = Color.White
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 }
                             }
@@ -116,7 +116,7 @@ data class MediaViewerScreen(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth(),
-                color = Color.Black.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
             ) {
                 Row(
                     modifier = Modifier
@@ -131,14 +131,14 @@ data class MediaViewerScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     
                     Text(
                         text = mediaFile.fileName,
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
                     
@@ -151,7 +151,7 @@ data class MediaViewerScreen(
                             Icon(
                                 imageVector = Icons.Default.Share,
                                 contentDescription = "Share",
-                                tint = Color.White
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                         
@@ -165,7 +165,7 @@ data class MediaViewerScreen(
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = "Delete",
-                                    tint = Color.White
+                                    tint = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -178,7 +178,7 @@ data class MediaViewerScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth(),
-                color = Color.Black.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp)
@@ -186,17 +186,17 @@ data class MediaViewerScreen(
                     Text(
                         text = "Type: ${mediaFile.type.name}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "Size: ${formatFileSize(mediaFile.sizeBytes)}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "Format: ${mediaFile.mimeType}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }

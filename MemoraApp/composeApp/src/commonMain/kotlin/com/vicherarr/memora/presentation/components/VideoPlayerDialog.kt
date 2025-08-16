@@ -76,7 +76,7 @@ private fun VideoPlayerContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.surface)
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
         // Main video player area
@@ -116,7 +116,7 @@ private fun VideoPlayerContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                color = Color.Black.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Row(
@@ -130,7 +130,7 @@ private fun VideoPlayerContent(
                     Text(
                         text = fileName ?: "Video",
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
                     
@@ -147,7 +147,7 @@ private fun VideoPlayerContent(
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Volver",
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(20.dp)
                             )
                         }

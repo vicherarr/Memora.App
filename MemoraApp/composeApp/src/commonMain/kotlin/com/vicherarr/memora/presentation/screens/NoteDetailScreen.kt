@@ -690,7 +690,7 @@ private fun AttachmentItem(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
-                                androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.8f),
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
                                 RoundedCornerShape(12.dp)
                             ),
                         contentAlignment = Alignment.Center
@@ -699,14 +699,14 @@ private fun AttachmentItem(
                             Icons.Default.PlayArrow,
                             contentDescription = "Video",
                             modifier = Modifier.size(48.dp),
-                            tint = androidx.compose.ui.graphics.Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                         // Mostrar nombre del archivo en la parte inferior
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
                                 .background(
-                                    androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
                                     RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
                                 )
                                 .padding(4.dp)
@@ -715,7 +715,7 @@ private fun AttachmentItem(
                             Text(
                                 text = attachment.nombreOriginal ?: "Video",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = androidx.compose.ui.graphics.Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -787,7 +787,7 @@ private fun EditableAttachmentItem(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
-                                androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.8f),
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
                                 RoundedCornerShape(12.dp)
                             ),
                         contentAlignment = Alignment.Center
@@ -796,14 +796,14 @@ private fun EditableAttachmentItem(
                             Icons.Default.PlayArrow,
                             contentDescription = "Video",
                             modifier = Modifier.size(48.dp),
-                            tint = androidx.compose.ui.graphics.Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                         // Mostrar nombre del archivo en la parte inferior
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
                                 .background(
-                                    androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
                                     RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
                                 )
                                 .padding(4.dp)
@@ -812,7 +812,7 @@ private fun EditableAttachmentItem(
                             Text(
                                 text = attachment.nombreOriginal ?: "Video",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = androidx.compose.ui.graphics.Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -892,7 +892,7 @@ private fun NewMediaThumbnail(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
-                                androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.8f),
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
                                 RoundedCornerShape(12.dp)
                             ),
                         contentAlignment = Alignment.Center
@@ -901,14 +901,14 @@ private fun NewMediaThumbnail(
                             Icons.Default.PlayArrow,
                             contentDescription = "Video",
                             modifier = Modifier.size(48.dp),
-                            tint = androidx.compose.ui.graphics.Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                         // Mostrar nombre del archivo en la parte inferior
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
                                 .background(
-                                    androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
                                     RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
                                 )
                                 .padding(4.dp)
@@ -917,7 +917,7 @@ private fun NewMediaThumbnail(
                             Text(
                                 text = mediaFile.fileName ?: "Video",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = androidx.compose.ui.graphics.Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center

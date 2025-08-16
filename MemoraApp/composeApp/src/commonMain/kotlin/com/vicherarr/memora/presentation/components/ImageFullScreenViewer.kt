@@ -86,7 +86,7 @@ private fun ImageViewerContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.95f))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
         // Main image with zoom and pan gestures
@@ -156,7 +156,7 @@ private fun ImageViewerContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                color = Color.Black.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Row(
@@ -170,7 +170,7 @@ private fun ImageViewerContent(
                     Text(
                         text = fileName ?: "Imagen",
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
                     
@@ -187,7 +187,7 @@ private fun ImageViewerContent(
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Volver",
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -212,7 +212,7 @@ private fun ImageViewerContent(
             Surface(
                 modifier = Modifier
                     .padding(16.dp),
-                color = Color.Black.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Row(
@@ -240,7 +240,7 @@ private fun ImageViewerContent(
                             Icon(
                                 Icons.Default.ZoomOut,
                                 contentDescription = "Reducir zoom",
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -254,7 +254,7 @@ private fun ImageViewerContent(
                         Text(
                             text = "${(scale * 100).toInt()}%",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                         )
                     }
@@ -276,7 +276,7 @@ private fun ImageViewerContent(
                             Icon(
                                 Icons.Default.ZoomIn,
                                 contentDescription = "Aumentar zoom",
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -296,7 +296,7 @@ private fun ImageViewerContent(
                             Text(
                                 text = "Restablecer",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                             )
                         }

@@ -48,7 +48,7 @@ class CameraScreen : Screen {
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing)
-                .background(Color.Black)
+                .background(MaterialTheme.colorScheme.surface)
         ) {
             // Camera Preview Area
             Column(
@@ -57,7 +57,7 @@ class CameraScreen : Screen {
                 // Top Bar
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color.Black.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
                 ) {
                     Row(
                         modifier = Modifier
@@ -72,14 +72,14 @@ class CameraScreen : Screen {
                             Icon(
                                 imageVector = Icons.Default.ArrowBack,
                                 contentDescription = "Back",
-                                tint = Color.White
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                         
                         Text(
                             text = "Camera",
                             style = MaterialTheme.typography.titleLarge,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         
                         // Placeholder for balance
@@ -97,13 +97,13 @@ class CameraScreen : Screen {
                 ) {
                     if (uiState.isLoading) {
                         CircularProgressIndicator(
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     } else {
                         Text(
                             text = "Camera Preview",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -111,7 +111,7 @@ class CameraScreen : Screen {
                 // Controls Area
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color.Black.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
                 ) {
                     Row(
                         modifier = Modifier
@@ -140,7 +140,7 @@ class CameraScreen : Screen {
                             Icon(
                                 imageVector = Icons.Default.VideoCall,
                                 contentDescription = "Record Video",
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(32.dp)
                             )
                         }
@@ -154,13 +154,13 @@ class CameraScreen : Screen {
                             modifier = Modifier
                                 .size(80.dp)
                                 .clip(CircleShape)
-                                .background(Color.White),
+                                .background(MaterialTheme.colorScheme.onSurface),
                             enabled = !uiState.isLoading
                         ) {
                             Icon(
                                 imageVector = Icons.Default.CameraAlt,
                                 contentDescription = "Take Photo",
-                                tint = Color.Black,
+                                tint = MaterialTheme.colorScheme.surface,
                                 modifier = Modifier.size(40.dp)
                             )
                         }

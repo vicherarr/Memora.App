@@ -62,7 +62,10 @@ class NotesListScreen : Screen {
             topBar = {
                 TopAppBar(
                     title = {
-                        val gradientColors = listOf(Color(0xFF1976D2), Color(0xFF00796B))
+                        val gradientColors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.secondary
+                        )
                         Text(
                             text = "Memora",
                             modifier = Modifier.fillMaxWidth().wrapContentWidth(Alignment.CenterHorizontally),
@@ -188,26 +191,26 @@ class NotesListScreen : Screen {
                         }
                     }
                 }
+                
+                // Media viewers state is also driven by the ViewModel
+                uiState.imageViewer.imageData?.let { imageData ->
+                    ImageFullScreenViewer(
+                        imageData = imageData,
+                        fileName = uiState.imageViewer.imageName,
+                        isVisible = uiState.imageViewer.isVisible,
+                        onDismiss = notesViewModel::hideImageViewer
+                    )
+                }
+
+                uiState.videoViewer.videoData?.let { videoData ->
+                    VideoPlayerDialog(
+                        videoData = videoData,
+                        fileName = uiState.videoViewer.videoName,
+                        isVisible = uiState.videoViewer.isVisible,
+                        onDismiss = notesViewModel::hideVideoViewer
+                    )
+                }
             }
-        }
-
-        // Media viewers state is also driven by the ViewModel
-        uiState.imageViewer.imageData?.let { imageData ->
-            ImageFullScreenViewer(
-                imageData = imageData,
-                fileName = uiState.imageViewer.imageName,
-                isVisible = uiState.imageViewer.isVisible,
-                onDismiss = notesViewModel::hideImageViewer
-            )
-        }
-
-        uiState.videoViewer.videoData?.let { videoData ->
-            VideoPlayerDialog(
-                videoData = videoData,
-                fileName = uiState.videoViewer.videoName,
-                isVisible = uiState.videoViewer.isVisible,
-                onDismiss = notesViewModel::hideVideoViewer
-            )
         }
     }
 }
@@ -284,12 +287,20 @@ private fun NotesGrid(
     onNoteClick: (String) -> Unit,
     onMediaClick: (ArchivoAdjunto) -> Unit = {}
 ) {
-    val noteColors = remember {
-        listOf(
-            Color(0xFFFFF0F0), Color(0xFFE6F4EA), Color(0xFFE0F7FA),
-            Color(0xFFF3E5F5), Color(0xFFFFFDE7), Color(0xFFF5F5F5)
-        )
-    }
+    val primaryContainerColor = MaterialTheme.colorScheme.primaryContainer
+    val secondaryContainerColor = MaterialTheme.colorScheme.secondaryContainer
+    val tertiaryContainerColor = MaterialTheme.colorScheme.tertiaryContainer
+    val surfaceVariantColor = MaterialTheme.colorScheme.surfaceVariant
+    val surfaceColor = MaterialTheme.colorScheme.surface
+
+    val noteColors = listOf(
+        primaryContainerColor,
+        secondaryContainerColor,
+        tertiaryContainerColor,
+        surfaceVariantColor,
+        surfaceColor,
+        primaryContainerColor
+    )
 
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(2),
@@ -407,7 +418,7 @@ private fun AttachmentsGridPreview(
                             .aspectRatio(1f)
                             .clip(RoundedCornerShape(12.dp))
                             .background(
-                                Color.Black.copy(alpha = 0.8f),
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
                                 RoundedCornerShape(12.dp)
                             )
                             .clickable { onMediaClick(attachment) },
@@ -417,14 +428,14 @@ private fun AttachmentsGridPreview(
                             Icons.Default.PlayArrow,
                             contentDescription = "Video adjunto",
                             modifier = Modifier.size(48.dp),
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.primary
                         )
                         // Mostrar nombre del archivo en la parte inferior
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
                                 .background(
-                                    Color.Black.copy(alpha = 0.6f),
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
                                     RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
                                 )
                                 .padding(8.dp)
@@ -433,7 +444,7 @@ private fun AttachmentsGridPreview(
                             Text(
                                 text = attachment.nombreOriginal ?: "Video",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -500,7 +511,7 @@ private fun EmptyState(isFiltering: Boolean) {
             text = subMessage,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
-            color = Color.Gray
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -536,6 +547,7 @@ private fun NoteCategoriesRow(categories: List<Category>) {
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         items(categories.take(3)) { category ->
+            val categoryColor = parseHexColorWithFallback(category.color, MaterialTheme.colorScheme.primary)
             AssistChip(
                 onClick = { /* No action needed in list view */ },
                 label = { 
@@ -545,8 +557,8 @@ private fun NoteCategoriesRow(categories: List<Category>) {
                     ) 
                 },
                 colors = AssistChipDefaults.assistChipColors(
-                    containerColor = Color(parseHexColor(category.color)).copy(alpha = 0.15f),
-                    labelColor = Color(parseHexColor(category.color))
+                    containerColor = categoryColor.copy(alpha = 0.15f),
+                    labelColor = categoryColor
                 ),
                 border = null,
                 modifier = Modifier.height(24.dp)
@@ -574,16 +586,37 @@ private fun NoteCategoriesRow(categories: List<Category>) {
     }
 }
 
-// Helper function to parse hex color (copied from CategoryDomainMapper)
-private fun parseHexColor(hexColor: String): Int {
+// Helper function to parse hex color with proper architecture
+private fun parseHexColorOrNull(hexColor: String): Color? {
     return try {
         val cleanHex = hexColor.removePrefix("#")
         when (cleanHex.length) {
-            6 -> cleanHex.toLong(16).toInt() or 0xFF000000.toInt() // Add alpha
-            8 -> cleanHex.toLong(16).toInt() // Already has alpha
-            else -> 0xFF6750A4.toInt() // Default Material Design 3 Primary
+            6 -> {
+                val colorInt = cleanHex.toLong(16)
+                Color(
+                    red = ((colorInt shr 16) and 0xFF) / 255f,
+                    green = ((colorInt shr 8) and 0xFF) / 255f,
+                    blue = (colorInt and 0xFF) / 255f,
+                    alpha = 1f
+                )
+            }
+            8 -> {
+                val colorInt = cleanHex.toLong(16)
+                Color(
+                    red = ((colorInt shr 16) and 0xFF) / 255f,
+                    green = ((colorInt shr 8) and 0xFF) / 255f,
+                    blue = (colorInt and 0xFF) / 255f,
+                    alpha = ((colorInt shr 24) and 0xFF) / 255f
+                )
+            }
+            else -> null
         }
     } catch (e: NumberFormatException) {
-        0xFF6750A4.toInt() // Default color on parse error
+        null
     }
+}
+
+@Composable
+private fun parseHexColorWithFallback(hexColor: String, fallbackColor: Color): Color {
+    return parseHexColorOrNull(hexColor) ?: fallbackColor
 }
